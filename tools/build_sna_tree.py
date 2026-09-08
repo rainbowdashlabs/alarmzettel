@@ -255,7 +255,7 @@ GESCHLECHT = ("Mann oder Frau?", (
 
 ORT = {
     "frage": "Geschoss und Name am Klingelschild?",
-    "vorlage": "Einsatzort: {wert}.",
+    "vorlage": "{wert}",
     "platzhalter": "z. B. 1. OG bei Müller",
     "leer": None,
     "eigen": True,
