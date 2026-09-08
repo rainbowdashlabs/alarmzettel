@@ -25,8 +25,10 @@ screen are the ones printed on the slip.
 - **JSON** — the working set downloads and uploads again. Old ODS or XLSX spreadsheets are
   imported.
 - **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp, plus the
-  Arbeitsgruppe every new alarm starts with and the station the sheets are written for. A vehicle
-  carries its crew strength, EZP and status, and fills them in when you pick it.
+  Arbeitsgruppe every new alarm starts with and the station the sheets are written for. An alarm
+  names a vehicle and takes its crew strength, EZP and status from the catalogue, so correcting a
+  vehicle once corrects every sheet that calls for it; anything typed on the alarm overrides that
+  one field.
 - **Addresses** — type `Archenholdstr 21` into the street field and pick the suggestion; street,
   house number, postcode and Ortsteil all land at once, and the Polar-Koordinaten are measured
   from the station to the Einsatzadresse.

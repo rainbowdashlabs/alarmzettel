@@ -114,6 +114,7 @@ export default {
         fahrzeugNeu: 'Fahrzeug hinzufügen',
         fahrzeugEntfernen: 'Fahrzeug entfernen',
         haHinweis: 'Die HA-Zeile jeder Gruppe druckt die Einsatzadresse des Alarms.',
+        katalogHinweis: 'Leere Felder kommen aus dem Fahrzeugkatalog und ändern sich mit ihm. Was hier steht, gilt nur für diesen Alarm.',
         alarmFuer: 'Alarm für dieses Fahrzeug',
         alarmFuerKurz: 'Alarm für',
         alarmFuerHinweis: 'Das angesprochene Fahrzeug wird auf dem Zettel grau hinterlegt.',

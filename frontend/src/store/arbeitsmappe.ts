@@ -1,4 +1,5 @@
 import {reactive, watch} from 'vue'
+import {fahrzeugwerte} from '../scripts/katalog'
 import {neuSortieren} from '../scripts/listen'
 import {
     ARBEITSMAPPE_VERSION,
@@ -31,11 +32,39 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
         kataloge.fahrzeuge = alteNamen.map(funkrufname => ({funkrufname, staerke: '', ezp: '', status: ''}))
     }
 
-    return sortierungSetzen({
+    return sortierungSetzen(katalogVerknuepfen({
         version: ARBEITSMAPPE_VERSION,
         alarme: (quelle.alarme ?? []).map(alarm => ({...leererAlarm(), ...alarm})),
         kataloge,
-    })
+    }))
+}
+
+/**
+ * A working set written before vehicles referred to the catalogue carries its values copied into
+ * every Alarm. Clearing the ones that still match turns those copies back into references
+ * without changing a single printed sheet — the value is the same either way, it just starts
+ * following the catalogue again. Anything that differs was meant as an override and stays.
+ */
+function katalogVerknuepfen(mappe: Arbeitsmappe): Arbeitsmappe {
+    const vorlagen = new Map(mappe.kataloge.fahrzeuge
+        .filter(vorlage => vorlage.funkrufname.trim())
+        .map(vorlage => [vorlage.funkrufname.trim().toLowerCase(), vorlage]))
+    if (!vorlagen.size) return mappe
+
+    for (const alarm of mappe.alarme) {
+        for (const gruppe of alarm.einsatzmittel ?? []) {
+            for (const fahrzeug of gruppe.fahrzeuge ?? []) {
+                const vorlage = vorlagen.get(fahrzeug.funkrufname.trim().toLowerCase())
+                if (!vorlage) continue
+                for (const feld of ['ezp', 'status', 'staerke'] as const) {
+                    if (fahrzeug[feld] && fahrzeug[feld] === vorlage[feld]) fahrzeug[feld] = ''
+                }
+                const abgeleitet = fahrzeugwerte({...fahrzeug, trupp: ''}, vorlage).trupp
+                if (fahrzeug.trupp && fahrzeug.trupp === abgeleitet) fahrzeug.trupp = ''
+            }
+        }
+    }
+    return mappe
 }
 
 /**

@@ -8,7 +8,7 @@ import {
   statusVorschlaege,
   truppVorschlaege,
 } from '../../store/arbeitsmappe'
-import {truppText} from '../../scripts/staerke'
+import {fahrzeugwerte} from '../../scripts/katalog'
 import {leereGruppe, leeresFahrzeug, naechste, type Alarm, type Fahrzeug} from '../../interfaces/Alarm'
 
 const alarm = defineModel<Alarm>({required: true})
@@ -30,22 +30,23 @@ function fahrzeugEntfernen(gruppe: number, fahrzeug: number) {
   alarm.value.einsatzmittel[gruppe]?.fahrzeuge.splice(fahrzeug, 1)
 }
 
-/** Picking a known vehicle brings its strength, EZP and status along; each stays editable. */
-function vorlageUebernehmen(fahrzeug: Fahrzeug) {
-  const vorlage = fahrzeugvorlage(fahrzeug.funkrufname)
-  if (!vorlage) return
-  if (vorlage.ezp) fahrzeug.ezp = vorlage.ezp
-  if (vorlage.status) fahrzeug.status = vorlage.status
-  if (vorlage.staerke) {
-    fahrzeug.staerke = vorlage.staerke
-    staerkeUebernehmen(fahrzeug)
-  }
+/**
+ * What this vehicle prints, catalogue included — shown as the placeholder of every field the
+ * Alarm leaves empty, so the sheet holds no value the editor does not show.
+ */
+function werte(fahrzeug: Fahrzeug) {
+  return fahrzeugwerte(fahrzeug, fahrzeugvorlage(fahrzeug.funkrufname))
 }
 
-/** The Trupp line follows the strength; it stays free text once written. */
-function staerkeUebernehmen(fahrzeug: Fahrzeug) {
-  const zahl = Number(fahrzeug.staerke)
-  if (Number.isFinite(zahl) && zahl > 0) fahrzeug.trupp = truppText(zahl)
+/**
+ * A different vehicle answers for itself. Anything overridden for the one before it would
+ * otherwise stay behind and quietly describe the wrong wagen.
+ */
+function vorlageUebernehmen(fahrzeug: Fahrzeug) {
+  fahrzeug.ezp = ''
+  fahrzeug.status = ''
+  fahrzeug.staerke = ''
+  fahrzeug.trupp = ''
 }
 
 /**
@@ -75,6 +76,7 @@ function alarmFuerWaehlen(gruppe: number, fahrzeug: number) {
 
     <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.alarmFuerHinweis') }}</p>
     <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.haHinweis') }}</p>
+    <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.katalogHinweis') }}</p>
 
     <div class="grid gap-4">
       <div v-for="(gruppe, gruppeIndex) in alarm.einsatzmittel" :key="gruppeIndex"
@@ -102,13 +104,16 @@ function alarmFuerWaehlen(gruppe: number, fahrzeug: number) {
               <AuswahlFeld v-model="fahrzeug.funkrufname" :label="t('feld.funkrufname')"
                            :vorschlaege="funkrufnameVorschlaege()"
                            @change="vorlageUebernehmen(fahrzeug)"/>
-              <TextFeld v-model="fahrzeug.ezp" :label="t('feld.ezp')"/>
+              <TextFeld v-model="fahrzeug.ezp" :label="t('feld.ezp')"
+                        :platzhalter="werte(fahrzeug).ezp"/>
               <AuswahlFeld v-model="fahrzeug.status" :label="t('feld.status')"
-                           :vorschlaege="statusVorschlaege()"/>
+                           :vorschlaege="statusVorschlaege()"
+                           :platzhalter="werte(fahrzeug).status"/>
               <TextFeld v-model="fahrzeug.staerke" :label="t('feld.staerke')"
-                        @change="staerkeUebernehmen(fahrzeug)"/>
+                        :platzhalter="werte(fahrzeug).staerke"/>
               <AuswahlFeld v-model="fahrzeug.trupp" :label="t('feld.trupp')"
-                           :vorschlaege="truppVorschlaege()"/>
+                           :vorschlaege="truppVorschlaege()"
+                           :platzhalter="werte(fahrzeug).trupp"/>
               <TextFeld v-model="fahrzeug.hinweis" :label="t('feld.fahrzeugHinweis')"/>
             </div>
             <div class="flex gap-2">
