@@ -118,10 +118,10 @@
       let angesprochen = get(fz, "alarmFuer", fallback: false) == true
       vehicle-rows.push(cell(colspan: 2, fill: if angesprochen { GREY } else { none },
                              stroke: none-stroke)[#V(get(fz, "funkrufname"))])
-      vehicle-rows.push(cell(colspan: 5, stroke: none-stroke)[#V(get(fz, "ezp"))])
-      vehicle-rows.push(cell(colspan: 3, stroke: none-stroke)[#V(get(fz, "status"))])
-      vehicle-rows.push(cell(colspan: 5, stroke: none-stroke)[#V(get(fz, "trupp"))])
-      vehicle-rows.push(cell(colspan: 3, stroke: none-stroke)[#V(get(fz, "hinweis"))])
+      vehicle-rows.push(cell(colspan: 5, stroke: none-stroke)[#V(get(fz, "ezp"), weight: "regular")])
+      vehicle-rows.push(cell(colspan: 3, stroke: none-stroke)[#V(get(fz, "status"), weight: "regular")])
+      vehicle-rows.push(cell(colspan: 5, stroke: none-stroke)[#V(get(fz, "trupp"), weight: "regular")])
+      vehicle-rows.push(cell(colspan: 3, stroke: none-stroke)[#V(get(fz, "hinweis"), weight: "regular")])
       vehicle-rows.push(cell(stroke: none-stroke)[])
     }
   }
@@ -221,13 +221,19 @@
     cell(colspan: 4)[#strut], cell(colspan: 4)[], cell(colspan: 6)[], cell(colspan: 5)[],
 
     // 22-26 — Meldung und Beteiligte
-    cell(colspan: 4)[#L("Meldungsquelle")], cell(colspan: 4)[#V(get(a, "meldungsquelle"))],
-    cell(colspan: 4)[#L("Rückrufnummer")], cell(colspan: 7)[#V(get(a, "rueckrufnummer"))],
+    cell(colspan: 4)[#L("Meldungsquelle")],
+    cell(colspan: 4)[#V(get(a, "meldungsquelle"), weight: "regular")],
+    cell(colspan: 4)[#L("Rückrufnummer")],
+    cell(colspan: 7)[#V(get(a, "rueckrufnummer"), weight: "regular")],
 
-    cell(colspan: 4)[#L("Anrufer")], cell(colspan: 15)[#V(get(a, "anrufer"))],
-    cell(colspan: 4)[#strut#L("Betroffener")], cell(colspan: 15)[#V(get(a, "betroffener"))],
-    cell(colspan: 4)[#strut#L("Meldender")], cell(colspan: 15)[#V(get(a, "meldender"))],
-    cell(colspan: 4)[#strut#L("Was ist passiert")], cell(colspan: 15)[#VM(get(a, "wasIstPassiert"))],
+    cell(colspan: 4)[#L("Anrufer")],
+    cell(colspan: 15)[#V(get(a, "anrufer"), weight: "regular")],
+    cell(colspan: 4)[#strut#L("Betroffener")],
+    cell(colspan: 15)[#V(get(a, "betroffener"), weight: "regular")],
+    cell(colspan: 4)[#strut#L("Meldender")],
+    cell(colspan: 15)[#V(get(a, "meldender"), weight: "regular")],
+    cell(colspan: 4)[#strut#L("Was ist passiert")],
+    cell(colspan: 15)[#VM(get(a, "wasIstPassiert"), weight: "regular")],
 
     // 27/28 — Hinweise
     cell(colspan: 19)[#strut#L("Hinweise")],
