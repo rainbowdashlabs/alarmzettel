@@ -127,6 +127,8 @@ class Kataloge(BaseModel):
     trupp: list[str] = []
     """One fixed value for the whole working set; every new Alarm starts with it."""
     arbeitsgruppe: str = ""
+    """The station the sheets are written for; the Polar-Koordinaten are measured from it."""
+    wache: Adresse = Adresse()
 
 
 class Arbeitsmappe(BaseModel):

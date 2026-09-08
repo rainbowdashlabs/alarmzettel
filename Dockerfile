@@ -45,8 +45,10 @@ COPY backend/src/ ./src/
 COPY --from=frontend-build /app/dist ./static/
 
 # The fonts travel with the image, so a render never depends on what the host has installed.
-# /data is where shared working sets live and is the only thing that outlives the container.
-ENV FREIGABE_VERZEICHNIS=/data/freigaben
+# /data is where shared working sets and the downloaded address list live, and is the only thing
+# that outlives the container. The address list is fetched on first start, not shipped.
+ENV FREIGABE_VERZEICHNIS=/data/freigaben \
+    ADRESSEN_DATEI=/data/adressen.sqlite
 RUN mkdir -p src/render/tmp /data/freigaben && chmod 1777 src/render/tmp \
  && useradd --system --uid 10001 alarmzettel \
  && chown -R alarmzettel:alarmzettel /app /data

@@ -27,6 +27,7 @@ services:
     environment:
       SESSION_TTL_MINUTES: 30
       FREIGABE_VERZEICHNIS: /data/freigaben
+      ADRESSEN_DATEI: /data/adressen.sqlite
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]

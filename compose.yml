@@ -6,6 +6,7 @@ services:
     environment:
       SESSION_TTL_MINUTES: ${SESSION_TTL_MINUTES:-30}
       FREIGABE_TAGE: ${FREIGABE_TAGE:-30}
+      ADRESSEN_TAGE: ${ADRESSEN_TAGE:-30}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
     volumes:
       - freigaben:/data

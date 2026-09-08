@@ -2,13 +2,27 @@
 import AdresseFeld from '../base/AdresseFeld.vue'
 import TextFeld from '../base/TextFeld.vue'
 import {t} from '../../i18n'
+import {zuPunkt, type Adresspunkt} from '../../api/adressen'
+import {polarKoordinaten} from '../../scripts/polar'
+import {arbeitsmappe} from '../../store/arbeitsmappe'
 import type {Alarm} from '../../interfaces/Alarm'
 
 const alarm = defineModel<Alarm>({required: true})
 
 /** The two addresses usually agree, so copying one over the other saves typing it twice. */
-function uebernehmen() {
+async function uebernehmen() {
   alarm.value.einsatzadresse = {...alarm.value.anfahrtsadresse}
+  const ziel = await zuPunkt(alarm.value.einsatzadresse)
+  if (ziel) await polarSetzen(ziel)
+}
+
+/**
+ * Where the Einsatzadresse lies seen from the station. Written as soon as both are known and
+ * editable afterwards, the way the Trupp follows the Stärke.
+ */
+async function polarSetzen(ziel: Adresspunkt) {
+  const wache = await zuPunkt(arbeitsmappe.kataloge.wache)
+  if (wache) alarm.value.karte.polarKoordinaten = polarKoordinaten(wache, ziel)
 }
 </script>
 
@@ -22,7 +36,8 @@ function uebernehmen() {
     </div>
     <div class="grid md:grid-cols-2 gap-5">
       <AdresseFeld v-model="alarm.anfahrtsadresse" :titel="t('adresse.anfahrt')"/>
-      <AdresseFeld v-model="alarm.einsatzadresse" :titel="t('adresse.einsatz')"/>
+      <AdresseFeld v-model="alarm.einsatzadresse" :titel="t('adresse.einsatz')"
+                   @aufgeloest="polarSetzen"/>
     </div>
   </section>
 

@@ -79,6 +79,7 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
 
     kataloge = arbeitsmappe.get("kataloge") or {}
     werte[_pfad("kataloge", "arbeitsgruppe")] = kataloge.get("arbeitsgruppe", "")
+    werte.update(_adresse_felder(_pfad("kataloge", "wache"), kataloge.get("wache") or {}))
     for liste in ("stichwoerter", "status", "trupp"):
         for wert in kataloge.get(liste, []):
             werte[_pfad("kataloge", liste, wert)] = True
@@ -117,7 +118,7 @@ def rund(werte: dict[str, Any]) -> dict:
     """Builds the working set back out of the flat map, in sort-key order."""
     alarme: dict[str, dict] = {}
     kataloge: dict[str, Any] = {"stichwoerter": [], "status": [], "trupp": [], "fahrzeuge": {},
-                                "arbeitsgruppe": ""}
+                                "arbeitsgruppe": "", "wache": {}}
 
     for pfad, wert in werte.items():
         stueck = teile(pfad)
@@ -125,7 +126,9 @@ def rund(werte: dict[str, Any]) -> dict:
             kataloge[stueck[1]] = wert
             continue
         if stueck[0] == "kataloge" and len(stueck) >= 3:
-            if stueck[1] in ("stichwoerter", "status", "trupp"):
+            if stueck[1] == "wache" and len(stueck) == 3:
+                kataloge["wache"][stueck[2]] = wert
+            elif stueck[1] in ("stichwoerter", "status", "trupp"):
                 kataloge[stueck[1]].append(stueck[2])
             elif stueck[1] == "fahrzeuge" and len(stueck) == 4:
                 kataloge["fahrzeuge"].setdefault(stueck[2], {})[stueck[3]] = wert

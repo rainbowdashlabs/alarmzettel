@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     freigabe_verzeichnis: Path = Path(__file__).resolve().parent.parent.parent / "data" / "freigaben"
     freigabe_tage: int = 30
     freigabe_max_bytes: int = 4 * 1024 * 1024
+    # Beside the shares, and in the image on the same volume: it is downloaded, never shipped.
+    adressen_datei: Path = Path(__file__).resolve().parent.parent.parent / "data" / "adressen.sqlite"
+    adressen_tage: int = 30
+    adressen_laden: bool = True
     typst_binary: str = "typst"
     render_timeout_seconds: int = 30
     render_root: Path = Path(__file__).resolve().parent.parent / "render"

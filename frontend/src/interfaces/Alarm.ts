@@ -98,6 +98,8 @@ export interface Kataloge {
     trupp: string[]
     /** One fixed value for the whole working set; every new Alarm starts with it. */
     arbeitsgruppe: string
+    /** The station the sheets are written for. The Polar-Koordinaten are measured from it. */
+    wache: Adresse
 }
 
 export interface Arbeitsmappe {
@@ -188,6 +190,9 @@ export function leereArbeitsmappe(): Arbeitsmappe {
     return {
         version: ARBEITSMAPPE_VERSION,
         alarme: [],
-        kataloge: {stichwoerter: [...STICHWOERTER], fahrzeuge: [], status: [], trupp: [], arbeitsgruppe: ''},
+        kataloge: {
+            stichwoerter: [...STICHWOERTER], fahrzeuge: [], status: [], trupp: [],
+            arbeitsgruppe: '', wache: leereAdresse(),
+        },
     }
 }

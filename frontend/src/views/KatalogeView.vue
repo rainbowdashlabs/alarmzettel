@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {ref} from 'vue'
+import AdresseFeld from '../components/base/AdresseFeld.vue'
 import TextFeld from '../components/base/TextFeld.vue'
 import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
@@ -54,7 +55,10 @@ function truppVorschau(staerke: string): string {
       <div class="grid md:grid-cols-3 gap-3">
         <TextFeld v-model="arbeitsmappe.kataloge.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>
       </div>
-      <p class="text-muted text-[13px] mt-3">{{ t('kataloge.arbeitsgruppeHinweis') }}</p>
+      <p class="text-muted text-[13px] mt-3 mb-4">{{ t('kataloge.arbeitsgruppeHinweis') }}</p>
+
+      <AdresseFeld v-model="arbeitsmappe.kataloge.wache" :titel="t('kataloge.wache')"/>
+      <p class="text-muted text-[13px] mt-3">{{ t('kataloge.wacheHinweis') }}</p>
     </section>
 
     <section class="abschnitt">

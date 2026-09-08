@@ -125,6 +125,8 @@ export default {
         fahrzeuge: 'Fahrzeuge',
         fahrzeugeHinweis: 'Stärke, EZP und Status werden beim Auswählen des Funkrufnamens übernommen und bleiben im Alarm änderbar.',
         dienststelle: 'Dienststelle',
+        wache: 'Wache',
+        wacheHinweis: 'Die Polar-Koordinaten eines Alarms werden von hier zur Einsatzadresse gerechnet.',
         arbeitsgruppeHinweis: 'Wird in jeden neu angelegten Alarm übernommen und bleibt dort änderbar.',
         status: 'Status',
         staerke: 'Stärke',

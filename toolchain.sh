@@ -77,6 +77,13 @@ Abgleich
                         outside a browser: concurrent edits, deletion against a stale client,
                         a dropped connection. Brings its own server (PORT_PROBE, Vorgabe 8131)
 
+Adressen
+  adressen-laden        Download the Berlin address list into the cache the backend queries.
+                        The server does this by itself on startup when the copy is missing or
+                        old; this is for doing it on purpose. Never committed
+  adressen-stand        What the cache holds and when it was fetched
+  adressen-polar        Check the Polar-Koordinaten against the values a real slip carries
+
 Abfragebaum
   sna-build             Regenerate frontend/public/sna-tree.json. Downloads the open data
                         workbook on first use; spreadsheets are not kept in the repository
@@ -90,7 +97,8 @@ Docker
   docker-dev            Start the dev stack: backend with --reload, Vite on 5175
 
 Combined
-  verify                be-test, fe-build and sna-check - what CI runs
+  verify                be-test, fe-build, sna-check and the two sync checks plus the
+                        Polar-Koordinaten - what CI runs
 EOF
 }
 
@@ -100,7 +108,7 @@ be() { cd "$BACKEND/src"; }
 # The command names are hyphenated, and the first hyphen also reads as a group: `docker app` is
 # accepted for `docker-app`, and both reach the same arm below. Naming the group alone lists what
 # is in it.
-COMMAND_GROUPS=(fe be render sna sync docker)
+COMMAND_GROUPS=(fe be render sna sync docker adressen)
 
 is_group() {
     local candidate
@@ -211,6 +219,16 @@ case "$cmd" in
         cd "$ROOT"; run node tools/sync_probe.mjs "$@"
         ;;
 
+    adressen-laden) be; run python -c "
+from data.adressen import Adressen
+from web.settings import settings
+laden = Adressen(settings.adressen_datei, settings.adressen_tage)
+print(f'{laden.laden()} Adressen in {laden.datei}')" ;;
+    adressen-polar) cd "$ROOT"; run node tools/polar_pruefen.mjs ;;
+    adressen-stand) be; run python -c "
+from data.adressen import Adressen
+from web.settings import settings
+print(Adressen(settings.adressen_datei, settings.adressen_tage).bestand())" ;;
     sna-build)     cd "$ROOT"; run python tools/build_sna_tree.py "$@" ;;
     sna-check)
         cd "$ROOT"
@@ -268,6 +286,7 @@ PY
         "$ROOT/toolchain.sh" sna-check
         "$ROOT/toolchain.sh" sync-pfade
         "$ROOT/toolchain.sh" sync-probe
+        "$ROOT/toolchain.sh" adressen-polar
         ;;
 
     help|-h|--help) usage ;;

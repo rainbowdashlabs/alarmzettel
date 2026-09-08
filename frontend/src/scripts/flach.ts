@@ -63,6 +63,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
     })
 
     werte[pfad('kataloge', 'arbeitsgruppe')] = mappe.kataloge.arbeitsgruppe ?? ''
+    adresse(pfad('kataloge', 'wache'), werte, mappe.kataloge.wache as never)
     for (const liste of ['stichwoerter', 'status', 'trupp'] as const) {
         for (const wert of mappe.kataloge[liste]) werte[pfad('kataloge', liste, wert)] = true
     }
@@ -87,6 +88,7 @@ export function rund(werte: Flachbild): unknown {
     const kataloge: Record<string, unknown> = {
         stichwoerter: [] as string[], status: [] as string[], trupp: [] as string[],
         fahrzeuge: {} as Record<string, unknown>, arbeitsgruppe: '',
+        wache: {} as Record<string, unknown>,
     }
 
     for (const [schluessel, wert] of Object.entries(werte)) {
@@ -97,7 +99,9 @@ export function rund(werte: Flachbild): unknown {
         }
         if (teile[0] === 'kataloge' && teile.length >= 3) {
             const liste = teile[1]!
-            if (liste === 'stichwoerter' || liste === 'status' || liste === 'trupp') {
+            if (liste === 'wache' && teile.length === 3) {
+                (kataloge['wache'] as Record<string, unknown>)[teile[2]!] = wert
+            } else if (liste === 'stichwoerter' || liste === 'status' || liste === 'trupp') {
                 (kataloge[liste] as string[]).push(teile[2]!)
             } else if (liste === 'fahrzeuge' && teile.length === 4) {
                 const gruppe = kataloge['fahrzeuge'] as Record<string, Record<string, unknown>>

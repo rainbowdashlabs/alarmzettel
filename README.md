@@ -24,9 +24,11 @@ screen are the ones printed on the slip.
 - **PDF** — one sheet per alarm, all of them in one file or singly.
 - **JSON** — the working set downloads and uploads again. Old ODS or XLSX spreadsheets are
   imported.
-- **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp, and the one
-  Arbeitsgruppe every new alarm starts with. A vehicle carries its crew strength, EZP and status,
-  and fills them in when you pick it.
+- **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp, plus the
+  Arbeitsgruppe every new alarm starts with and the station the sheets are written for. A vehicle
+  carries its crew strength, EZP and status, and fills them in when you pick it.
+- **Addresses** — type two letters of a street and pick it; the house number fills in postcode and
+  Ortsteil, and the Polar-Koordinaten are measured from the station to the Einsatzadresse.
 - **Share and edit together** — a working set gets a link. Whoever opens it either works on their
   own copy or joins everyone else on the same one.
 
@@ -111,6 +113,9 @@ it hands out will name the wrong scheme.
 | `FREIGABE_TAGE` | `30` | how long a share stays available after its last use |
 | `FREIGABE_VERZEICHNIS` | `/data/freigaben` | where shared working sets live |
 | `FREIGABE_MAX_BYTES` | `4194304` | size limit for one shared working set |
+| `ADRESSEN_DATEI` | `/data/adressen.sqlite` | where the downloaded address list is cached |
+| `ADRESSEN_TAGE` | `30` | how old the address list may get before it is fetched again |
+| `ADRESSEN_LADEN` | `true` | set false to never fetch it |
 | `CORS_ORIGINS` | `*` | allowed origins, comma separated |
 | `TYPST_BINARY` | `typst` | path to the renderer |
 | `RENDER_TIMEOUT_SECONDS` | `30` | give up when a render hangs |
@@ -147,7 +152,7 @@ They talk to the real API and really render; where Typst is missing they skip th
 ```
 backend/src/
   entities/     the models, and with them the API schema
-  data/         session store, shares, the Typst call, the spreadsheet reader, Stärke derivation
+  data/         session store, shares, addresses, the Typst call, the spreadsheet reader
   services/     one module per router, with the tests beside them
   render/       alarmzettel.typ and the bundled fonts
 frontend/src/
@@ -185,6 +190,20 @@ classified *Nur für den Dienstgebrauch*, and the FPDS determinants are licensed
 neither is publicly available. The two branches in `tools/sna_authored.py` are built to be
 plausible, but they are made up. They are marked as such in the dialog and should be replaced with
 the real AAO before anyone relies on them.
+
+Addresses come from the city's [address
+WFS](https://daten.berlin.de/datensaetze/adressen-berlin-wfs-634ab8ba) — 402 756 points with
+street, house number, postcode, Ortsteil and official coordinates. It is not committed and not in
+the image: the server fetches it into a SQLite cache on the volume the first time it comes up, in
+the background, and refetches when the copy ages out. Everything works without it; completion is
+the only thing missing until it lands. `./toolchain.sh adressen-laden` does it on purpose,
+`adressen-stand` says what is there.
+
+The Polar-Koordinaten are a bearing from grid north and a straight-line distance from the station
+to the Einsatzadresse. Nothing documents that — it was recovered from two printed slips by solving
+for the point both agree on, which turned out to be the station itself, to within seven metres.
+The station is set once in the catalogue. `./toolchain.sh adressen-polar` checks the formula
+against those printed values, and runs in CI.
 
 Callers, phone numbers and callback numbers are generated rather than typed: the slips are written
 as exercise material, and that way no real personal data ends up on a sheet that gets printed and
