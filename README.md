@@ -188,5 +188,16 @@ passed around.
 
 Times New Roman and Aptos cannot be redistributed. Instead `backend/src/render/fonts/` holds
 **Liberation Serif** — metrically identical to Times New Roman, so the labels keep their widths —
-and **Inter** for the values. Both are freely redistributable and travel inside the image, so a
-render never depends on what happens to be installed on the machine.
+and **Inter** for the values. Both travel inside the image, so a render never depends on what
+happens to be installed on the machine.
+
+Both are under the SIL Open Font License 1.1, which is not the licence covering the rest of this
+repository. Their licence texts sit beside them, along with a note on what each stands in for.
+
+## Licence
+
+GNU Affero General Public License, version 3 or later (`AGPL-3.0-or-later`) — see `LICENSE`.
+
+The Affero clause is the point: anyone who runs a modified copy of this as a network service owes
+its users the source. The bundled fonts are the exception noted above, and the dispatch code data
+belongs to the Berlin fire brigade under its own terms.

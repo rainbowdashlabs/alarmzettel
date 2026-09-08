@@ -35,6 +35,10 @@ RUN pipenv sync --system && pip uninstall -y pipenv
 
 # Stage 5: the image that runs
 FROM runtime AS production
+LABEL org.opencontainers.image.title="Alarmzettel" \
+      org.opencontainers.image.description="Berlin fire brigade alarm slips, rendered with Typst" \
+      org.opencontainers.image.source="https://github.com/rainbowdashlabs/alarmzettel" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
 WORKDIR /app
 
 COPY backend/src/ ./src/
