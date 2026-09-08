@@ -20,7 +20,7 @@ const gebaut = await build({
     entryPoints: [resolve(WURZEL, 'frontend/src/scripts/ablauf.ts')],
     bundle: true, format: 'esm', write: false, platform: 'node',
 })
-const {ortssicht, personenplan, pruefen} = await import(
+const {lagensicht, ortssicht, personenplan, pruefen} = await import(
     'data:text/javascript;base64,' + Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 
 const TAG = '2026-09-19'
@@ -304,6 +304,36 @@ fall('Zu Fuß dauert dieselbe Strecke länger', () => {
     return [
         ['dreißig Minuten reichen für vier Kilometer zu Fuß nicht', Boolean(zuKnapp), true],
         ['geschätzt sind sechzig gegen die Fahrzeit von zehn', zuKnapp?.werte.geschaetzt, 60],
+    ]
+})
+
+fall('Eine Lage sammelt ein, was auf sie zeigt', () => {
+    const punkt = {id: 'pp-brand', sortierung: 0, name: 'Brand', ortId: 'o-sued', alarmId: ''}
+    const lhf = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-sued', {
+            programmpunktId: 'pp-brand', besatzung: [sitzt('p-alex', true)],
+        }),
+    ])
+    const mtf = lauf({fahrzeugId: 'f-mtf'}, [
+        schritt('aufenthalt', '08:30', '10:00', 'o-sued', {
+            programmpunktId: 'pp-brand', besatzung: [sitzt('p-maria', true)],
+        }),
+    ])
+    const mimen = lauf({personId: 'p-mimen'}, [
+        schritt('aufenthalt', '07:45', '09:30', 'o-sued', {programmpunktId: 'pp-brand'}),
+    ])
+    const sicht = lagensicht(daten({
+        personen: [person('p-alex', 'Alex'), person('p-maria', 'Maria'),
+                   person('p-mimen', 'Mimen', {anzahl: 4})],
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')],
+        laeufe: [lhf, mtf, mimen], programmpunkte: [punkt],
+    }), punkt)
+    return [
+        ['läuft vom frühesten bis zum spätesten Schritt',
+            `${sicht.von.slice(11)}–${sicht.bis.slice(11)}`, '07:45–10:00'],
+        ['drei Ketten hängen daran', sicht.laeufe.length, 3],
+        ['und alle Beteiligten, jeder einmal',
+            sicht.personIds.join(','), 'p-alex,p-maria,p-mimen'],
     ]
 })
 

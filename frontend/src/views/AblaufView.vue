@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import {watch} from 'vue'
+import {ref, watch} from 'vue'
 import {RouterLink} from 'vue-router'
+import LagenAnsicht from '../components/planung/LagenAnsicht.vue'
 import LaufKette from '../components/planung/LaufKette.vue'
+import OrtsSicht from '../components/planung/OrtsSicht.vue'
+import PersonenPlan from '../components/planung/PersonenPlan.vue'
 import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
 import {entfernen, laufAnlegen, laufVon, personName, punkteLaden} from '../store/planung'
@@ -25,6 +28,10 @@ function beschriftung(lauf: {fahrzeugId: string, personId: string}): string {
 function offen(fuer: {fahrzeugId?: string, personId?: string}): boolean {
   return !laufVon(fuer)
 }
+
+/** Geplant wird in den Ketten; die drei anderen Ansichten sind dieselben Daten von anderer Seite. */
+const ANSICHTEN = ['ketten', 'personen', 'orte', 'lagen'] as const
+const ansicht = ref<typeof ANSICHTEN[number]>('ketten')
 </script>
 
 <template>
@@ -37,6 +44,18 @@ function offen(fuer: {fahrzeugId?: string, personId?: string}): boolean {
       <RouterLink to="/planung" class="knopf knopf-klein">{{ t('ablauf.stammdaten') }}</RouterLink>
     </div>
 
+    <div class="flex flex-wrap gap-2">
+      <button v-for="name in ANSICHTEN" :key="name" type="button" class="knopf knopf-klein"
+              :class="ansicht === name ? 'knopf-primaer' : ''" @click="ansicht = name">
+        {{ t(`ablauf.ansicht.${name}`) }}
+      </button>
+    </div>
+
+    <PersonenPlan v-if="ansicht === 'personen'"/>
+    <OrtsSicht v-else-if="ansicht === 'orte'"/>
+    <LagenAnsicht v-else-if="ansicht === 'lagen'"/>
+
+    <template v-else>
     <section v-if="!arbeitsmappe.planung.orte.length" class="abschnitt">
       <p class="text-muted text-sm">{{ t('ablauf.ersteOrte') }}</p>
     </section>
@@ -79,5 +98,6 @@ function offen(fuer: {fahrzeugId?: string, personId?: string}): boolean {
       </div>
       <LaufKette :lauf="lauf"/>
     </section>
+    </template>
   </div>
 </template>

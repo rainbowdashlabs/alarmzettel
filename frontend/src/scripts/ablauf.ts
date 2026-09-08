@@ -9,7 +9,7 @@
  * `tools/ablauf_pruefen.mjs` außerhalb eines Browsers geprüft werden kann.
  */
 import type {Fahrzeugvorlage} from '../interfaces/Alarm'
-import type {Lauf, Person, Planung, Schritt} from '../interfaces/Planung'
+import type {Lauf, Person, Planung, Programmpunkt, Schritt} from '../interfaces/Planung'
 import type {Punkt} from './polar'
 import {entfernungKm} from './polar'
 import {alsMinuten, dauer, ueberschneidet} from './zeit'
@@ -48,6 +48,16 @@ export interface Ortsbelegung {
     schritt: Schritt
     von: string
     bis: string
+    personIds: string[]
+}
+
+/** Eine Lage, wie sie aus den Schritten entsteht, die auf sie zeigen. */
+export interface Lagensicht {
+    programmpunkt: Programmpunkt
+    /** Früherster Beginn und spätestes Ende der beteiligten Schritte. Leer, wenn keiner zeigt. */
+    von: string
+    bis: string
+    laeufe: Lauf[]
     personIds: string[]
 }
 
@@ -132,6 +142,31 @@ export function ortssicht(daten: Plandaten, ortId: string): Ortsbelegung[] {
         }
     }
     return nachZeit(belegungen)
+}
+
+/**
+ * Wann eine Lage läuft und wer an ihr hängt. Die Lage selbst trägt weder Zeiten noch Teilnehmer
+ * — sie kann sich damit nicht selbst widersprechen, und zwei Fahrzeuge an derselben Lage teilen
+ * sich einen Eintrag statt ihn zu verdoppeln.
+ */
+export function lagensicht(daten: Plandaten, punkt: Programmpunkt): Lagensicht {
+    const sicht: Lagensicht = {programmpunkt: punkt, von: '', bis: '', laeufe: [], personIds: []}
+    for (const lauf of daten.planung.laeufe) {
+        for (const schritt of lauf.schritte) {
+            if (schritt.programmpunktId !== punkt.id) continue
+            if (!sicht.von || (alsMinuten(schritt.von) ?? 0) < (alsMinuten(sicht.von) ?? 0)) {
+                sicht.von = schritt.von
+            }
+            if (!sicht.bis || (alsMinuten(schritt.bis) ?? 0) > (alsMinuten(sicht.bis) ?? 0)) {
+                sicht.bis = schritt.bis
+            }
+            if (!sicht.laeufe.includes(lauf)) sicht.laeufe.push(lauf)
+            for (const personId of [lauf.personId, ...schritt.besatzung.map(p => p.personId)]) {
+                if (personId && !sicht.personIds.includes(personId)) sicht.personIds.push(personId)
+            }
+        }
+    }
+    return sicht
 }
 
 /**
