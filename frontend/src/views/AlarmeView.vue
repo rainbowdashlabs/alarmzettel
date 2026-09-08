@@ -167,7 +167,7 @@ async function laden(event: Event) {
           <font-awesome-icon icon="fa-solid fa-copy"/>
         </button>
       </div>
-      <p class="text-muted text-[13px]">{{ t('freigabe.warnung') }}</p>
+      <p class="text-signal-ink text-[13px]">{{ t('freigabe.warnung') }}</p>
     </div>
 
     <p v-if="meldung" class="text-sm text-muted">{{ meldung }}</p>

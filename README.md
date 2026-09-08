@@ -87,8 +87,8 @@ two participants against each other — concurrent edits on one alarm, a deletio
 still typing into it, a dropped connection. Both run in CI.
 
 **The link is the password.** There is no other authentication — whoever has it can read the
-working set and change it. The token is long and random, but a forwarded link is a forwarded
-working set. The slips are exercise material with invented personal details; nothing else belongs
+working set, change it, and delete it. The token is long and random, but a forwarded link is a
+forwarded working set. The slips are exercise material with invented personal details; nothing else belongs
 in them.
 
 ## Running it

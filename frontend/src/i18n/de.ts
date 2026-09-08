@@ -170,7 +170,7 @@ export default {
         teilen: 'Teilen',
         erzeugt: 'Link erstellt. Er gilt {tage} Tage ab dem letzten Öffnen.',
         kopiert: 'Link kopiert.',
-        warnung: 'Wer den Link hat, kann die Arbeitsmappe lesen. Es gibt keine weitere Anmeldung.',
+        warnung: 'Der Link ist das Passwort: wer ihn hat, kann die Arbeitsmappe lesen, bearbeiten und löschen. Es gibt keine weitere Anmeldung.',
         fehler: 'Der Link konnte nicht erstellt werden.',
     },
     vorschau: {
