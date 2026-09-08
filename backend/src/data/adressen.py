@@ -13,6 +13,7 @@ a client that needs a dozen rows of it.
 """
 
 import os
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -87,37 +88,63 @@ class Adressen:
         geholt = datetime.fromisoformat(bestand["stand"])
         return datetime.now(UTC) - geholt > self.hoechstalter
 
-    def strassen(self, suche: str, grenze: int = 12) -> list[dict]:
+    ANGEHAENGT = re.compile(r"^(?P<strasse>.*?)[\s,]+(?P<hnr>\d+\s*[a-zA-Z]?)$")
+
+    @classmethod
+    def _zerlegen(cls, text: str) -> tuple[str, str]:
         """
-        Street names beginning with what has been typed, each with the postcodes and Ortsteile it
-        runs through — a long street crosses several, and the sheet wants the right one.
+        Splits "Archenholdstr 21" into the street and the house number, so one field can carry a
+        whole address. A trailing word that is not a number stays part of the name — "Straße des
+        17. Juni" is a street, not a street and a number.
         """
-        anfang = suche.strip().lower()
+        treffer = cls.ANGEHAENGT.match(text.strip())
+        if not treffer:
+            return text.strip(), ""
+        return treffer.group("strasse").strip(), treffer.group("hnr")
+
+    def suchen(self, text: str, grenze: int = 12) -> list[dict]:
+        """
+        What to offer for what has been typed so far.
+
+        Without a house number these are streets, each listed once per postcode and Ortsteil it
+        runs through, because a long street crosses several and the sheet wants the right one.
+        With one they are doors, carrying the coordinates, so picking a suggestion settles the
+        whole address at once.
+        """
+        name, hnr = self._zerlegen(text)
+        anfang = name.lower()
         if len(anfang) < 2:
             return []
         with self._lesen() as verbindung:
             if verbindung is None:
                 return []
-            zeilen = verbindung.execute(
-                "SELECT strasse, plz, ort, count(*) AS anzahl FROM adressen "
-                "WHERE suche LIKE ? || '%' GROUP BY strasse, plz, ort "
-                "ORDER BY strasse, plz LIMIT ?", (anfang, grenze)).fetchall()
-            return [dict(zeile) for zeile in zeilen]
+            if not hnr:
+                zeilen = verbindung.execute(
+                    "SELECT strasse, plz, ort, count(*) AS anzahl FROM adressen "
+                    "WHERE suche LIKE ? || '%' GROUP BY strasse, plz, ort "
+                    "ORDER BY strasse, plz LIMIT ?", (anfang, grenze)).fetchall()
+                return [{"beschriftung": f"{zeile['strasse']}, {zeile['plz']} {zeile['ort']}",
+                         "strasse": zeile["strasse"], "hnr": "",
+                         "plz": zeile["plz"], "ort": zeile["ort"],
+                         "ostwert": None, "nordwert": None} for zeile in zeilen]
 
-    def hausnummern(self, strasse: str, plz: str = "", grenze: int = 400) -> list[dict]:
-        with self._lesen() as verbindung:
-            if verbindung is None:
-                return []
-            bedingung = "suche = ?"
-            werte: list = [strasse.strip().lower()]
-            if plz.strip():
-                bedingung += " AND plz = ?"
-                werte.append(plz.strip())
+            zahl, zusatz = self._hausnummer(hnr)
+            bedingung = "suche LIKE ? || '%' AND hnr = ?"
+            werte: list = [anfang, zahl]
+            if zusatz:
+                bedingung += " AND zusatz = ?"
+                werte.append(zusatz)
             werte.append(grenze)
             zeilen = verbindung.execute(
                 f"SELECT strasse, hnr, zusatz, plz, ort, ostwert, nordwert FROM adressen "
-                f"WHERE {bedingung} ORDER BY hnr, zusatz LIMIT ?", werte).fetchall()
-            return [self._eintrag(zeile) for zeile in zeilen]
+                f"WHERE {bedingung} ORDER BY strasse, zusatz, plz LIMIT ?", werte).fetchall()
+            return [self._beschriftet(zeile) for zeile in zeilen]
+
+    @classmethod
+    def _beschriftet(cls, zeile: sqlite3.Row) -> dict:
+        eintrag = cls._eintrag(zeile)
+        return {"beschriftung": f"{eintrag['strasse']} {eintrag['hnr']}, "
+                                f"{eintrag['plz']} {eintrag['ort']}", **eintrag}
 
     def finden(self, strasse: str, hnr: str, plz: str = "") -> dict | None:
         """

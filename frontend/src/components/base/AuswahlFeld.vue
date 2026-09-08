@@ -7,6 +7,8 @@ const props = defineProps<{
   vorschlaege: string[]
   platzhalter?: string
   breit?: boolean
+  /** The list already answers the typing — filtering it again here would only cut it down. */
+  vorgefiltert?: boolean
 }>()
 
 const emit = defineEmits<{ change: [] }>()
@@ -22,7 +24,8 @@ const offen = ref(false)
  */
 const gefiltert = computed(() => {
   const suche = model.value.trim().toLowerCase()
-  if (!suche || props.vorschlaege.some(wert => wert.toLowerCase() === suche)) return props.vorschlaege
+  if (props.vorgefiltert || !suche) return props.vorschlaege
+  if (props.vorschlaege.some(wert => wert.toLowerCase() === suche)) return props.vorschlaege
   return props.vorschlaege.filter(wert => wert.toLowerCase().includes(suche))
 })
 

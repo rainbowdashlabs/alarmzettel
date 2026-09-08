@@ -91,6 +91,7 @@ export default {
         erzeugenHinweis: 'Anrufer, Meldungsquelle und Rückrufnummer neu erfinden. Diese Zettel sind Übungsmaterial, die Angaben sind frei erfunden.',
     },
     adresse: {
+        platzhalter: 'z. B. Archenholdstr 21',
         anfahrt: 'Anfahrtsadresse',
         einsatz: 'Einsatzadresse',
         uebernehmen: 'Einsatzadresse = Anfahrtsadresse',

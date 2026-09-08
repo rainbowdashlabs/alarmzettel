@@ -1,12 +1,18 @@
 import client from './http'
 import type {Adresse} from '../interfaces/Alarm'
 
-/** A street, and the postcode and Ortsteil one stretch of it lies in. */
-export interface Strassentreffer {
+/**
+ * One thing the address field can offer. Until a house number has been typed these are streets
+ * and carry no coordinates; after one they are single doors and do.
+ */
+export interface Adressvorschlag {
+    beschriftung: string
     strasse: string
+    hnr: string
     plz: string
     ort: string
-    anzahl: number
+    ostwert: number | null
+    nordwert: number | null
 }
 
 /** One door, with the official coordinates in ETRS89 / UTM 33N. */
@@ -34,10 +40,10 @@ export function adressdienstBereit(): Promise<boolean> {
     return bereit
 }
 
-export async function strassen(suche: string): Promise<Strassentreffer[]> {
-    if (suche.trim().length < 2 || !await adressdienstBereit()) return []
+export async function suchen(text: string): Promise<Adressvorschlag[]> {
+    if (text.trim().length < 2 || !await adressdienstBereit()) return []
     try {
-        const antwort = await client.get('/api/adressen/strassen', {params: {q: suche}})
+        const antwort = await client.get('/api/adressen/suche', {params: {q: text}})
         return antwort.data ?? []
     } catch {
         return []

@@ -22,14 +22,10 @@ def status() -> dict:
     return adressen.bestand()
 
 
-@router.get("/strassen")
-def strassen(q: str = "") -> list[dict]:
-    return adressen.strassen(q)
-
-
-@router.get("/hausnummern")
-def hausnummern(strasse: str, plz: str = "") -> list[dict]:
-    return adressen.hausnummern(strasse, plz)
+@router.get("/suche")
+def suche(q: str = "") -> list[dict]:
+    """Streets while a name is being typed, doors once a house number follows it."""
+    return adressen.suchen(q)
 
 
 @router.get("")

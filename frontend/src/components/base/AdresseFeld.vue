@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import {onBeforeUnmount, ref, watch} from 'vue'
+import {computed, onBeforeUnmount, ref, watch} from 'vue'
 import AuswahlFeld from './AuswahlFeld.vue'
 import TextFeld from './TextFeld.vue'
 import {t} from '../../i18n'
-import {adresspunkt, strassen, type Adresspunkt, type Strassentreffer} from '../../api/adressen'
+import {adresspunkt, suchen, type Adresspunkt, type Adressvorschlag} from '../../api/adressen'
 import type {Adresse} from '../../interfaces/Alarm'
 
 defineProps<{ titel: string }>()
 const emit = defineEmits<{ aufgeloest: [Adresspunkt] }>()
 const adresse = defineModel<Adresse>({required: true})
 
-const vorschlaege = ref<string[]>([])
-const treffer = ref<Strassentreffer[]>([])
+const treffer = ref<Adressvorschlag[]>([])
+const vorschlaege = computed(() => treffer.value.map(eintrag => eintrag.beschriftung))
 
 let zaehler = 0
 let warten: number | undefined
@@ -21,28 +21,36 @@ let warten: number | undefined
  * for. Each request carries a number and a late answer to an older one is dropped, or a slow
  * reply for "mark" would overwrite the list for "marksburg".
  */
-function suchen(wert: string) {
+function suggerieren(wert: string) {
     window.clearTimeout(warten)
     warten = window.setTimeout(async () => {
         const lauf = ++zaehler
-        const gefunden = await strassen(wert)
+        const gefunden = await suchen(wert)
         if (lauf !== zaehler) return
         treffer.value = gefunden
-        vorschlaege.value = [...new Set(gefunden.map(eintrag => eintrag.strasse))]
     }, 200)
 }
 
 /**
- * A street that runs through one postcode only settles it there and then; one crossing several
- * waits for the house number to say which.
+ * A picked suggestion carries the whole address, so "Archenholdstr 21" typed into this one field
+ * settles street, number, postcode and Ortsteil together. Anything typed and left alone falls
+ * back to looking up whatever the separate fields hold.
  */
-function strasseGewaehlt() {
-    const passend = treffer.value.filter(eintrag => eintrag.strasse === adresse.value.strasse)
-    if (passend.length === 1 && passend[0]) {
-        adresse.value.plz = passend[0].plz
-        adresse.value.ort = passend[0].ort
+function uebernehmen() {
+    const gewaehlt = treffer.value.find(eintrag => eintrag.beschriftung === adresse.value.strasse)
+    if (!gewaehlt) {
+        aufloesen()
+        return
     }
-    aufloesen()
+    adresse.value.strasse = gewaehlt.strasse
+    adresse.value.plz = gewaehlt.plz
+    adresse.value.ort = gewaehlt.ort
+    if (gewaehlt.hnr) adresse.value.hnr = gewaehlt.hnr
+    if (gewaehlt.ostwert !== null && gewaehlt.nordwert !== null) {
+        emit('aufgeloest', gewaehlt as Adresspunkt)
+    } else {
+        aufloesen()
+    }
 }
 
 async function aufloesen() {
@@ -53,7 +61,7 @@ async function aufloesen() {
     emit('aufgeloest', punkt)
 }
 
-watch(() => adresse.value.strasse, suchen)
+watch(() => adresse.value.strasse, suggerieren)
 onBeforeUnmount(() => window.clearTimeout(warten))
 </script>
 
@@ -62,7 +70,8 @@ onBeforeUnmount(() => window.clearTimeout(warten))
     <div class="label mb-2">{{ titel }}</div>
     <div class="grid grid-cols-3 gap-3">
       <AuswahlFeld v-model="adresse.strasse" :label="t('feld.strasse')" :vorschlaege="vorschlaege"
-                   breit @change="strasseGewaehlt"/>
+                   :platzhalter="t('adresse.platzhalter')" breit vorgefiltert
+                   @change="uebernehmen"/>
       <TextFeld v-model="adresse.hnr" :label="t('feld.hnr')" @change="aufloesen"/>
       <TextFeld v-model="adresse.objekt" :label="t('feld.objekt')" breit/>
       <TextFeld v-model="adresse.plz" :label="t('feld.plz')" @change="aufloesen"/>

@@ -41,8 +41,8 @@ class AdressenTest(unittest.TestCase):
     def test_without_a_download_everything_answers_empty(self):
         leer = Adressen(self.datei)
         self.assertFalse(leer.bestand()["verfuegbar"])
-        self.assertEqual([], leer.strassen("marksburg"))
-        self.assertEqual([], leer.hausnummern("Marksburgstraße"))
+        self.assertEqual([], leer.suchen("marksburg"))
+        self.assertEqual([], leer.suchen("marksburg 28"))
         self.assertIsNone(leer.finden("Marksburgstraße", "28"))
         self.assertTrue(leer.veraltet())
 
@@ -53,14 +53,38 @@ class AdressenTest(unittest.TestCase):
 
     def test_streets_are_completed_from_the_second_letter(self):
         adressen = self.gefuellt()
-        self.assertEqual([], adressen.strassen("m"))
-        namen = [treffer["strasse"] for treffer in adressen.strassen("mark")]
+        self.assertEqual([], adressen.suchen("m"))
+        namen = [treffer["strasse"] for treffer in adressen.suchen("mark")]
         self.assertEqual(["Markgrafenstraße", "Marksburgstraße"], namen)
 
     def test_a_street_reports_the_postcode_it_lies_in(self):
-        treffer = self.gefuellt().strassen("archen")
+        treffer = self.gefuellt().suchen("archen")
         self.assertEqual(1, len(treffer))
-        self.assertEqual(("10315", "Friedrichsfelde"), (treffer[0]["plz"], treffer[0]["ort"]))
+        self.assertEqual("Archenholdstraße, 10315 Friedrichsfelde", treffer[0]["beschriftung"])
+        self.assertEqual("", treffer[0]["hnr"])
+
+    def test_a_house_number_in_the_same_field_settles_the_whole_address(self):
+        treffer = self.gefuellt().suchen("archenh 21")
+        self.assertEqual(1, len(treffer))
+        self.assertEqual("Archenholdstraße 21, 10315 Friedrichsfelde", treffer[0]["beschriftung"])
+        self.assertEqual(("Archenholdstraße", "21", "10315", "Friedrichsfelde"),
+                         (treffer[0]["strasse"], treffer[0]["hnr"],
+                          treffer[0]["plz"], treffer[0]["ort"]))
+        self.assertAlmostEqual(398470.239, treffer[0]["ostwert"], places=3)
+
+    def test_a_bare_house_number_offers_every_door_that_carries_a_letter(self):
+        beschriftungen = [t["beschriftung"] for t in self.gefuellt().suchen("marksburgstraße 28")]
+        self.assertEqual(["Marksburgstraße 28, 10318 Karlshorst",
+                          "Marksburgstraße 28A, 10318 Karlshorst"], beschriftungen)
+        genau = self.gefuellt().suchen("marksburgstraße 28a")
+        self.assertEqual(["Marksburgstraße 28A, 10318 Karlshorst"],
+                         [t["beschriftung"] for t in genau])
+
+    def test_the_search_splits_off_only_a_trailing_number(self):
+        self.assertEqual(("Archenholdstr", "21"), Adressen._zerlegen("Archenholdstr 21"))
+        self.assertEqual(("Marksburgstraße", "28 a"), Adressen._zerlegen("Marksburgstraße 28 a"))
+        self.assertEqual(("Straße des 17. Juni", ""), Adressen._zerlegen("Straße des 17. Juni"))
+        self.assertEqual(("Straße des 17. Juni", "12"), Adressen._zerlegen("Straße des 17. Juni 12"))
 
     def test_a_house_number_with_a_letter_is_a_different_door(self):
         adressen = self.gefuellt()
@@ -72,10 +96,6 @@ class AdressenTest(unittest.TestCase):
         adressen = self.gefuellt()
         self.assertIsNone(adressen.finden("Marksburgstraße", "28", "10969"))
         self.assertIsNotNone(adressen.finden("Marksburgstraße", "28", "10318"))
-
-    def test_house_numbers_come_back_in_order(self):
-        nummern = [eintrag["hnr"] for eintrag in self.gefuellt().hausnummern("Marksburgstraße")]
-        self.assertEqual(["28", "28A"], nummern)
 
     def test_nothing_typed_at_all_is_not_a_lookup(self):
         adressen = self.gefuellt()
@@ -120,9 +140,8 @@ class AdressenApiTest(unittest.TestCase):
 
     def test_every_route_answers_empty_without_a_list(self):
         self.leeren()
-        self.assertEqual([], self.client.get("/api/adressen/strassen?q=mark").json())
-        self.assertEqual([], self.client.get(
-            "/api/adressen/hausnummern?strasse=Marksburgstraße").json())
+        self.assertEqual([], self.client.get("/api/adressen/suche?q=mark").json())
+        self.assertEqual([], self.client.get("/api/adressen/suche?q=mark 28").json())
         self.assertIsNone(self.client.get(
             "/api/adressen?strasse=Marksburgstraße&hnr=28").json())
 

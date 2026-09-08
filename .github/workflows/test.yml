@@ -60,6 +60,12 @@ jobs:
         with:
           python-version: '3.14'
 
+      # The bearing and distance the sheet prints were recovered from two printed slips, not from
+      # any specification, so those two values are the only thing the formula can be checked
+      # against.
+      - name: Check the Polar-Koordinaten
+        run: node tools/polar_pruefen.mjs
+
       # Browser and server each flatten the working set into paths, and they have to agree
       # exactly: a path only one side knows reads to the other as an entry that was never there.
       - name: Compare the flatteners

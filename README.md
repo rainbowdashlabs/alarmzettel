@@ -27,8 +27,9 @@ screen are the ones printed on the slip.
 - **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp, plus the
   Arbeitsgruppe every new alarm starts with and the station the sheets are written for. A vehicle
   carries its crew strength, EZP and status, and fills them in when you pick it.
-- **Addresses** — type two letters of a street and pick it; the house number fills in postcode and
-  Ortsteil, and the Polar-Koordinaten are measured from the station to the Einsatzadresse.
+- **Addresses** — type `Archenholdstr 21` into the street field and pick the suggestion; street,
+  house number, postcode and Ortsteil all land at once, and the Polar-Koordinaten are measured
+  from the station to the Einsatzadresse.
 - **Share and edit together** — a working set gets a link. Whoever opens it either works on their
   own copy or joins everyone else on the same one.
 
