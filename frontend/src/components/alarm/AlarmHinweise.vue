@@ -17,11 +17,19 @@ const abfrage = ref(false)
  * an answer already given by hand is never overwritten.
  */
 function uebernehmen(treffer: SnaTreffer, meldung: string) {
+  // Where the crew has to go is not part of the path to a determinant, so it stands as its own
+  // Hinweis — and before the code, because it is read first.
+  for (const schritt of treffer.pfad.filter(s => s.eigen && s.aussage.trim())) {
+    alarm.value.hinweise.push({
+      ...leererHinweisText(naechste(alarm.value.hinweise)),
+      text: schritt.aussage,
+    })
+  }
   alarm.value.hinweise.push({
     ...leererHinweisCode(naechste(alarm.value.hinweise)),
     code: treffer.code,
     meldung,
-    antworten: treffer.pfad.map(schritt => schritt.aussage).filter(Boolean),
+    antworten: treffer.pfad.filter(s => !s.eigen).map(s => s.aussage).filter(Boolean),
   })
   if (!alarm.value.kurzinfo) alarm.value.kurzinfo = treffer.anlass
   if (!alarm.value.stichwort) alarm.value.stichwort = treffer.stichwort

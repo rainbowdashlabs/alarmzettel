@@ -178,6 +178,8 @@ Three things worth knowing before touching the code:
   compares an output against a reference PDF row by row; run it after any change to the template.
   Against the LibreOffice print the columns sit within 0.8 pt.
 - **The two flatteners have to stay in step.** `./toolchain.sh sync-pfade` after touching either.
+- **A share is not made twice.** A working set has one link: sharing again returns it rather than
+  forking a second copy that drifts from the first.
 
 ## Data sources
 
@@ -202,6 +204,12 @@ and on a medical call the **age** and **sex** of the person concerned follow the
 moves the determinant, so every answer leads to the same next question: a handful of edges into
 one node, which is the plainest case of the graph converging rather than branching, and they print
 as the opening Hinweise.
+
+Two of them are answered by typing rather than by choosing, because no list of bands is the number
+the caller said: the **age**, which may perfectly well be `ungefähr 60`, and the **floor and the
+name on the bell**. The floor is not part of the path to a determinant — it says where to go, not
+what for — so it prints as a Hinweis of its own, above the code, and is skipped without a trace
+when there is no floor to give.
 
 **Whether people are in danger** is asked last on every fire, because that answer is what sets the
 Stichwort: the situation fixes a base level and this raises it, so the same Wohnungsbrand is

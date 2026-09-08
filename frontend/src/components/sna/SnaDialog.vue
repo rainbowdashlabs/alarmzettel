@@ -14,6 +14,7 @@ const knotenId = ref<string | null>(null)
 const pfad = ref<SnaSchritt[]>([])
 const meldung = ref('')
 const suchtext = ref('')
+const eingegeben = ref('')
 
 onMounted(async () => {
   try {
@@ -56,25 +57,44 @@ function starten(gewaehlt: SnaDisziplin) {
   disziplin.value = gewaehlt
   knotenId.value = gewaehlt.einstieg
   pfad.value = []
+  eingegeben.value = ''
 }
 
 function antworten(label: string, aussage: string, ziel: string) {
-  pfad.value = [...pfad.value, {label, aussage}]
+  const eigen = knoten.value?.eingabe?.eigen === true
+  pfad.value = [...pfad.value, {label, aussage, knoten: knotenId.value ?? undefined, eigen}]
   knotenId.value = ziel
+  eingegeben.value = ''
 }
 
-/** Steps back to the state before the given answer, so a wrong turn costs one click. */
-function zurueckZu(index: number) {
-  if (!disziplin.value || !baum.value) return
-  const ziel = pfad.value.slice(0, index)
-  let aktuell = disziplin.value.einstieg
-  for (const schritt of ziel) {
-    const antwort = baum.value.knoten[aktuell]?.antworten?.find(a => a.label === schritt.label)
-    if (!antwort) break
-    aktuell = antwort.ziel
+/**
+ * Takes a typed answer. Left empty the question is passed over — recorded where the gap itself
+ * says something, as an age asked for and not known does, and silently where it does not: not
+ * every call happens on a floor.
+ */
+function eintragen() {
+  const wert = eingegeben.value.trim()
+  const eingabe = knoten.value?.eingabe
+  const ziel = knoten.value?.ziel
+  if (!eingabe || !ziel) return
+  if (wert) antworten(wert, eingabe.vorlage.replace('{wert}', wert), ziel)
+  else if (eingabe.leer) antworten(eingabe.leer.label, eingabe.leer.aussage, ziel)
+  else {
+    knotenId.value = ziel
+    eingegeben.value = ''
   }
-  pfad.value = ziel
-  knotenId.value = aktuell
+}
+
+/**
+ * Steps back to the state before the given answer, so a wrong turn costs one click. Every step
+ * carries the question it answered, so this is a lookup rather than a walk back down the graph —
+ * which also holds for a path that came out of the search and never passed some questions.
+ */
+function zurueckZu(index: number) {
+  if (!disziplin.value) return
+  knotenId.value = pfad.value[index]?.knoten ?? disziplin.value.einstieg
+  pfad.value = pfad.value.slice(0, index)
+  eingegeben.value = ''
 }
 
 function neuStarten() {
@@ -98,8 +118,12 @@ function ausSuche(gewaehlt: SnaTreffer) {
  * statement and are not numbered — the Hinweis drops them too, and the two have to agree or the
  * preview would promise a line the slip does not print.
  */
-const abfrageweg = computed(
-    () => treffer.value?.pfad.filter(schritt => schritt.aussage.trim()) ?? [])
+const abfrageweg = computed(() => treffer.value?.pfad
+    .filter(schritt => schritt.aussage.trim() && !schritt.eigen) ?? [])
+
+/** Answers that print as Hinweise of their own, above the code — where to go, before what for. */
+const eigeneHinweise = computed(() => treffer.value?.pfad
+    .filter(schritt => schritt.eigen && schritt.aussage.trim()) ?? [])
 
 function uebernehmen() {
   if (treffer.value) emit('uebernehmen', treffer.value, meldung.value.trim())
@@ -179,6 +203,16 @@ watch(amEnde, (erreicht) => {
 
           <div v-if="!amEnde && knoten" class="grid gap-2">
             <p class="font-condensed font-bold uppercase tracking-wide">{{ knoten.frage }}</p>
+
+            <form v-if="knoten.eingabe" class="flex gap-2 flex-wrap" @submit.prevent="eintragen">
+              <input v-model="eingegeben" type="text" class="field grow min-w-40"
+                     :placeholder="knoten.eingabe.platzhalter" autofocus/>
+              <button type="submit" class="knopf knopf-primaer shrink-0">
+                {{ eingegeben.trim() ? t('sna.weiter')
+                   : (knoten.eingabe.leer?.label ?? t('sna.ueberspringen')) }}
+              </button>
+            </form>
+
             <button v-for="antwort in knoten.antworten" :key="antwort.ziel + antwort.label"
                     type="button"
                     class="border border-rule rounded px-3 py-2 bg-page hover:bg-raised text-left"
@@ -203,6 +237,17 @@ watch(amEnde, (erreicht) => {
             <div>
               <label class="feld-label">{{ t('sna.meldung') }}</label>
               <input v-model="meldung" type="text" class="field"/>
+            </div>
+
+            <div v-if="eigeneHinweise.length">
+              <div class="feld-label">{{ t('sna.eigeneHinweise') }}</div>
+              <ul class="grid gap-1">
+                <li v-for="(schritt, index) in eigeneHinweise" :key="index"
+                    class="text-sm flex gap-2">
+                  <span class="text-muted w-6 text-right shrink-0">–</span>
+                  <span>{{ schritt.aussage }}</span>
+                </li>
+              </ul>
             </div>
 
             <div>

@@ -8,6 +8,7 @@ import {
 import {renderAlle, fehlertext} from '../api/render'
 import {tabelleImportieren} from '../api/tabelle'
 import {teilen} from '../api/freigabe'
+import {bestehendeFreigabe, freigabeMerken} from '../store/freigabe'
 import Rueckfrage from '../components/base/Rueckfrage.vue'
 import {jetztAbgleichen} from '../store/sync'
 
@@ -58,7 +59,14 @@ async function teilenLassen() {
     // The new workspace is a copy of this working set, so it is worth making that copy from the
     // current state rather than from one a few seconds old.
     await jetztAbgleichen()
+    const vorhanden = await bestehendeFreigabe()
+    if (vorhanden) {
+      freigabeLink.value = vorhanden
+      meldung.value = t('freigabe.schonGeteilt')
+      return
+    }
     const freigabe = await teilen(arbeitsmappe)
+    freigabeMerken(freigabe.token)
     freigabeLink.value = freigabe.url
     meldung.value = t('freigabe.erzeugt', {tage: freigabe.tage})
   } catch (error) {

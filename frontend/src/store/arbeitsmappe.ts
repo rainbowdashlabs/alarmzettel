@@ -1,4 +1,5 @@
 import {reactive, watch} from 'vue'
+import {freigabeVergessen} from './freigabe'
 import {fahrzeugwerte} from '../scripts/katalog'
 import {neuSortieren} from '../scripts/listen'
 import {
@@ -91,7 +92,9 @@ watch(arbeitsmappe, (wert) => {
     } catch { /* nothing to do if the browser refuses to store */ }
 }, {deep: true})
 
+/** A different working set is not the one behind the old link, so the link is not offered for it. */
 export function ersetzen(neu: Arbeitsmappe) {
+    freigabeVergessen()
     arbeitsmappe.version = neu.version
     arbeitsmappe.alarme = neu.alarme
     arbeitsmappe.kataloge = neu.kataloge

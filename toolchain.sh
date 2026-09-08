@@ -230,49 +230,7 @@ from data.adressen import Adressen
 from web.settings import settings
 print(Adressen(settings.adressen_datei, settings.adressen_tage).bestand())" ;;
     sna-build)     cd "$ROOT"; run python tools/build_sna_tree.py "$@" ;;
-    sna-check)
-        cd "$ROOT"
-        run python - <<'PY'
-import json, sys
-from pathlib import Path
-
-baum = json.loads(Path("frontend/public/sna-tree.json").read_text(encoding="utf-8"))
-knoten = baum["knoten"]
-
-offen = {a["ziel"] for n in knoten.values() for a in n.get("antworten", ()) if a["ziel"] not in knoten}
-if offen:
-    sys.exit(f"Kanten ohne Ziel: {sorted(offen)[:5]}")
-
-sys.setrecursionlimit(50000)
-farbe = dict.fromkeys(knoten, 0)
-zyklen = []
-
-def besuchen(kid):
-    if farbe[kid] == 1:
-        zyklen.append(kid)
-        return
-    if farbe[kid] == 2:
-        return
-    farbe[kid] = 1
-    for antwort in knoten[kid].get("antworten", ()):
-        besuchen(antwort["ziel"])
-    farbe[kid] = 2
-
-for disziplin in baum["disziplinen"]:
-    besuchen(disziplin["einstieg"])
-
-if zyklen:
-    sys.exit(f"Zyklen im Graphen: {zyklen[:5]}")
-unerreichbar = [k for k, f in farbe.items() if f == 0]
-if unerreichbar:
-    sys.exit(f"{len(unerreichbar)} Knoten sind von keiner Disziplin aus erreichbar")
-
-endpunkte = sum(1 for n in knoten.values() if "code" in n)
-kanten = sum(len(n.get("antworten", ())) for n in knoten.values())
-print(f"{len(knoten)} Knoten, {endpunkte} Endpunkte, {kanten} Kanten, "
-      f"keine Zyklen, alles erreichbar")
-PY
-        ;;
+    sna-check)     cd "$ROOT"; run python tools/sna_pruefen.py ;;
 
     docker-build)     cd "$ROOT"; run docker build -t alarmzettel:dev . "$@" ;;
     docker-app)       cd "$ROOT"; run docker compose up -d --build "$@" ;;

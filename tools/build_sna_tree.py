@@ -125,6 +125,26 @@ class Graph:
     def branch(self, question, answers):
         return self.add({"frage": question, "antworten": answers})
 
+    def eingabe(self, question, vorlage, platzhalter, leer, ziel, eigen=False):
+        """
+        A question answered by typing rather than by choosing. An age is a number the caller
+        says, and no list of bands is that number — "ungefähr 60" belongs on the sheet as it was
+        given. One way on, so this is a node with a `ziel` instead of answers.
+
+        `leer` is what gets recorded when the field is left empty. Where it is None the question
+        is simply passed over and nothing is written: not every call happens on a floor.
+
+        `eigen` marks an answer that belongs on the sheet as a Hinweis of its own rather than as
+        one of the numbered sentences after the code — where the crew has to go is not part of
+        the path to a determinant.
+        """
+        eingabe = {"vorlage": vorlage, "platzhalter": platzhalter}
+        if leer:
+            eingabe["leer"] = leer
+        if eigen:
+            eingabe["eigen"] = True
+        return self.add({"frage": question, "ziel": ziel, "eingabe": eingabe})
+
 
 def leaf(row):
     return {
@@ -217,15 +237,13 @@ VOR_ORT = ("Ist der Anrufer vor Ort?", (
     ("Unbekannt", "Ob der Anrufer vor Ort ist, ist nicht bekannt."),
 ))
 
-ALTER = ("Wie alt ist die betroffene Person?", (
-    ("Säugling, unter 1 Jahr", "Die betroffene Person ist ein Säugling unter einem Jahr."),
-    ("Kleinkind, 1 bis 5 Jahre", "Die betroffene Person ist ein Kleinkind von 1 bis 5 Jahren."),
-    ("Kind, 6 bis 13 Jahre", "Die betroffene Person ist ein Kind von 6 bis 13 Jahren."),
-    ("Jugendlich, 14 bis 17 Jahre", "Die betroffene Person ist 14 bis 17 Jahre alt."),
-    ("Erwachsen, 18 bis 64 Jahre", "Die betroffene Person ist 18 bis 64 Jahre alt."),
-    ("65 Jahre und älter", "Die betroffene Person ist 65 Jahre oder älter."),
-    ("Alter unbekannt", "Das Alter der betroffenen Person ist nicht bekannt."),
-))
+ALTER = {
+    "frage": "Wie alt ist die betroffene Person?",
+    "vorlage": "Die betroffene Person ist {wert} Jahre alt.",
+    "platzhalter": "Alter in Jahren, z. B. 54 oder ungefähr 60",
+    "leer": {"label": "Alter unbekannt",
+             "aussage": "Das Alter der betroffenen Person ist nicht bekannt."},
+}
 
 GESCHLECHT = ("Mann oder Frau?", (
     ("Mann", "Die betroffene Person ist männlich."),
@@ -233,6 +251,15 @@ GESCHLECHT = ("Mann oder Frau?", (
     ("Divers", "Die betroffene Person ist divers."),
     ("Unbekannt", "Das Geschlecht der betroffenen Person ist nicht bekannt."),
 ))
+
+
+ORT = {
+    "frage": "Geschoss und Name am Klingelschild?",
+    "vorlage": "Einsatzort: {wert}.",
+    "platzhalter": "z. B. 1. OG bei Müller",
+    "leer": None,
+    "eigen": True,
+}
 
 
 def vorfragen(graph, ziel, *fragen):
@@ -243,9 +270,14 @@ def vorfragen(graph, ziel, *fragen):
 
     Built back to front, because each question has to know the one that follows it.
     """
-    for frage, antworten in reversed(fragen):
-        ziel = graph.branch(frage, [{"label": label, "aussage": aussage, "ziel": ziel}
-                                    for label, aussage in antworten])
+    for frage in reversed(fragen):
+        if isinstance(frage, dict):
+            ziel = graph.eingabe(frage["frage"], frage["vorlage"], frage["platzhalter"],
+                                 frage["leer"], ziel, frage.get("eigen", False))
+        else:
+            titel, antworten = frage
+            ziel = graph.branch(titel, [{"label": label, "aussage": aussage, "ziel": ziel}
+                                        for label, aussage in antworten])
     return ziel
 
 
@@ -259,7 +291,7 @@ ERFUNDEN = (
 
 MELDER_HINWEIS = (
     "Die Codes und Anlässe stammen aus den offenen Daten der Berliner Feuerwehr. Die Fragen "
-    "davor — Hand der Meldung, Anrufer vor Ort, Alter und Geschlecht — sind ergänzt."
+    "davor — Hand der Meldung, Anrufer vor Ort, Alter, Geschlecht und Einsatzort — sind ergänzt."
 )
 
 
@@ -270,14 +302,14 @@ def main():
         {"id": "notf", "label": "Notfallrettung", "quelle": "bf-open-data",
          "hinweis": MELDER_HINWEIS,
          "einstieg": vorfragen(graph, notfallrettung(graph, rows),
-                               HAND, VOR_ORT, ALTER, GESCHLECHT)},
+                               HAND, VOR_ORT, ALTER, GESCHLECHT, ORT)},
         {"id": "brand", "label": "Brand", "quelle": "erfunden", "hinweis": ERFUNDEN,
          "einstieg": vorfragen(graph, authored(graph, sna_authored.BRAND, "Was brennt?"),
-                               HAND, VOR_ORT)},
+                               HAND, VOR_ORT, ORT)},
         {"id": "th", "label": "Technische Hilfeleistung", "quelle": "erfunden",
          "hinweis": ERFUNDEN,
          "einstieg": vorfragen(graph, authored(graph, sna_authored.TH, "Welche Lage liegt vor?"),
-                               HAND, VOR_ORT)},
+                               HAND, VOR_ORT, ORT)},
     ]
     tree = {
         "stand": "2026-05-21",
