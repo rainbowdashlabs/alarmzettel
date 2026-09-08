@@ -328,25 +328,21 @@ textarea.field {
     box-shadow: 0 10px 24px rgb(0 0 0 / 18%);
 }
 
-.auswahl-liste button {
-    display: block;
-    width: 100%;
+.auswahl-liste li {
     padding: 5px 8px;
-    border: 0;
     border-radius: calc(var(--radius-control) - 2px);
-    background: none;
     color: var(--c-ink);
     font-family: var(--font-sans);
     font-size: 14px;
-    text-align: left;
     cursor: pointer;
 }
 
-.auswahl-liste button:hover {
+/* The pointer and the arrow keys share one highlight, so the list never shows two at once. */
+.auswahl-liste li.ist-aktiv {
     background: var(--c-raised);
 }
 
-.auswahl-liste button.ist-gewaehlt {
+.auswahl-liste li.ist-gewaehlt {
     color: var(--c-signal-ink);
     font-weight: 600;
 }
