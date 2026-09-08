@@ -1,20 +1,46 @@
 /**
- * Der Ablaufplan in der Arbeitsmappe: anlegen, entfernen, nachschlagen.
+ * Der Ablaufplan in der Arbeitsmappe: anlegen, entfernen, nachschlagen und die Ketten
+ * fortschreiben.
  *
- * Die Kette selbst — Läufe und Schritte — kommt später; hier stehen erst die Stammdaten, auf die
- * sie sich beziehen wird.
+ * Gerechnet wird hier nichts. Personenplan, Ortssicht und die Prüfungen stehen in
+ * `scripts/ablauf`, das nichts von einem Store weiß und deshalb auch außerhalb eines Browsers
+ * geprüft werden kann.
  */
+import {reactive} from 'vue'
 import {arbeitsmappe} from './arbeitsmappe'
 import {naechste, leereAdresse} from '../interfaces/Alarm'
 import {zuPunkt} from '../api/adressen'
+import {MINUTEN_JE_KM} from '../scripts/ablauf'
 import {entfernungKm} from '../scripts/polar'
+import type {Plandaten} from '../scripts/ablauf'
+import type {Punkt} from '../scripts/polar'
 import {verschieben} from '../scripts/zeit'
 import type {
     Besatzung, Lauf, Mittel, Ort, Person, Programmpunkt, Schritt, Tag, Verfuegbarkeit,
 } from '../interfaces/Planung'
 
-/** Minuten je Kilometer Luftlinie. Grobe Schätzung, jederzeit überschreibbar. */
-export const MINUTEN_JE_KM: Record<Mittel, number> = {fuss: 15, fahrzeug: 3, eigen: 3}
+/**
+ * Die Koordinaten der Orte, soweit der Adressdienst sie kennt. Sie kommen über das Netz, die
+ * Prüfungen rechnen aber ohne Warten — deshalb liegen sie hier und werden einmal geladen.
+ */
+const ortsPunkte = reactive<Record<string, Punkt>>({})
+
+export async function punkteLaden() {
+    for (const ort of arbeitsmappe.planung.orte) {
+        const punkt = await zuPunkt(ort.adresse)
+        if (punkt) ortsPunkte[ort.id] = punkt
+        else delete ortsPunkte[ort.id]
+    }
+}
+
+/** Alles, was die Ableitung braucht, aus der laufenden Arbeitsmappe. */
+export function plandaten(): Plandaten {
+    return {
+        planung: arbeitsmappe.planung,
+        fahrzeuge: arbeitsmappe.kataloge.fahrzeuge,
+        punkte: ortsPunkte,
+    }
+}
 
 export function planung() {
     return arbeitsmappe.planung

@@ -84,6 +84,9 @@ Adressen
   adressen-stand        What the cache holds and when it was fetched
   adressen-polar        Check the Polar-Koordinaten against the values a real slip carries
 
+Ablaufplan
+  ablauf-pruefen        Personenplan, Ortssicht und die acht Pruefungen, ausserhalb des Browsers
+
 Abfragebaum
   sna-build             Regenerate frontend/public/sna-tree.json. Downloads the open data
                         workbook on first use; spreadsheets are not kept in the repository
@@ -97,8 +100,8 @@ Docker
   docker-dev            Start the dev stack: backend with --reload, Vite on 5175
 
 Combined
-  verify                be-test, fe-build, sna-check and the two sync checks plus the
-                        Polar-Koordinaten - what CI runs
+  verify                be-test, fe-build, sna-check, the two sync checks, the
+                        Polar-Koordinaten and den Ablaufplan - what CI runs
 EOF
 }
 
@@ -236,6 +239,8 @@ from web.settings import settings
 laden = Adressen(settings.adressen_datei, settings.adressen_tage)
 print(f'{laden.laden()} Adressen in {laden.datei}')" ;;
     adressen-polar) cd "$ROOT"; run node tools/polar_pruefen.mjs ;;
+
+    ablauf-pruefen) cd "$ROOT"; run node tools/ablauf_pruefen.mjs "$@" ;;
     adressen-stand) be; run python -c "
 from data.adressen import Adressen
 from web.settings import settings
@@ -256,6 +261,7 @@ print(Adressen(settings.adressen_datei, settings.adressen_tage).bestand())" ;;
         "$ROOT/toolchain.sh" sync-pfade
         "$ROOT/toolchain.sh" sync-probe
         "$ROOT/toolchain.sh" adressen-polar
+        "$ROOT/toolchain.sh" ablauf-pruefen
         ;;
 
     help|-h|--help) usage ;;

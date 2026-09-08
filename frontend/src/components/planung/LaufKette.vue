@@ -1,14 +1,37 @@
 <script setup lang="ts">
+import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
-  personName, plaetze, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
+  personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
 } from '../../store/planung'
+import {pruefen} from '../../scripts/ablauf'
+import type {Befund} from '../../scripts/ablauf'
 import {dauer, uhrzeit} from '../../scripts/zeit'
 import type {Lauf, Schritt} from '../../interfaces/Planung'
 
 const {lauf} = defineProps<{ lauf: Lauf }>()
+
+/**
+ * Geprüft wird der ganze Plan, angezeigt wird am Schritt. Ein Zustieg ins Nichts oder eine
+ * Person an zwei Orten entsteht zwischen zwei Ketten, gehört aber dorthin, wo man es abstellen
+ * kann — an den Schritt, in dem sie steht.
+ */
+const befunde = computed(() => {
+  const nachSchritt = new Map<string, Befund[]>()
+  for (const befund of pruefen(plandaten())) {
+    if (!befund.schrittId) continue
+    const bisher = nachSchritt.get(befund.schrittId) ?? []
+    bisher.push(befund)
+    nachSchritt.set(befund.schrittId, bisher)
+  }
+  return nachSchritt
+})
+
+function meldung(befund: Befund): string {
+  return t(`ablauf.befund.${befund.art}`, befund.werte ?? {})
+}
 
 /** Wie viele Köpfe an Bord sind — „Mimen (4)“ zählt vier. */
 function koepfe(schritt: Schritt): number {
@@ -18,34 +41,10 @@ function koepfe(schritt: Schritt): number {
   }, 0)
 }
 
-function zuVoll(schritt: Schritt): boolean {
-  const grenze = plaetze(lauf.fahrzeugId)
-  return grenze !== null && koepfe(schritt) > grenze
-}
-
-/** Fährt jemand, der die Klasse des Fahrzeugs nicht hat? */
-function fahrerOhneErlaubnis(schritt: Schritt): string | null {
-  const klasse = arbeitsmappe.kataloge.fahrzeuge
-      .find(v => v.id === lauf.fahrzeugId)?.fuehrerschein?.trim()
-  if (!klasse) return null
-  const fahrer = schritt.besatzung.find(sitzt => sitzt.faehrt)
-  if (!fahrer) return null
-  const person = arbeitsmappe.planung.personen.find(p => p.id === fahrer.personId)
-  return person && !person.fahrerlaubnis.includes(klasse) ? person.name : null
-}
-
-function ohneFahrer(schritt: Schritt): boolean {
-  return Boolean(lauf.fahrzeugId) && schritt.art === 'fahrt' &&
-      !schritt.besatzung.some(sitzt => sitzt.faehrt)
-}
-
 async function anhaengen(art: Schritt['art']) {
   const vorher = letzterSchritt(lauf)
   const schritt = schrittAnhaengen(lauf, art)
-  if (art === 'fahrt' && vorher) {
-    // Das Ziel steht noch nicht fest; die Schätzung kommt, sobald es gewählt ist.
-    schritt.ortId = vorher.ortId
-  }
+  if (art === 'fahrt' && vorher) schritt.ortId = vorher.ortId
 }
 
 /** Beim Wechsel des Ziels die geschätzte Fahrzeit vorschlagen — überschreiben bleibt möglich. */
@@ -160,17 +159,11 @@ function lageAnlegen(schritt: Schritt) {
                     :value="person.id">{{ person.name || t('ablauf.ohneName') }}</option>
           </select>
         </div>
-        <div class="flex flex-wrap gap-3 mt-1">
-          <span v-if="zuVoll(schritt)" class="text-signal-ink text-[13px]">
-            {{ t('ablauf.zuVoll', {plaetze: plaetze(lauf.fahrzeugId)}) }}
-          </span>
-          <span v-if="ohneFahrer(schritt)" class="text-signal-ink text-[13px]">
-            {{ t('ablauf.ohneFahrer') }}
-          </span>
-          <span v-if="fahrerOhneErlaubnis(schritt)" class="text-signal-ink text-[13px]">
-            {{ t('ablauf.ohneErlaubnis', {wer: fahrerOhneErlaubnis(schritt)}) }}
-          </span>
-        </div>
+      </div>
+
+      <div v-if="befunde.get(schritt.id)?.length" class="flex flex-wrap gap-3">
+        <span v-for="(befund, nummer) in befunde.get(schritt.id)" :key="nummer"
+              class="text-signal-ink text-[13px]">{{ meldung(befund) }}</span>
       </div>
     </div>
 

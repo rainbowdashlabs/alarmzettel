@@ -66,6 +66,12 @@ jobs:
       - name: Check the Polar-Koordinaten
         run: node tools/polar_pruefen.mjs
 
+      # Der Personenplan wird gerechnet und nirgends gepflegt, und die Prüfungen sind der Grund,
+      # warum der Ablauf hier und nicht in einer Tabelle entsteht. Beides hängt an dieser einen
+      # Rechnung.
+      - name: Check den Ablaufplan
+        run: node tools/ablauf_pruefen.mjs
+
       # Browser and server each flatten the working set into paths, and they have to agree
       # exactly: a path only one side knows reads to the other as an entry that was never there.
       - name: Compare the flatteners

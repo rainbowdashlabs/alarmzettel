@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import {watch} from 'vue'
 import {RouterLink} from 'vue-router'
 import LaufKette from '../components/planung/LaufKette.vue'
 import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
-import {entfernen, laufAnlegen, laufVon, personName} from '../store/planung'
+import {entfernen, laufAnlegen, laufVon, personName, punkteLaden} from '../store/planung'
+
+watch(() => arbeitsmappe.planung.orte.map(ort => Object.values(ort.adresse).join()).join('|'),
+    () => punkteLaden(), {immediate: true})
 
 /** Ein Fahrzeug oder eine Person bekommt eine Kette, sobald es eingeplant wird. */
 function einplanen(fuer: {fahrzeugId?: string, personId?: string}) {
