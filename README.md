@@ -188,6 +188,16 @@ Callers, phone numbers and callback numbers are generated rather than typed: the
 as exercise material, and that way no real personal data ends up on a sheet that gets printed and
 passed around.
 
+The names are meant to look like the people who actually ring the Berlin fire brigade — a slip
+full of storybook German names trains the eye for the wrong thing. Around a quarter of Berlin
+holds a non-German passport and about a third of the city has a migration background; the largest
+groups are Turkish, Ukrainian, Indian, Polish and Syrian, with a Vietnamese population
+concentrated in the eastern districts. `frontend/src/scripts/generator.ts` draws first and last
+name from the same pool, so the pairing is one a real person could have, and inflects the Polish
+surnames that take a feminine form. German surnames come from the national frequency list, and
+the given names span every decade a caller might have been born in. It is a plausible mix rather
+than a distribution derived from the registry — nobody publishes surname frequencies per city.
+
 ## Fonts
 
 Times New Roman and Aptos cannot be redistributed. Instead `backend/src/render/fonts/` holds
