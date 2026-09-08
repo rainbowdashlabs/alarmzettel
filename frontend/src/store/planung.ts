@@ -6,7 +6,15 @@
  */
 import {arbeitsmappe} from './arbeitsmappe'
 import {naechste, leereAdresse} from '../interfaces/Alarm'
-import type {Ort, Person, Tag, Verfuegbarkeit} from '../interfaces/Planung'
+import {zuPunkt} from '../api/adressen'
+import {entfernungKm} from '../scripts/polar'
+import {verschieben} from '../scripts/zeit'
+import type {
+    Besatzung, Lauf, Mittel, Ort, Person, Programmpunkt, Schritt, Tag, Verfuegbarkeit,
+} from '../interfaces/Planung'
+
+/** Minuten je Kilometer Luftlinie. Grobe Schätzung, jederzeit überschreibbar. */
+export const MINUTEN_JE_KM: Record<Mittel, number> = {fuss: 15, fahrzeug: 3, eigen: 3}
 
 export function planung() {
     return arbeitsmappe.planung
@@ -72,6 +80,110 @@ export function umschalten(liste: string[], wert: string) {
 export function wortHinzufuegen(liste: string[], wert: string) {
     const sauber = wert.trim()
     if (sauber && !liste.includes(sauber)) liste.push(sauber)
+}
+
+export function laufAnlegen(fuer: {fahrzeugId?: string, personId?: string}): Lauf {
+    const lauf: Lauf = {
+        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.planung.laeufe),
+        fahrzeugId: fuer.fahrzeugId ?? '', personId: fuer.personId ?? '', schritte: [],
+    }
+    arbeitsmappe.planung.laeufe.push(lauf)
+    return lauf
+}
+
+export function laufVon(fuer: {fahrzeugId?: string, personId?: string}): Lauf | undefined {
+    return arbeitsmappe.planung.laeufe.find(lauf =>
+        (fuer.fahrzeugId ? lauf.fahrzeugId === fuer.fahrzeugId : !lauf.fahrzeugId) &&
+        (fuer.personId ? lauf.personId === fuer.personId : !lauf.personId))
+}
+
+export function letzterSchritt(lauf: Lauf): Schritt | undefined {
+    return lauf.schritte[lauf.schritte.length - 1]
+}
+
+/**
+ * Hängt einen Schritt an. Er fängt an, wo der vorige aufhörte — Zeit, Ort und Besatzung kommen
+ * von dort. Genau deshalb ist ein Sprung von A nach B ohne Weg dazwischen nicht darstellbar und
+ * muss nicht geprüft werden.
+ */
+export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30): Schritt {
+    const vorher = letzterSchritt(lauf)
+    const beginn = vorher?.bis ?? standardBeginn()
+    const schritt: Schritt = {
+        id: crypto.randomUUID(), sortierung: naechste(lauf.schritte),
+        art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss',
+        von: beginn, bis: verschieben(beginn, minuten),
+        ortId: vorher?.ortId ?? arbeitsmappe.planung.orte[0]?.id ?? '',
+        programmpunktId: '',
+        besatzung: (vorher?.besatzung ?? []).map(sitzt => ({
+            ...sitzt, id: crypto.randomUUID(),
+        })),
+    }
+    lauf.schritte.push(schritt)
+    return schritt
+}
+
+function standardBeginn(): string {
+    const tag = arbeitsmappe.planung.tage[0]?.datum ?? new Date().toISOString().slice(0, 10)
+    return `${tag}T08:00`
+}
+
+/** Die folgenden Schritte mitziehen, damit die Kette lückenlos bleibt. */
+export function nachziehen(lauf: Lauf, ab: Schritt) {
+    let vorher = ab
+    for (const schritt of lauf.schritte.slice(lauf.schritte.indexOf(ab) + 1)) {
+        const laenge = (Date.parse(`${schritt.bis}:00Z`) - Date.parse(`${schritt.von}:00Z`)) / 60000
+        schritt.von = vorher.bis
+        schritt.bis = verschieben(schritt.von, Number.isFinite(laenge) ? laenge : 30)
+        vorher = schritt
+    }
+}
+
+export function besatzungHinzufuegen(schritt: Schritt, personId: string): Besatzung | undefined {
+    if (schritt.besatzung.some(sitzt => sitzt.personId === personId)) return undefined
+    const sitzt: Besatzung = {
+        id: crypto.randomUUID(), sortierung: naechste(schritt.besatzung),
+        personId, faehrt: false,
+    }
+    schritt.besatzung.push(sitzt)
+    return sitzt
+}
+
+/** Es fährt immer höchstens einer; wer das Lenkrad nimmt, nimmt es dem anderen ab. */
+export function fahrerSetzen(schritt: Schritt, personId: string) {
+    const vorher = schritt.besatzung.find(sitzt => sitzt.personId === personId)?.faehrt
+    for (const sitzt of schritt.besatzung) sitzt.faehrt = false
+    const gewaehlt = schritt.besatzung.find(sitzt => sitzt.personId === personId)
+    if (gewaehlt) gewaehlt.faehrt = !vorher
+}
+
+export function programmpunktAnlegen(ortId: string): Programmpunkt {
+    const punkt: Programmpunkt = {
+        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.planung.programmpunkte),
+        name: '', ortId, alarmId: '',
+    }
+    arbeitsmappe.planung.programmpunkte.push(punkt)
+    return punkt
+}
+
+export function programmpunkt(id: string): Programmpunkt | undefined {
+    return arbeitsmappe.planung.programmpunkte.find(punkt => punkt.id === id)
+}
+
+/**
+ * Geschätzte Fahrzeit zwischen zwei Orten: Luftlinie mal Minuten je Kilometer. Nur ein
+ * Vorschlag — die Luftlinie kennt weder Spree noch Baustelle. Ohne Adresse an einem der beiden
+ * Orte gibt es keine Schätzung.
+ */
+export async function fahrzeitSchaetzen(vonOrtId: string, nachOrtId: string,
+                                        mittel: Mittel): Promise<number | null> {
+    const orte = arbeitsmappe.planung.orte
+    const von = orte.find(ort => ort.id === vonOrtId)
+    const nach = orte.find(ort => ort.id === nachOrtId)
+    if (!von || !nach || von.id === nach.id) return null
+    const [a, b] = await Promise.all([zuPunkt(von.adresse), zuPunkt(nach.adresse)])
+    if (!a || !b) return null
+    return Math.max(5, Math.round(entfernungKm(a, b) * MINUTEN_JE_KM[mittel] / 5) * 5)
 }
 
 export function ortName(ortId: string): string {

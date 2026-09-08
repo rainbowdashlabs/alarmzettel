@@ -18,6 +18,11 @@ function entfernung(meter: number): string {
     return geschrieben.startsWith('0,') ? ` ${geschrieben.slice(1)}` : geschrieben
 }
 
+/** Luftlinie in Kilometern. Grundlage der geschätzten Fahrzeiten im Ablaufplan. */
+export function entfernungKm(von: Punkt, nach: Punkt): number {
+    return Math.hypot(nach.ostwert - von.ostwert, nach.nordwert - von.nordwert) / 1000
+}
+
 export function polarKoordinaten(von: Punkt, nach: Punkt): string {
     const ost = nach.ostwert - von.ostwert
     const nord = nach.nordwert - von.nordwert

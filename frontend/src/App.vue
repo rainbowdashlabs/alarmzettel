@@ -38,7 +38,7 @@ async function tun(was: () => Promise<void>) {
         <nav class="flex flex-wrap gap-x-5 gap-y-1 grow">
           <RouterLink to="/" class="nav-link">{{ t('nav.alarme') }}</RouterLink>
           <RouterLink to="/kataloge" class="nav-link">{{ t('nav.kataloge') }}</RouterLink>
-          <RouterLink v-if="arbeitsmappe.planung.aktiv" to="/planung" class="nav-link">
+          <RouterLink v-if="arbeitsmappe.planung.aktiv" to="/ablauf" class="nav-link">
             {{ t('nav.planung') }}
           </RouterLink>
         </nav>
