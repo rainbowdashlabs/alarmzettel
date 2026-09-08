@@ -1,7 +1,6 @@
 #let data = json(sys.inputs.data)
 
-#let SERIF = "Liberation Serif"
-#let SANS = "Inter"
+#let SCHRIFT = "Liberation Serif"
 
 /// The size of every merged value. The original leaves these unsized, so in Word they fall
 /// through to its 12pt default, which sits far above the 9pt and 10pt labels around them. The
@@ -20,25 +19,24 @@
 )
 
 #set page(paper: "a4", margin: 10mm)
-// A line is as tall as its font's line height, and the two faces differ. Both boxes are set
-// explicitly to the ratios measured off the reference render — 1.36em for the sans values,
-// 1.33em for the serif labels — rather than to the vendored fonts' own ascender and descender,
-// which are tighter than what the original document was laid out with.
-#set text(font: SANS, size: WERT, lang: "de", top-edge: 1.09em, bottom-edge: -0.27em)
+// A row is as tall as the paragraph it sits in, and the original's paragraphs are taller than
+// the label spans inside them. Both boxes are set explicitly to the ratios measured off the
+// reference render — 1.36em for a paragraph, 1.33em for a label — rather than to the vendored
+// font's own ascender and descender, which are tighter than what the original was laid out with.
+#set text(font: SCHRIFT, size: WERT, lang: "de", top-edge: 1.09em, bottom-edge: -0.27em)
 #set par(leading: 0pt, spacing: 0pt, justify: false)
 
-/// A label in the sheet's serif face. Bold unless told otherwise.
+/// A printed label. Bold unless told otherwise.
 #let L(body, size: 10pt, weight: "bold") = text(
-  font: SERIF, size: size, weight: weight,
-  top-edge: 1.05em, bottom-edge: -0.28em)[#body]
+  size: size, weight: weight, top-edge: 1.05em, bottom-edge: -0.28em)[#body]
 
-/// A merged field value, in the sheet's sans face.
-#let V(body, size: WERT) = text(font: SANS, size: size)[#body]
+/// A merged field value. Bold, as a filled-in sheet has them, unless told otherwise.
+#let V(body, size: WERT, weight: "bold") = text(size: size, weight: weight)[#body]
 
 /// Field values arrive as plain strings carrying newlines and tabs from the dispatch system.
-#let VM(body, size: WERT) = {
+#let VM(body, size: WERT, weight: "bold") = {
   let lines = str(body).split("\n").map(l => l.replace("\t", "\u{2003}"))
-  text(font: SANS, size: size)[#lines.join(linebreak())]
+  text(size: size, weight: weight)[#lines.join(linebreak())]
 }
 
 #let get(dict, key, fallback: "") = if key in dict and dict.at(key) != none { dict.at(key) } else { fallback }
@@ -71,24 +69,25 @@
     }
     lines.push("-\u{2003}" + body)
   }
-  text(font: SANS, size: WERT)[#lines.map(l => par(l)).join()]
+  text(size: WERT, weight: "bold")[#lines.map(l => par(l)).join()]
 }
 
-/// "Straße Nr, PLZ Ort", skipping the parts that are blank.
+/// "Straße Nr, PLZ Ort", skipping the parts that are blank. Joining an empty array yields none
+/// rather than an empty string, so an address with nothing in it has to drop out here too.
 #let address-line(adr) = {
   let street = (get(adr, "strasse"), get(adr, "hnr")).filter(p => p != "").join(" ")
   let town = (get(adr, "plz"), get(adr, "ort")).filter(p => p != "").join(" ")
-  (street, town).filter(p => p != "").join(", ")
+  (street, town).filter(p => p != none).join(", ")
 }
 
 #let cell = table.cell
 #let none-stroke = (top: none, bottom: none, left: none, right: none)
 
 /// An empty row still occupies one line in the original, so it needs a glyph to stand on.
-#let spacer(size) = text(font: SERIF, size: size)[~]
+#let spacer(size) = text(size: size)[~]
 
-/// Several labels are small serif spans inside a paragraph the original leaves unsized, which
-/// keeps their row a full 12pt sans line. A zero-width glyph at that size reproduces the height.
+/// Several labels are small spans inside a paragraph the original leaves unsized, which keeps
+/// their row a full-size line. A zero-width glyph at that size reproduces the height.
 #let strut = text(size: WERT)[\u{200B}]
 
 
@@ -106,7 +105,7 @@
   let vehicle-rows = ()
   for grp in get(a, "einsatzmittel", fallback: ()) {
     vehicle-rows.push(cell(colspan: 18, stroke: (bottom: DOTTED))[
-      #L("HA:") #V(address-line(get(grp, "adresse", fallback: (:))))
+      #L("HA:") #V(address-line(adr-ein))
     ])
     vehicle-rows.push(cell(stroke: none-stroke)[])
     vehicle-rows.push(cell(colspan: 18, stroke: none-stroke,
@@ -153,18 +152,18 @@
     cell(colspan: 3)[#L("Einsatz Uhrzeit", weight: "regular")], cell(colspan: 3)[#L("Meldung Datum", weight: "regular")],
     cell(colspan: 5)[#L("Meldung Uhrzeit", weight: "regular")], cell(colspan: 3)[#L("A-Platz", weight: "regular")],
 
-    cell[#V(get(a, "einsatzNr"))], cell(colspan: 4)[#V(get(a, "einsatzDatum"))],
-    cell(colspan: 3)[#V(get(a, "einsatzZeit"))], cell(colspan: 3)[#V(get(a, "meldungDatum"))],
-    cell(colspan: 5)[#V(get(a, "meldungZeit"))], cell(colspan: 3)[#L(get(a, "aPlatz"), size: 11pt)],
+    cell[#V(get(a, "einsatzNr"), size: 11pt)], cell(colspan: 4)[#V(get(a, "einsatzDatum"), size: 11pt)],
+    cell(colspan: 3)[#V(get(a, "einsatzZeit"), size: 11pt)], cell(colspan: 3)[#V(get(a, "meldungDatum"), size: 11pt)],
+    cell(colspan: 5)[#V(get(a, "meldungZeit"), size: 11pt)], cell(colspan: 3)[#V(get(a, "aPlatz"), size: 11pt)],
 
     // 4/5 — Polizei, Sonderrechte, Arbeitsgruppe
     cell[#L("Polizei", weight: "regular")], cell(colspan: 4)[#L("Sonderrechte", weight: "regular")],
     cell(colspan: 3)[#L("Arbeitsgruppe", weight: "regular")], cell(colspan: 3)[], cell(colspan: 5)[],
     cell(colspan: 3)[#L("Wachalarm-Nr.", weight: "regular")],
 
-    cell[#L(get(a, "polizei"), size: 11pt)], cell(colspan: 4)[#L(get(a, "sonderrechte"), size: 11pt)],
-    cell(colspan: 3)[#L(get(a, "arbeitsgruppe"), size: 11pt)], cell(colspan: 3)[], cell(colspan: 5)[],
-    cell(colspan: 3)[#L(get(a, "wachalarmNr"), size: 11pt)],
+    cell[#V(get(a, "polizei"), size: 11pt)], cell(colspan: 4)[#V(get(a, "sonderrechte"), size: 11pt)],
+    cell(colspan: 3)[#V(get(a, "arbeitsgruppe"), size: 11pt)], cell(colspan: 3)[], cell(colspan: 5)[],
+    cell(colspan: 3)[#V(get(a, "wachalarmNr"), size: 11pt)],
 
     // 6 — obere Kante des Kastens
     ..((1, 4, 3, 3, 5, 3).map(n => cell(colspan: n, stroke: (bottom: THICK))[#spacer(2pt)])),
@@ -185,24 +184,25 @@
 
     cell(colspan: 6, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "strasse"))],
     cell(colspan: 3, fill: GREY)[#V(get(adr-an, "hnr"))],
-    cell(colspan: 8)[#V(get(adr-ein, "strasse"))], cell(colspan: 2, stroke: boxed-r)[#V(get(adr-ein, "hnr"))],
+    cell(colspan: 8)[#V(get(adr-ein, "strasse"), weight: "regular")],
+    cell(colspan: 2, stroke: boxed-r)[#V(get(adr-ein, "hnr"), weight: "regular")],
 
     cell(colspan: 3, fill: GREY, stroke: boxed-l)[#L("Objekt", size: 9pt)],
     cell(colspan: 3, fill: GREY)[], cell(colspan: 3, fill: GREY)[],
     cell(colspan: 8)[#L("Objekt", size: 9pt)], cell(colspan: 2, stroke: boxed-r)[],
 
     cell(colspan: 9, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "objekt"))],
-    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "objekt"))],
+    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "objekt"), weight: "regular")],
 
     cell(colspan: 9, fill: GREY, stroke: boxed-l)[#L("Ort")],
     cell(colspan: 10, stroke: boxed-r)[#L("Ort")],
 
     cell(colspan: 3, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "plz"))],
     cell(colspan: 3, fill: GREY)[], cell(colspan: 3, fill: GREY)[],
-    cell(colspan: 4)[#V(get(adr-ein, "plz"))], cell(colspan: 4)[], cell(colspan: 2, stroke: boxed-r)[],
+    cell(colspan: 4)[#V(get(adr-ein, "plz"), weight: "regular")], cell(colspan: 4)[], cell(colspan: 2, stroke: boxed-r)[],
 
     cell(colspan: 9, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "ort"))],
-    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "ort"))],
+    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "ort"), weight: "regular")],
 
     // 19/20 — Karte und Koordinaten, untere Kante des Kastens
     cell(colspan: 2, stroke: boxed-l)[#L("Karte", size: 9pt, weight: "regular")],
@@ -213,8 +213,8 @@
 
     cell(colspan: 2, stroke: (left: THICK, bottom: THICK))[#L("KNICK MICH!")],
     cell(colspan: 5, stroke: (bottom: THICK))[#V(get(karte, "kab"))],
-    cell(colspan: 3, stroke: (bottom: THICK))[#L(get(karte, "fwPlan"))],
-    cell(colspan: 5, stroke: (bottom: THICK))[#L(get(karte, "ePlan"))],
+    cell(colspan: 3, stroke: (bottom: THICK))[#V(get(karte, "fwPlan"))],
+    cell(colspan: 5, stroke: (bottom: THICK))[#V(get(karte, "ePlan"))],
     cell(colspan: 4, stroke: (bottom: THICK, right: THICK))[#V(get(karte, "polarKoordinaten"))],
 
     // 21 — Abstand

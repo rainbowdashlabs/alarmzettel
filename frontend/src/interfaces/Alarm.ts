@@ -36,7 +36,6 @@ export interface Fahrzeug extends Eintrag {
 }
 
 export interface Einsatzmittelgruppe extends Eintrag {
-    adresse: Adresse
     gruppe: string
     fahrzeuge: Fahrzeug[]
 }
@@ -97,6 +96,8 @@ export interface Kataloge {
     fahrzeuge: Fahrzeugvorlage[]
     status: string[]
     trupp: string[]
+    /** One fixed value for the whole working set; every new Alarm starts with it. */
+    arbeitsgruppe: string
 }
 
 export interface Arbeitsmappe {
@@ -105,7 +106,7 @@ export interface Arbeitsmappe {
     kataloge: Kataloge
 }
 
-import {festnetznummer, mobilnummer, zufallsname} from '../scripts/generator'
+import {aPlatzKennung, festnetznummer, mobilnummer, zufallsname} from '../scripts/generator'
 
 export const ARBEITSMAPPE_VERSION = 1
 
@@ -125,10 +126,9 @@ export function leeresFahrzeug(sortierung = 0): Fahrzeug {
     }
 }
 
-export function leereGruppe(adresse?: Adresse, sortierung = 0): Einsatzmittelgruppe {
+export function leereGruppe(sortierung = 0): Einsatzmittelgruppe {
     return {
         id: crypto.randomUUID(), sortierung,
-        adresse: adresse ? {...adresse} : leereAdresse(),
         gruppe: 'keine Gruppe',
         fahrzeuge: [leeresFahrzeug()],
     }
@@ -163,7 +163,7 @@ export function leererAlarm(): Alarm {
         einsatzZeit: zeit,
         meldungDatum: datum,
         meldungZeit: zeit,
-        aPlatz: '',
+        aPlatz: aPlatzKennung(),
         polizei: 'N',
         sonderrechte: 'J',
         arbeitsgruppe: '',
@@ -188,6 +188,6 @@ export function leereArbeitsmappe(): Arbeitsmappe {
     return {
         version: ARBEITSMAPPE_VERSION,
         alarme: [],
-        kataloge: {stichwoerter: [...STICHWOERTER], fahrzeuge: [], status: [], trupp: []},
+        kataloge: {stichwoerter: [...STICHWOERTER], fahrzeuge: [], status: [], trupp: [], arbeitsgruppe: ''},
     }
 }

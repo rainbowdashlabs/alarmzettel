@@ -72,6 +72,7 @@ export function alarmAnlegen(): Alarm {
     const alarm = leererAlarm()
     alarm.sortierung = naechste(arbeitsmappe.alarme)
     alarm.einsatzNr = String(arbeitsmappe.alarme.length)
+    alarm.arbeitsgruppe = arbeitsmappe.kataloge.arbeitsgruppe
     arbeitsmappe.alarme.push(alarm)
     return alarm
 }

@@ -70,7 +70,6 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
             gbasis = _pfad(basis, "einsatzmittel", gruppe["id"])
             werte[_pfad(gbasis, "sortierung")] = gruppe.get("sortierung", float(stelle))
             werte[_pfad(gbasis, "gruppe")] = gruppe.get("gruppe", "")
-            werte.update(_adresse_felder(_pfad(gbasis, "adresse"), gruppe.get("adresse") or {}))
             for platz, fahrzeug in enumerate(gruppe.get("fahrzeuge", [])):
                 fbasis = _pfad(gbasis, "fahrzeuge", fahrzeug["id"])
                 werte[_pfad(fbasis, "sortierung")] = fahrzeug.get("sortierung", float(platz))
@@ -79,6 +78,7 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
                         werte[_pfad(fbasis, feld)] = wert
 
     kataloge = arbeitsmappe.get("kataloge") or {}
+    werte[_pfad("kataloge", "arbeitsgruppe")] = kataloge.get("arbeitsgruppe", "")
     for liste in ("stichwoerter", "status", "trupp"):
         for wert in kataloge.get(liste, []):
             werte[_pfad("kataloge", liste, wert)] = True
@@ -116,10 +116,14 @@ def _leerer_alarm(kennung: str) -> dict:
 def rund(werte: dict[str, Any]) -> dict:
     """Builds the working set back out of the flat map, in sort-key order."""
     alarme: dict[str, dict] = {}
-    kataloge: dict[str, Any] = {"stichwoerter": [], "status": [], "trupp": [], "fahrzeuge": {}}
+    kataloge: dict[str, Any] = {"stichwoerter": [], "status": [], "trupp": [], "fahrzeuge": {},
+                                "arbeitsgruppe": ""}
 
     for pfad, wert in werte.items():
         stueck = teile(pfad)
+        if stueck[0] == "kataloge" and len(stueck) == 2:
+            kataloge[stueck[1]] = wert
+            continue
         if stueck[0] == "kataloge" and len(stueck) >= 3:
             if stueck[1] in ("stichwoerter", "status", "trupp"):
                 kataloge[stueck[1]].append(stueck[2])
@@ -139,10 +143,8 @@ def rund(werte: dict[str, Any]) -> dict:
             alarm.setdefault("_hinweise", {}).setdefault(rest[1], {"id": rest[1]})[rest[2]] = wert
         elif rest[0] == "einsatzmittel" and len(rest) >= 3:
             gruppe = alarm.setdefault("_gruppen", {}).setdefault(
-                rest[1], {"id": rest[1], "adresse": {}, "_fahrzeuge": {}})
-            if rest[2] == "adresse" and len(rest) == 4:
-                gruppe["adresse"][rest[3]] = wert
-            elif rest[2] == "fahrzeuge" and len(rest) == 5:
+                rest[1], {"id": rest[1], "_fahrzeuge": {}})
+            if rest[2] == "fahrzeuge" and len(rest) == 5:
                 gruppe["_fahrzeuge"].setdefault(rest[3], {"id": rest[3]})[rest[4]] = wert
             elif len(rest) == 3:
                 gruppe[rest[2]] = wert

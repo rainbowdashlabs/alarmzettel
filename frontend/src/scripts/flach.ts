@@ -52,7 +52,6 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
             const gbasis = pfad(basis, 'einsatzmittel', gruppe.id)
             werte[pfad(gbasis, 'sortierung')] = gruppe.sortierung ?? stelle
             werte[pfad(gbasis, 'gruppe')] = gruppe.gruppe ?? ''
-            adresse(pfad(gbasis, 'adresse'), werte, gruppe.adresse as never)
             gruppe.fahrzeuge.forEach((fahrzeug, platz) => {
                 const fbasis = pfad(gbasis, 'fahrzeuge', fahrzeug.id)
                 werte[pfad(fbasis, 'sortierung')] = fahrzeug.sortierung ?? platz
@@ -63,6 +62,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
         })
     })
 
+    werte[pfad('kataloge', 'arbeitsgruppe')] = mappe.kataloge.arbeitsgruppe ?? ''
     for (const liste of ['stichwoerter', 'status', 'trupp'] as const) {
         for (const wert of mappe.kataloge[liste]) werte[pfad('kataloge', liste, wert)] = true
     }
@@ -86,11 +86,15 @@ export function rund(werte: Flachbild): unknown {
     const alarme: Record<string, Record<string, never>> = {}
     const kataloge: Record<string, unknown> = {
         stichwoerter: [] as string[], status: [] as string[], trupp: [] as string[],
-        fahrzeuge: {} as Record<string, unknown>,
+        fahrzeuge: {} as Record<string, unknown>, arbeitsgruppe: '',
     }
 
     for (const [schluessel, wert] of Object.entries(werte)) {
         const teile = schluessel.split(TRENNER)
+        if (teile[0] === 'kataloge' && teile.length === 2) {
+            kataloge[teile[1]!] = wert
+            continue
+        }
         if (teile[0] === 'kataloge' && teile.length >= 3) {
             const liste = teile[1]!
             if (liste === 'stichwoerter' || liste === 'status' || liste === 'trupp') {
@@ -119,10 +123,8 @@ export function rund(werte: Flachbild): unknown {
             ;(eintraege[rest[1]!] ??= {id: rest[1]})[rest[2]!] = wert
         } else if (kopf === 'einsatzmittel' && rest.length >= 3) {
             const gruppen = (alarm as never as Record<string, Record<string, Record<string, unknown>>>)['_gruppen']!
-            const gruppe = (gruppen[rest[1]!] ??= {id: rest[1], adresse: {}, _fahrzeuge: {}})
-            if (rest[2] === 'adresse' && rest.length === 4) {
-                (gruppe['adresse'] as Record<string, unknown>)[rest[3]!] = wert
-            } else if (rest[2] === 'fahrzeuge' && rest.length === 5) {
+            const gruppe = (gruppen[rest[1]!] ??= {id: rest[1], _fahrzeuge: {}})
+            if (rest[2] === 'fahrzeuge' && rest.length === 5) {
                 const fahrzeuge = gruppe['_fahrzeuge'] as Record<string, Record<string, unknown>>
                 ;(fahrzeuge[rest[3]!] ??= {id: rest[3]})[rest[4]!] = wert
             } else if (rest.length === 3) {

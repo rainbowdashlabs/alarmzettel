@@ -50,9 +50,9 @@ class Fahrzeug(Eintrag):
 
 
 class Einsatzmittelgruppe(Eintrag):
-    """One block of the Einsatzmittelaufgebot: an HA line, a group name and its vehicles."""
+    """One block of the Einsatzmittelaufgebot: a group name and its vehicles. The HA line above
+    it prints the Alarm's Einsatzadresse, so the group carries no address of its own."""
 
-    adresse: Adresse = Adresse()
     gruppe: str = ""
     fahrzeuge: list[Fahrzeug] = []
 
@@ -125,6 +125,8 @@ class Kataloge(BaseModel):
     fahrzeuge: list[Fahrzeugvorlage] = []
     status: list[str] = []
     trupp: list[str] = []
+    """One fixed value for the whole working set; every new Alarm starts with it."""
+    arbeitsgruppe: str = ""
 
 
 class Arbeitsmappe(BaseModel):

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AuswahlFeld from '../base/AuswahlFeld.vue'
+import JaNeinFeld from '../base/JaNeinFeld.vue'
 import TextFeld from '../base/TextFeld.vue'
 import TextBereich from '../base/TextBereich.vue'
 import {t} from '../../i18n'
@@ -20,8 +22,8 @@ const alarm = defineModel<Alarm>({required: true})
       <TextFeld v-model="alarm.einsatzZeit" :label="t('feld.einsatzZeit')"/>
       <TextFeld v-model="alarm.meldungDatum" :label="t('feld.meldungDatum')"/>
       <TextFeld v-model="alarm.meldungZeit" :label="t('feld.meldungZeit')"/>
-      <TextFeld v-model="alarm.polizei" :label="t('feld.polizei')" :vorschlaege="['J', 'N']"/>
-      <TextFeld v-model="alarm.sonderrechte" :label="t('feld.sonderrechte')" :vorschlaege="['J', 'N']"/>
+      <JaNeinFeld v-model="alarm.polizei" :label="t('feld.polizei')"/>
+      <JaNeinFeld v-model="alarm.sonderrechte" :label="t('feld.sonderrechte')"/>
       <TextFeld v-model="alarm.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>
       <TextFeld v-model="alarm.wachalarmNr" :label="t('feld.wachalarmNr')"/>
     </div>
@@ -30,8 +32,8 @@ const alarm = defineModel<Alarm>({required: true})
   <section class="abschnitt">
     <h2 class="abschnitt-titel">{{ t('abschnitt.stichwort') }}</h2>
     <div class="grid gap-3">
-      <TextFeld v-model="alarm.stichwort" :label="t('feld.stichwort')"
-                :vorschlaege="stichwortVorschlaege()"/>
+      <AuswahlFeld v-model="alarm.stichwort" :label="t('feld.stichwort')"
+                   :vorschlaege="stichwortVorschlaege()"/>
       <TextBereich v-model="alarm.kurzinfo" :label="t('feld.kurzinfo')" :zeilen="2"/>
     </div>
   </section>

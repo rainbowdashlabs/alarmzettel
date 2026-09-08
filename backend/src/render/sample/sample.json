@@ -10,7 +10,7 @@
       "einsatzZeit": "12:00",
       "meldungDatum": "01.01.2026",
       "meldungZeit": "11:58",
-      "aPlatz": "MUSTER-01",
+      "aPlatz": "PRLTMSTR-01",
       "polizei": "N",
       "sonderrechte": "J",
       "arbeitsgruppe": "Muster 1",
@@ -69,19 +69,13 @@
       ],
       "einsatzmittel": [
         {
-          "adresse": {
-            "strasse": "Musterstraße",
-            "hnr": "1",
-            "plz": "10000",
-            "ort": "Musterort"
-          },
           "gruppe": "keine Gruppe",
           "fahrzeuge": [
             {
               "funkrufname": "LHF 0001.1 (0000)",
               "ezp": "6",
               "status": "R2(A1)",
-              "trupp": "Stärke=6:11F, 12F,13F",
+              "trupp": "Stärke=6: SF, AT, WT",
               "hinweis": "",
               "alarmFuer": true,
               "id": "fahrzeug-0-0",
@@ -99,6 +93,7 @@
     "stichwoerter": [],
     "fahrzeuge": [],
     "status": [],
-    "trupp": []
+    "trupp": [],
+    "arbeitsgruppe": "Muster 1"
   }
 }

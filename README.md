@@ -14,8 +14,9 @@ screen are the ones printed on the slip.
 
 - **Enter alarms** — a list with add, duplicate, delete and reorder; the editor is split into
   Einsatz, Stichwort, addresses, map, people involved, Hinweise and Einsatzmittelaufgebot.
-- **Einsatzmittelaufgebot** — any number of groups, each with its own HA address and any number of
-  vehicles. Exactly one vehicle is the one the slip is addressed to; it prints on grey.
+- **Einsatzmittelaufgebot** — any number of groups, each with any number of vehicles; the HA line
+  above a group prints the Alarm's Einsatzadresse. Exactly one vehicle is the one the slip is
+  addressed to; it prints on grey.
 - **Interrogation dialog** — instead of looking a code up, you click through the questions. The
   path you took becomes the Hinweis, because that is precisely what the numbered sentences after
   the code on the slip are.
@@ -23,8 +24,9 @@ screen are the ones printed on the slip.
 - **PDF** — one sheet per alarm, all of them in one file or singly.
 - **JSON** — the working set downloads and uploads again. Old ODS or XLSX spreadsheets are
   imported.
-- **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp. A vehicle carries its
-  crew strength, EZP and status, and fills them in when you pick it.
+- **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp, and the one
+  Arbeitsgruppe every new alarm starts with. A vehicle carries its crew strength, EZP and status,
+  and fills them in when you pick it.
 - **Share and edit together** — a working set gets a link. Whoever opens it either works on their
   own copy or joins everyone else on the same one.
 
@@ -163,10 +165,10 @@ Three things worth knowing before touching the code:
 - **No user-facing text belongs in a template.** It goes into `frontend/src/i18n/de.ts` and is
   fetched with `t('…')`.
 - **The slip is measured, not estimated.** `backend/src/render/alarmzettel.typ` reproduces a
-  19-column grid with fixed inch widths. `tools/compare_reference.py` compares an output against a
-  reference PDF row by row, which is worth a look after any change to the template. Measured
-  against the LibreOffice print of the original: 0.8 pt horizontal deviation, 607.6 pt against
-  610.0 pt total height.
+  19-column grid with fixed inch widths, and the row heights come from line-box ratios read off a
+  print of the original rather than from the font's own metrics. `tools/compare_reference.py`
+  compares an output against a reference PDF row by row; run it after any change to the template.
+  Against the LibreOffice print the columns sit within 0.8 pt.
 - **The two flatteners have to stay in step.** `./toolchain.sh sync-pfade` after touching either.
 
 ## Data sources
@@ -200,13 +202,13 @@ than a distribution derived from the registry — nobody publishes surname frequ
 
 ## Fonts
 
-Times New Roman and Aptos cannot be redistributed. Instead `backend/src/render/fonts/` holds
-**Liberation Serif** — metrically identical to Times New Roman, so the labels keep their widths —
-and **Inter** for the values. Both travel inside the image, so a render never depends on what
-happens to be installed on the machine.
+The sheet is set in Times New Roman throughout, which cannot be redistributed. Instead
+`backend/src/render/fonts/` holds **Liberation Serif** — metrically identical to it, so the sheet
+keeps its widths and its line breaks. It travels inside the image, so a render never depends on
+what happens to be installed on the machine.
 
-Both are under the SIL Open Font License 1.1, which is not the licence covering the rest of this
-repository. Their licence texts sit beside them, along with a note on what each stands in for.
+It is under the SIL Open Font License 1.1, which is not the licence covering the rest of this
+repository. The licence text sits beside it, along with a note on what it stands in for.
 
 ## Licence
 

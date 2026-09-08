@@ -50,6 +50,14 @@ function truppVorschau(staerke: string): string {
     </div>
 
     <section class="abschnitt">
+      <h2 class="abschnitt-titel">{{ t('kataloge.dienststelle') }}</h2>
+      <div class="grid md:grid-cols-3 gap-3">
+        <TextFeld v-model="arbeitsmappe.kataloge.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>
+      </div>
+      <p class="text-muted text-[13px] mt-3">{{ t('kataloge.arbeitsgruppeHinweis') }}</p>
+    </section>
+
+    <section class="abschnitt">
       <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
         <h2 class="abschnitt-titel mb-0">{{ t('kataloge.fahrzeuge') }}</h2>
         <button type="button" class="knopf knopf-klein" @click="fahrzeugHinzufuegen">

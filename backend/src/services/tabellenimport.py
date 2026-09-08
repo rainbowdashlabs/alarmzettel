@@ -108,8 +108,7 @@ def alarm_aus_zeile(zeile: dict[str, str]) -> Alarm:
         anrufer=holen("Anrufer"), betroffener=holen("Betroffener"), meldender=holen("Meldender"),
         wasIstPassiert=holen("Was ist passiert"),
         hinweise=_hinweise(holen("Hinweise")),
-        einsatzmittel=[Einsatzmittelgruppe(adresse=adresse.model_copy(), gruppe="keine Gruppe",
-                                           fahrzeuge=[fahrzeug])],
+        einsatzmittel=[Einsatzmittelgruppe(gruppe="keine Gruppe", fahrzeuge=[fahrzeug])],
     )
 
 

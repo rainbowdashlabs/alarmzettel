@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import AuswahlFeld from '../base/AuswahlFeld.vue'
 import TextFeld from '../base/TextFeld.vue'
 import {t} from '../../i18n'
-import {fahrzeugvorlage, funkrufnameVorschlaege, statusVorschlaege} from '../../store/arbeitsmappe'
+import {
+  fahrzeugvorlage,
+  funkrufnameVorschlaege,
+  statusVorschlaege,
+  truppVorschlaege,
+} from '../../store/arbeitsmappe'
 import {truppText} from '../../scripts/staerke'
 import {leereGruppe, leeresFahrzeug, naechste, type Alarm, type Fahrzeug} from '../../interfaces/Alarm'
 
 const alarm = defineModel<Alarm>({required: true})
 
 function gruppeHinzufuegen() {
-  alarm.value.einsatzmittel.push(leereGruppe(alarm.value.einsatzadresse, naechste(alarm.value.einsatzmittel)))
+  alarm.value.einsatzmittel.push(leereGruppe(naechste(alarm.value.einsatzmittel)))
 }
 
 function gruppeEntfernen(index: number) {
@@ -68,17 +74,14 @@ function alarmFuerWaehlen(gruppe: number, fahrzeug: number) {
     </div>
 
     <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.alarmFuerHinweis') }}</p>
+    <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.haHinweis') }}</p>
 
     <div class="grid gap-4">
       <div v-for="(gruppe, gruppeIndex) in alarm.einsatzmittel" :key="gruppeIndex"
            class="border border-rule rounded p-3 bg-page">
         <div class="grid md:grid-cols-[1fr_auto] gap-3 items-end mb-3">
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="grid md:grid-cols-3 gap-3">
             <TextFeld v-model="gruppe.gruppe" :label="t('feld.gruppe')"/>
-            <TextFeld v-model="gruppe.adresse.strasse" :label="t('feld.strasse')"/>
-            <TextFeld v-model="gruppe.adresse.hnr" :label="t('feld.hnr')"/>
-            <TextFeld v-model="gruppe.adresse.plz" :label="t('feld.plz')"/>
-            <TextFeld v-model="gruppe.adresse.ort" :label="t('feld.ort')"/>
           </div>
           <button type="button" class="knopf knopf-klein knopf-gefahr"
                   :disabled="alarm.einsatzmittel.length === 1"
@@ -95,16 +98,17 @@ function alarmFuerWaehlen(gruppe: number, fahrzeug: number) {
         <div class="grid gap-2">
           <div v-for="(fahrzeug, fahrzeugIndex) in gruppe.fahrzeuge" :key="fahrzeugIndex"
                class="grid md:grid-cols-[1fr_auto] gap-2 items-end">
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
-              <TextFeld v-model="fahrzeug.funkrufname" :label="t('feld.funkrufname')"
-                        :vorschlaege="funkrufnameVorschlaege()"
-                        @change="vorlageUebernehmen(fahrzeug)"/>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <AuswahlFeld v-model="fahrzeug.funkrufname" :label="t('feld.funkrufname')"
+                           :vorschlaege="funkrufnameVorschlaege()"
+                           @change="vorlageUebernehmen(fahrzeug)"/>
               <TextFeld v-model="fahrzeug.ezp" :label="t('feld.ezp')"/>
-              <TextFeld v-model="fahrzeug.status" :label="t('feld.status')"
-                        :vorschlaege="statusVorschlaege()"/>
+              <AuswahlFeld v-model="fahrzeug.status" :label="t('feld.status')"
+                           :vorschlaege="statusVorschlaege()"/>
               <TextFeld v-model="fahrzeug.staerke" :label="t('feld.staerke')"
                         @change="staerkeUebernehmen(fahrzeug)"/>
-              <TextFeld v-model="fahrzeug.trupp" :label="t('feld.trupp')"/>
+              <AuswahlFeld v-model="fahrzeug.trupp" :label="t('feld.trupp')"
+                           :vorschlaege="truppVorschlaege()"/>
               <TextFeld v-model="fahrzeug.hinweis" :label="t('feld.fahrzeugHinweis')"/>
             </div>
             <div class="flex gap-2">

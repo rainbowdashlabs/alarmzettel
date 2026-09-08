@@ -161,3 +161,13 @@ export function festnetznummer(): string {
 export function mobilnummer(): string {
     return `49${eines(MOBILVORWAHLEN)}${ziffern(7)}`
 }
+
+/**
+ * The A-Platz is a cipher rather than a readable place: a fixed prefix, four more letters and a
+ * two-digit number, as in `PRLTSCMN-31`.
+ */
+export function aPlatzKennung(): string {
+    const buchstaben = Array.from({length: 4},
+        () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]).join('')
+    return `PRLT${buchstaben}-${ziffern(2)}`
+}
