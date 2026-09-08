@@ -76,7 +76,7 @@
     }
     lines.push("-\u{2003}" + body)
   }
-  text(size: WERT, weight: "bold")[#lines.map(l => par(l)).join()]
+  text(size: WERT, weight: "regular")[#lines.map(l => par(l)).join()]
 }
 
 /// "Straße Nr, PLZ Ort", skipping the parts that are blank. Joining an empty array yields none
