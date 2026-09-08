@@ -14,6 +14,9 @@ import {leereGruppe, leeresFahrzeug, naechste, type Alarm, type Fahrzeug} from '
 
 const alarm = defineModel<Alarm>({required: true})
 
+/** Zeigt eine Lage auf diesen Alarm, kommt das Aufgebot aus dem Plan. */
+defineProps<{ ausPlan?: boolean }>()
+
 function gruppeHinzufuegen() {
   alarm.value.einsatzmittel.push(leereGruppe(naechste(alarm.value.einsatzmittel)))
 }
@@ -80,6 +83,7 @@ function alarmFuerWaehlen(gruppe: number, fahrzeug: number) {
       </button>
     </div>
 
+    <p v-if="ausPlan" class="text-signal-ink text-[13px] mb-3">{{ t('ausPlan.aufgebot') }}</p>
     <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.alarmFuerHinweis') }}</p>
     <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.haHinweis') }}</p>
     <p class="text-muted text-[13px] mb-3">{{ t('einsatzmittel.katalogHinweis') }}</p>

@@ -35,9 +35,22 @@ screen are the ones printed on the slip.
   from the station to the Einsatzadresse.
 - **Share and edit together** — a working set gets a link. Whoever opens it either works on their
   own copy or joins everyone else on the same one.
-- **Ablaufplanung** — optional and off by default: places, people with roles, licence classes and
-  availability, seats and licence class per vehicle. Switched off it changes nothing about the
-  alarm slip.
+- **Ablaufplanung** — optional and off by default. An exercise day is planned as a chain per
+  vehicle and per person: each step starts where the previous one ended, so a jump from A to B
+  without a journey between them cannot be entered at all. Crew belongs to the step, which is
+  what makes a driver change a step like any other. Journey times are proposed from the straight
+  line between two places — 3 minutes per kilometre by vehicle, 15 on foot — and can be
+  overwritten.
+- **What the plan checks** — seats against heads, drivers against licence classes, journeys
+  without a driver, someone boarding where they are not, one person in two chains at once,
+  people scheduled outside their availability, journeys planned far shorter than the estimate,
+  and a Lage nothing points at. None of it blocks entry; a plan may be unfinished.
+- **Plan output** — the person plan, the view of a place and the view of a Lage on screen, and a
+  PDF with one sheet per person, one per vehicle and a landscape overall plan.
+- **Slips from the plan** — where a Lage points at an alarm, its times, Einsatzadresse and
+  Einsatzmittelaufgebot come from the schedule, and one sheet is printed per vehicle at that
+  Lage. Those fields show in the editor as what will be printed, rather than being editable
+  there. Switched off, the Ablaufplanung changes nothing about the alarm slip.
 
 ## Where the data lives
 

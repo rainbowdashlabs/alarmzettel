@@ -10,6 +10,14 @@ import type {Alarm} from '../../interfaces/Alarm'
 const alarm = defineModel<Alarm>({required: true})
 
 /**
+ * Zeigt eine Lage auf diesen Alarm, kommen die Zeiten aus dem Ablaufplan. Dann stehen hier die
+ * Werte, die gedruckt werden, und nicht die eingetippten, die es nicht aufs Blatt schaffen.
+ */
+const {zeiten} = defineProps<{ zeiten?: Record<string, string> }>()
+
+const ZEITFELDER = ['einsatzDatum', 'einsatzZeit', 'meldungDatum', 'meldungZeit']
+
+/**
  * The Meldung follows the Einsatz. The two are minutes apart on a real call, but on a sheet
  * written for an exercise they are the same time far more often than not, and typing it twice is
  * work for nothing. Correcting the Meldungszeit afterwards stands until the Einsatzzeit is
@@ -37,11 +45,19 @@ function stichwortGewaehlt() {
       <TextFeld v-model="alarm.aPlatz" :label="t('feld.aPlatz')"/>
       <TextFeld v-model="alarm.behoerde" :label="t('feld.behoerde')"/>
       <TextFeld v-model="alarm.titel" :label="t('feld.titel')"/>
-      <TextFeld v-model="alarm.einsatzDatum" :label="t('feld.einsatzDatum')"/>
-      <TextFeld v-model="alarm.einsatzZeit" :label="t('feld.einsatzZeit')"
-                @change="meldungszeitFolgen"/>
-      <TextFeld v-model="alarm.meldungDatum" :label="t('feld.meldungDatum')"/>
-      <TextFeld v-model="alarm.meldungZeit" :label="t('feld.meldungZeit')"/>
+      <template v-if="zeiten">
+        <div v-for="feld in ZEITFELDER" :key="feld">
+          <label class="feld-label">{{ t(`feld.${feld}`) }}</label>
+          <input type="text" class="field" disabled :value="zeiten[feld]"/>
+        </div>
+      </template>
+      <template v-else>
+        <TextFeld v-model="alarm.einsatzDatum" :label="t('feld.einsatzDatum')"/>
+        <TextFeld v-model="alarm.einsatzZeit" :label="t('feld.einsatzZeit')"
+                  @change="meldungszeitFolgen"/>
+        <TextFeld v-model="alarm.meldungDatum" :label="t('feld.meldungDatum')"/>
+        <TextFeld v-model="alarm.meldungZeit" :label="t('feld.meldungZeit')"/>
+      </template>
       <JaNeinFeld v-model="alarm.polizei" :label="t('feld.polizei')"/>
       <JaNeinFeld v-model="alarm.sonderrechte" :label="t('feld.sonderrechte')"/>
       <TextFeld v-model="alarm.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>

@@ -202,6 +202,14 @@ export default {
         entfernen: 'Aus dieser Liste nehmen',
         laeuftAb: 'Läuft am {datum} ab, wenn sie bis dahin niemand öffnet.',
     },
+    ausPlan: {
+        titel: 'Aus dem Ablaufplan',
+        erklaerung: 'Die Lage „{lage}“ zeigt auf diesen Alarm. Zeiten, Einsatzadresse und Aufgebot kommen von dort; gedruckt wird ein Blatt je Fahrzeug, jedes ab dessen eigener Anfahrt.',
+        staerke: 'Stärke {n}',
+        adresse: 'Die Adresse des Orts, an dem die Lage stattfindet.',
+        ohneFahrzeug: 'An dieser Lage hängt noch kein Fahrzeug.',
+        aufgebot: 'Beim Drucken steht hier das Aufgebot aus dem Plan; was hier eingetragen ist, kommt nicht aufs Blatt.',
+    },
     ablauf: {
         titel: 'Ablauf',
         beschreibung: 'Der Tag als Kette: jeder Schritt fängt an, wo der vorige aufgehört hat.',

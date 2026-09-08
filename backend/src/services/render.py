@@ -8,6 +8,7 @@ Browser sagt nur, was er gedruckt haben will.
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from data.ablaufplan import plandaten
+from data.alarmplan import ableitung, mit_plan
 from data.katalog import mit_katalog
 from data.typst import RenderError, render, render_plan
 from entities.alarm import Arbeitsmappe
@@ -30,7 +31,7 @@ def _mappe(request: Request) -> Arbeitsmappe:
 
 def _pdf(arbeitsmappe: Arbeitsmappe, filename: str) -> Response:
     try:
-        pdf = render(mit_katalog(arbeitsmappe))
+        pdf = render(mit_katalog(mit_plan(arbeitsmappe)))
     except RenderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",
@@ -65,3 +66,16 @@ def render_ablaufplan(request: Request) -> Response:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": 'inline; filename="ablaufplan.pdf"'})
+
+
+@router.get("/plan/alarm/{alarm_id}")
+def alarm_ableitung(alarm_id: str, request: Request) -> dict:
+    """
+    Was der Ablaufplan zu diesem Alarm beisteuert. Der Editor zeigt es an, statt es noch einmal
+    zu rechnen — gedruckt wird, was hier steht.
+    """
+    mappe = _mappe(request)
+    alarm = next((eintrag for eintrag in mappe.alarme if eintrag.id == alarm_id), None)
+    if alarm is None:
+        raise HTTPException(status_code=404, detail="Alarm nicht in der Sitzung.")
+    return {"abgeleitet": ableitung(mappe, alarm)}
