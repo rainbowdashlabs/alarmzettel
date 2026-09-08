@@ -230,6 +230,7 @@ export default {
         personDazu: 'Person dazu …',
         fahrerUmschalten: 'Fährt / fährt nicht',
         ohneName: 'ohne Namen',
+        drucken: 'Plan als PDF',
         faehrt: 'fährt',
         fahrzeuge: 'Fahrzeuge',
         beteiligte: 'Dabei',

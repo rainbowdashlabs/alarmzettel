@@ -17,6 +17,11 @@ export function renderEinen(alarmId: string): Promise<Blob> {
     return pdf(`/api/render/${alarmId}`)
 }
 
+/** Der Ablaufplan: ein Blatt je Person, eines je Fahrzeug, und der Gesamtplan quer. */
+export function renderAblaufplan(): Promise<Blob> {
+    return pdf('/api/render/plan/ablauf')
+}
+
 /** Turns the error body a failed render returns — a Blob — back into readable text. */
 export async function fehlertext(error: unknown): Promise<string> {
     const body = (error as {response?: {data?: unknown}})?.response?.data

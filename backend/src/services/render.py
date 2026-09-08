@@ -7,8 +7,9 @@ Browser sagt nur, was er gedruckt haben will.
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
+from data.ablaufplan import plandaten
 from data.katalog import mit_katalog
-from data.typst import RenderError, render
+from data.typst import RenderError, render, render_plan
 from entities.alarm import Arbeitsmappe
 from services.sitzung import COOKIE, sitzungen
 from data.sitzung import SitzungFehler
@@ -52,3 +53,15 @@ def render_alarm(alarm_id: str, request: Request) -> Response:
     return _pdf(Arbeitsmappe(version=mappe.version, alarme=treffer, kataloge=mappe.kataloge,
                              planung=mappe.planung),
                 f"alarmzettel-{alarm_id}.pdf")
+
+
+@router.post("/plan/ablauf")
+def render_ablaufplan(request: Request) -> Response:
+    """Der Ablaufplan: ein Blatt je Person, eines je Fahrzeug, und der Gesamtplan quer."""
+    mappe = _mappe(request)
+    try:
+        pdf = render_plan(plandaten(mappe))
+    except RenderError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": 'inline; filename="ablaufplan.pdf"'})

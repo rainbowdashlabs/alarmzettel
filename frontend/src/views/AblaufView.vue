@@ -6,8 +6,10 @@ import LaufKette from '../components/planung/LaufKette.vue'
 import OrtsSicht from '../components/planung/OrtsSicht.vue'
 import PersonenPlan from '../components/planung/PersonenPlan.vue'
 import {t} from '../i18n'
+import {fehlertext, renderAblaufplan} from '../api/render'
 import {arbeitsmappe} from '../store/arbeitsmappe'
 import {entfernen, laufAnlegen, laufVon, personName, punkteLaden} from '../store/planung'
+import {jetztAbgleichen} from '../store/sync'
 
 watch(() => arbeitsmappe.planung.orte.map(ort => Object.values(ort.adresse).join()).join('|'),
     () => punkteLaden(), {immediate: true})
@@ -32,6 +34,27 @@ function offen(fuer: {fahrzeugId?: string, personId?: string}): boolean {
 /** Geplant wird in den Ketten; die drei anderen Ansichten sind dieselben Daten von anderer Seite. */
 const ANSICHTEN = ['ketten', 'personen', 'orte', 'lagen'] as const
 const ansicht = ref<typeof ANSICHTEN[number]>('ketten')
+const fehler = ref<string | null>(null)
+
+/**
+ * Vor dem Drucken abgleichen, damit die Blätter den Stand tragen, den alle haben, und nicht den,
+ * den dieser Browser vor ein paar Sekunden gesehen hat.
+ */
+async function drucken() {
+  fehler.value = null
+  try {
+    await jetztAbgleichen()
+    const blob = await renderAblaufplan()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'ablaufplan.pdf'
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    fehler.value = await fehlertext(error)
+  }
+}
 </script>
 
 <template>
@@ -41,8 +64,16 @@ const ansicht = ref<typeof ANSICHTEN[number]>('ketten')
         <h1 class="headline text-2xl">{{ t('ablauf.titel') }}</h1>
         <p class="text-muted text-sm mt-1">{{ t('ablauf.beschreibung') }}</p>
       </div>
-      <RouterLink to="/planung" class="knopf knopf-klein">{{ t('ablauf.stammdaten') }}</RouterLink>
+      <div class="flex gap-2">
+        <button type="button" class="knopf knopf-klein" @click="drucken()">
+          <font-awesome-icon icon="fa-solid fa-file-pdf"/>
+          {{ t('ablauf.drucken') }}
+        </button>
+        <RouterLink to="/planung" class="knopf knopf-klein">{{ t('ablauf.stammdaten') }}</RouterLink>
+      </div>
     </div>
+
+    <p v-if="fehler" class="text-signal-ink text-sm">{{ fehler }}</p>
 
     <div class="flex flex-wrap gap-2">
       <button v-for="name in ANSICHTEN" :key="name" type="button" class="knopf knopf-klein"
