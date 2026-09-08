@@ -201,7 +201,9 @@ Some questions cut across every protocol and are asked before the situation itse
 the caller can still see decides how much of the rest is worth believing. **Which hand the report
 comes from** and **whether the caller is still on scene** are two separate facts — a second-hand
 report from someone who has since walked away is not the same as one from someone standing there —
-and on a medical call the **age** and **sex** of the person concerned follow them. None of these
+and on a medical call the **age** and **sex** of the person concerned follow them, then whether
+the person **responds normally** and **breathes normally** — the two things a first-aid instruction
+turns on. None of these
 moves the determinant, so every answer leads to the same next question: a handful of edges into
 one node, which is the plainest case of the graph converging rather than branching, and they print
 as the opening Hinweise.

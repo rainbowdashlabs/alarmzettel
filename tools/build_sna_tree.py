@@ -245,6 +245,20 @@ ALTER = {
              "aussage": "Das Alter der betroffenen Person ist nicht bekannt."},
 }
 
+WACH = ("Reagiert die Person normal?", (
+    ("Ja, wach und ansprechbar", "Die Person ist wach und ansprechbar."),
+    ("Reagiert, aber nicht normal", "Die Person reagiert, aber nicht normal."),
+    ("Reagiert nicht", "Die Person reagiert nicht."),
+    ("Unbekannt", "Ob die Person normal reagiert, ist nicht bekannt."),
+))
+
+ATMUNG = ("Atmet die Person normal?", (
+    ("Ja, normale Atmung", "Die Atmung ist normal."),
+    ("Atmung auffällig", "Die Atmung ist auffällig."),
+    ("Atmet nicht", "Die Person atmet nicht."),
+    ("Unbekannt", "Ob die Person normal atmet, ist nicht bekannt."),
+))
+
 GESCHLECHT = ("Mann oder Frau?", (
     ("Mann", "Die betroffene Person ist männlich."),
     ("Frau", "Die betroffene Person ist weiblich."),
@@ -291,7 +305,8 @@ ERFUNDEN = (
 
 MELDER_HINWEIS = (
     "Die Codes und Anlässe stammen aus den offenen Daten der Berliner Feuerwehr. Die Fragen "
-    "davor — Hand der Meldung, Anrufer vor Ort, Alter, Geschlecht und Einsatzort — sind ergänzt."
+    "davor — Hand der Meldung, Anrufer vor Ort, Alter, Geschlecht, Reaktion, Atmung und "
+    "Einsatzort — sind ergänzt."
 )
 
 
@@ -302,7 +317,7 @@ def main():
         {"id": "notf", "label": "Notfallrettung", "quelle": "bf-open-data",
          "hinweis": MELDER_HINWEIS,
          "einstieg": vorfragen(graph, notfallrettung(graph, rows),
-                               HAND, VOR_ORT, ALTER, GESCHLECHT, ORT)},
+                               HAND, VOR_ORT, ALTER, GESCHLECHT, WACH, ATMUNG, ORT)},
         {"id": "brand", "label": "Brand", "quelle": "erfunden", "hinweis": ERFUNDEN,
          "einstieg": vorfragen(graph, authored(graph, sna_authored.BRAND, "Was brennt?"),
                                HAND, VOR_ORT, ORT)},
