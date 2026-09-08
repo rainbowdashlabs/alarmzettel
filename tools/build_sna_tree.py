@@ -237,6 +237,13 @@ VOR_ORT = ("Ist der Anrufer vor Ort?", (
     ("Unbekannt", "Ob der Anrufer vor Ort ist, ist nicht bekannt."),
 ))
 
+ANZAHL = ("Wie viele Personen sind betroffen?", (
+    ("Eine Person", "Eine Person ist betroffen."),
+    ("Zwei Personen", "Zwei Personen sind betroffen."),
+    ("Drei oder mehr", "Drei oder mehr Personen sind betroffen."),
+    ("Unbekannt", "Wie viele Personen betroffen sind, ist nicht bekannt."),
+))
+
 ALTER = {
     "frage": "Wie alt ist die betroffene Person?",
     "vorlage": "Die betroffene Person ist {wert} Jahre alt.",
@@ -266,6 +273,14 @@ GESCHLECHT = ("Mann oder Frau?", (
     ("Unbekannt", "Das Geschlecht der betroffenen Person ist nicht bekannt."),
 ))
 
+
+GEFAHREN = {
+    "frage": "Gefahren an der Einsatzstelle?",
+    "vorlage": "Gefahr: {wert}",
+    "platzhalter": "z. B. Hund im Treppenhaus, Gasgeruch, Waffen",
+    "leer": None,
+    "eigen": True,
+}
 
 ORT = {
     "frage": "Geschoss und Name am Klingelschild?",
@@ -305,8 +320,8 @@ ERFUNDEN = (
 
 MELDER_HINWEIS = (
     "Die Codes und Anlässe stammen aus den offenen Daten der Berliner Feuerwehr. Die Fragen "
-    "davor — Hand der Meldung, Anrufer vor Ort, Alter, Geschlecht, Reaktion, Atmung und "
-    "Einsatzort — sind ergänzt."
+    "davor — Hand der Meldung, Anrufer vor Ort, Anzahl der Betroffenen, Alter, Geschlecht, "
+    "Reaktion, Atmung, Einsatzort und Gefahren — sind ergänzt."
 )
 
 
@@ -317,14 +332,15 @@ def main():
         {"id": "notf", "label": "Notfallrettung", "quelle": "bf-open-data",
          "hinweis": MELDER_HINWEIS,
          "einstieg": vorfragen(graph, notfallrettung(graph, rows),
-                               HAND, VOR_ORT, ALTER, GESCHLECHT, WACH, ATMUNG, ORT)},
+                               HAND, VOR_ORT, ANZAHL, ALTER, GESCHLECHT, WACH, ATMUNG,
+                               ORT, GEFAHREN)},
         {"id": "brand", "label": "Brand", "quelle": "erfunden", "hinweis": ERFUNDEN,
          "einstieg": vorfragen(graph, authored(graph, sna_authored.BRAND, "Was brennt?"),
-                               HAND, VOR_ORT, ORT)},
+                               HAND, VOR_ORT, ORT, GEFAHREN)},
         {"id": "th", "label": "Technische Hilfeleistung", "quelle": "erfunden",
          "hinweis": ERFUNDEN,
          "einstieg": vorfragen(graph, authored(graph, sna_authored.TH, "Welche Lage liegt vor?"),
-                               HAND, VOR_ORT, ORT)},
+                               HAND, VOR_ORT, ORT, GEFAHREN)},
     ]
     tree = {
         "stand": "2026-05-21",

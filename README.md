@@ -201,9 +201,14 @@ Some questions cut across every protocol and are asked before the situation itse
 the caller can still see decides how much of the rest is worth believing. **Which hand the report
 comes from** and **whether the caller is still on scene** are two separate facts — a second-hand
 report from someone who has since walked away is not the same as one from someone standing there —
-and on a medical call the **age** and **sex** of the person concerned follow them, then whether
-the person **responds normally** and **breathes normally** — the two things a first-aid instruction
-turns on. None of these
+and on a medical call **how many are affected**, the **age** and **sex** of the person concerned,
+and whether that person **responds normally** and **breathes normally** — the two things a
+first-aid instruction turns on. Every call ends its opening with the **floor and the name on the
+bell** and any **hazard on scene**, both of which print as Hinweise of their own.
+
+What is not asked up front is not missing: pregnancy, medication, how long the symptoms have been
+there and how heavily a wound bleeds are all in the open data already, as determinants inside the
+protocols they belong to, where they change the code rather than merely describing the call. None of these
 moves the determinant, so every answer leads to the same next question: a handful of edges into
 one node, which is the plainest case of the graph converging rather than branching, and they print
 as the opening Hinweise.
