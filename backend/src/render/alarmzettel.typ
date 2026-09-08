@@ -12,6 +12,9 @@
 #let STICHWORT = WERT + 3pt
 #let KURZINFO = WERT + 2pt
 
+/// The address lines are read out with the Kurzinfo and print at its size.
+#let ADRESSE = KURZINFO
+
 #let THICK = 2.25pt
 #let DOTTED = (paint: black, thickness: 0.75pt, dash: (array: (0.7pt, 0.75pt)))
 #let GREY = rgb("#D9D9D9")
@@ -189,27 +192,28 @@
     cell(colspan: 3, fill: GREY)[#L("H.Nr.:", size: 9pt)],
     cell(colspan: 8)[#L("Straße", size: 9pt)], cell(colspan: 2, stroke: boxed-r)[#L("H.Nr.:", size: 9pt)],
 
-    cell(colspan: 6, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "strasse"))],
-    cell(colspan: 3, fill: GREY)[#V(get(adr-an, "hnr"))],
-    cell(colspan: 8)[#V(get(adr-ein, "strasse"), weight: "regular")],
-    cell(colspan: 2, stroke: boxed-r)[#V(get(adr-ein, "hnr"), weight: "regular")],
+    cell(colspan: 6, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "strasse"), size: ADRESSE)],
+    cell(colspan: 3, fill: GREY)[#V(get(adr-an, "hnr"), size: ADRESSE)],
+    cell(colspan: 8)[#V(get(adr-ein, "strasse"), size: ADRESSE, weight: "regular")],
+    cell(colspan: 2, stroke: boxed-r)[#V(get(adr-ein, "hnr"), size: ADRESSE, weight: "regular")],
 
     cell(colspan: 3, fill: GREY, stroke: boxed-l)[#L("Objekt", size: 9pt)],
     cell(colspan: 3, fill: GREY)[], cell(colspan: 3, fill: GREY)[],
     cell(colspan: 8)[#L("Objekt", size: 9pt)], cell(colspan: 2, stroke: boxed-r)[],
 
-    cell(colspan: 9, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "objekt"))],
-    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "objekt"), weight: "regular")],
+    cell(colspan: 9, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "objekt"), size: ADRESSE)],
+    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "objekt"), size: ADRESSE, weight: "regular")],
 
     cell(colspan: 9, fill: GREY, stroke: boxed-l)[#L("Ort")],
     cell(colspan: 10, stroke: boxed-r)[#L("Ort")],
 
-    cell(colspan: 3, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "plz"))],
+    cell(colspan: 3, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "plz"), size: ADRESSE)],
     cell(colspan: 3, fill: GREY)[], cell(colspan: 3, fill: GREY)[],
-    cell(colspan: 4)[#V(get(adr-ein, "plz"), weight: "regular")], cell(colspan: 4)[], cell(colspan: 2, stroke: boxed-r)[],
+    cell(colspan: 4)[#V(get(adr-ein, "plz"), size: ADRESSE, weight: "regular")],
+    cell(colspan: 4)[], cell(colspan: 2, stroke: boxed-r)[],
 
-    cell(colspan: 9, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "ort"))],
-    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "ort"), weight: "regular")],
+    cell(colspan: 9, fill: GREY, stroke: boxed-l)[#V(get(adr-an, "ort"), size: ADRESSE)],
+    cell(colspan: 10, stroke: boxed-r)[#V(get(adr-ein, "ort"), size: ADRESSE, weight: "regular")],
 
     // 19/20 — Karte und Koordinaten, untere Kante des Kastens
     cell(colspan: 2, stroke: boxed-l)[#L("Karte", size: 9pt, weight: "regular")],
