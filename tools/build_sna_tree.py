@@ -197,30 +197,56 @@ def authored(graph, protocols, question):
     return graph.branch(question, entries)
 
 
-MELDENDE = (
-    ("Anrufer ist am Einsatzort (1. Hand)",
-     "Der Anrufer ist am Einsatzort."),
-    ("Anrufer war am Einsatzort (2. Hand)",
-     "Der Anrufer war am Einsatzort, ist es jetzt nicht mehr."),
-    ("Anrufer meldet für einen Dritten (3. Hand)",
-     "Der Anrufer meldet für eine dritte Person und ist nicht am Einsatzort."),
-    ("Anrufer hat es nur gehört oder gesehen (4. Hand)",
-     "Der Anrufer ist nicht am Einsatzort (Anrufer 4. Hand)."),
+HAND = ("Aus welcher Hand kommt die Meldung?", (
+    ("1. Hand — der Anrufer ist selbst betroffen",
+     "Meldung aus erster Hand: der Anrufer ist selbst betroffen."),
+    ("2. Hand — der Anrufer ist beim Betroffenen",
+     "Meldung aus zweiter Hand: der Anrufer ist beim Betroffenen."),
+    ("3. Hand — der Anrufer meldet für andere",
+     "Meldung aus dritter Hand: der Anrufer meldet für andere."),
+    ("4. Hand — der Anrufer hat es nur gehört oder gesehen",
+     "Meldung aus vierter Hand: der Anrufer hat es nur gehört oder gesehen."),
     ("Automatische Meldung",
      "Die Meldung stammt aus einer automatischen Anlage."),
-)
+))
+
+VOR_ORT = ("Ist der Anrufer vor Ort?", (
+    ("Ja, der Anrufer ist vor Ort", "Der Anrufer ist am Einsatzort."),
+    ("Nein, nicht mehr vor Ort", "Der Anrufer war am Einsatzort, ist es jetzt nicht mehr."),
+    ("Nein, war nicht vor Ort", "Der Anrufer ist nicht am Einsatzort."),
+    ("Unbekannt", "Ob der Anrufer vor Ort ist, ist nicht bekannt."),
+))
+
+ALTER = ("Wie alt ist die betroffene Person?", (
+    ("Säugling, unter 1 Jahr", "Die betroffene Person ist ein Säugling unter einem Jahr."),
+    ("Kleinkind, 1 bis 5 Jahre", "Die betroffene Person ist ein Kleinkind von 1 bis 5 Jahren."),
+    ("Kind, 6 bis 13 Jahre", "Die betroffene Person ist ein Kind von 6 bis 13 Jahren."),
+    ("Jugendlich, 14 bis 17 Jahre", "Die betroffene Person ist 14 bis 17 Jahre alt."),
+    ("Erwachsen, 18 bis 64 Jahre", "Die betroffene Person ist 18 bis 64 Jahre alt."),
+    ("65 Jahre und älter", "Die betroffene Person ist 65 Jahre oder älter."),
+    ("Alter unbekannt", "Das Alter der betroffenen Person ist nicht bekannt."),
+))
+
+GESCHLECHT = ("Mann oder Frau?", (
+    ("Mann", "Die betroffene Person ist männlich."),
+    ("Frau", "Die betroffene Person ist weiblich."),
+    ("Divers", "Die betroffene Person ist divers."),
+    ("Unbekannt", "Das Geschlecht der betroffenen Person ist nicht bekannt."),
+))
 
 
-def meldende(graph, ziel):
+def vorfragen(graph, ziel, *fragen):
     """
-    Who is on the phone, asked before anything else and printed as the first Hinweis. What the
-    caller can still see decides how much of the rest is worth believing, but it does not move
-    the determinant — so every answer leads to the same next question. Five edges into one node,
-    which is the plainest case of the graph converging rather than branching.
+    Questions asked before the situation itself and printed as the first Hinweise. None of them
+    moves the determinant, so every answer leads to the same next question — a handful of edges
+    into one node, which is the plainest case of the graph converging rather than branching.
+
+    Built back to front, because each question has to know the one that follows it.
     """
-    return graph.branch("Wer meldet?", [
-        {"label": label, "aussage": aussage, "ziel": ziel} for label, aussage in MELDENDE
-    ])
+    for frage, antworten in reversed(fragen):
+        ziel = graph.branch(frage, [{"label": label, "aussage": aussage, "ziel": ziel}
+                                    for label, aussage in antworten])
+    return ziel
 
 
 ERFUNDEN = (
@@ -232,8 +258,8 @@ ERFUNDEN = (
 
 
 MELDER_HINWEIS = (
-    "Die Codes und Anlässe stammen aus den offenen Daten der Berliner Feuerwehr. Nur die erste "
-    "Frage nach dem Meldenden ist ergänzt."
+    "Die Codes und Anlässe stammen aus den offenen Daten der Berliner Feuerwehr. Die Fragen "
+    "davor — Hand der Meldung, Anrufer vor Ort, Alter und Geschlecht — sind ergänzt."
 )
 
 
@@ -243,12 +269,15 @@ def main():
     disciplines = [
         {"id": "notf", "label": "Notfallrettung", "quelle": "bf-open-data",
          "hinweis": MELDER_HINWEIS,
-         "einstieg": meldende(graph, notfallrettung(graph, rows))},
+         "einstieg": vorfragen(graph, notfallrettung(graph, rows),
+                               HAND, VOR_ORT, ALTER, GESCHLECHT)},
         {"id": "brand", "label": "Brand", "quelle": "erfunden", "hinweis": ERFUNDEN,
-         "einstieg": meldende(graph, authored(graph, sna_authored.BRAND, "Was brennt?"))},
+         "einstieg": vorfragen(graph, authored(graph, sna_authored.BRAND, "Was brennt?"),
+                               HAND, VOR_ORT)},
         {"id": "th", "label": "Technische Hilfeleistung", "quelle": "erfunden",
          "hinweis": ERFUNDEN,
-         "einstieg": meldende(graph, authored(graph, sna_authored.TH, "Welche Lage liegt vor?"))},
+         "einstieg": vorfragen(graph, authored(graph, sna_authored.TH, "Welche Lage liegt vor?"),
+                               HAND, VOR_ORT)},
     ]
     tree = {
         "stand": "2026-05-21",
