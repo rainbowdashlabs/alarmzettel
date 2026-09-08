@@ -112,5 +112,116 @@
     ],
     "trupp": [],
     "arbeitsgruppe": "Muster 1"
+  },
+  "planung": {
+    "aktiv": true,
+    "rollen": [
+      "Ausbilder",
+      "Mime"
+    ],
+    "fahrerlaubnisse": [
+      "B",
+      "C"
+    ],
+    "tage": [
+      {
+        "id": "tag-0",
+        "sortierung": 0,
+        "datum": "2026-09-19",
+        "name": "Übungstag"
+      }
+    ],
+    "orte": [
+      {
+        "id": "ort-0",
+        "sortierung": 0,
+        "name": "Wache Nord",
+        "adresse": {
+          "strasse": "Musterstraße",
+          "hnr": "1",
+          "objekt": "",
+          "plz": "10000",
+          "ort": "Musterort"
+        }
+      }
+    ],
+    "personen": [
+      {
+        "id": "person-0",
+        "sortierung": 0,
+        "name": "Maria Muster",
+        "anzahl": 1,
+        "rollen": [
+          "Ausbilder"
+        ],
+        "fahrerlaubnis": [
+          "B",
+          "C"
+        ],
+        "verfuegbar": [
+          {
+            "id": "fenster-0",
+            "sortierung": 0,
+            "von": "2026-09-19T06:30",
+            "bis": "2026-09-19T18:45"
+          }
+        ]
+      }
+    ],
+    "programmpunkte": [
+      {
+        "id": "lage-0",
+        "sortierung": 0,
+        "name": "Brand im Freien",
+        "ortId": "ort-0",
+        "alarmId": "sample-0"
+      }
+    ],
+    "laeufe": [
+      {
+        "id": "lauf-0",
+        "sortierung": 0,
+        "fahrzeugId": "vorlage-0",
+        "personId": "",
+        "schritte": [
+          {
+            "id": "schritt-0",
+            "sortierung": 0,
+            "art": "aufenthalt",
+            "mittel": "fahrzeug",
+            "von": "2026-09-19T06:30",
+            "bis": "2026-09-19T07:45",
+            "ortId": "ort-0",
+            "programmpunktId": "lage-0",
+            "besatzung": [
+              {
+                "id": "sitz-0",
+                "sortierung": 0,
+                "personId": "person-0",
+                "faehrt": true
+              }
+            ]
+          },
+          {
+            "id": "schritt-1",
+            "sortierung": 1,
+            "art": "fahrt",
+            "mittel": "fahrzeug",
+            "von": "2026-09-19T07:45",
+            "bis": "2026-09-19T08:00",
+            "ortId": "ort-0",
+            "programmpunktId": "",
+            "besatzung": [
+              {
+                "id": "sitz-1",
+                "sortierung": 0,
+                "personId": "person-0",
+                "faehrt": true
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

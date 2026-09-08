@@ -49,6 +49,8 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
         version: ARBEITSMAPPE_VERSION,
         alarme: (quelle.alarme ?? []).map(alarm => ({...leererAlarm(), ...alarm})),
         kataloge,
+        // Eine Datei ohne Plan bekommt einen leeren; ausgeschaltet ändert er nichts.
+        planung: {...leer.planung, ...(quelle.planung ?? {})},
     })))
 }
 
@@ -132,6 +134,7 @@ export function ersetzen(neu: Arbeitsmappe) {
     arbeitsmappe.version = neu.version
     arbeitsmappe.alarme = neu.alarme
     arbeitsmappe.kataloge = neu.kataloge
+    arbeitsmappe.planung = neu.planung
 }
 
 export function alarmAnlegen(): Alarm {

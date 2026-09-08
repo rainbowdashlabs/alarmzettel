@@ -118,9 +118,12 @@ export interface Arbeitsmappe {
     version: number
     alarme: Alarm[]
     kataloge: Kataloge
+    /** Der Ablaufplan. Abschaltbar und ohne Wirkung auf den Alarmzettel, solange er aus ist. */
+    planung: Planung
 }
 
 import {aPlatzKennung, festnetznummer, mobilnummer, zufallsname} from '../scripts/generator'
+import {leerePlanung, type Planung} from './Planung'
 
 export const ARBEITSMAPPE_VERSION = 1
 
@@ -207,6 +210,7 @@ export function leereArbeitsmappe(): Arbeitsmappe {
     return {
         version: ARBEITSMAPPE_VERSION,
         alarme: [],
+        planung: leerePlanung(),
         kataloge: {
             stichwoerter: stichwortvorlagen(), fahrzeuge: [], status: [], trupp: [],
             arbeitsgruppe: '', wache: leereAdresse(),

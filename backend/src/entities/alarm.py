@@ -1,33 +1,13 @@
-import uuid
 from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
+from entities.basis import Adresse, Eintrag, kennung as _kennung
+from entities.planung import Planung
 
-def _kennung() -> str:
-    return str(uuid.uuid4())
-
-
-class Eintrag(BaseModel):
-    """
-    Anything that sits in a list carries an id and a sort key.
-
-    Two people editing one Alarm touch different entries far more often than the same one, so the
-    merge works per entry rather than per list — which needs an identity that survives a reorder.
-    The sort key is fractional: an entry moved between two others takes the value between theirs,
-    so moving one thing never rewrites the rest.
-    """
-
-    id: str = Field(default_factory=_kennung)
-    sortierung: float = 0
-
-
-class Adresse(BaseModel):
-    strasse: str = ""
-    hnr: str = ""
-    objekt: str = ""
-    plz: str = ""
-    ort: str = ""
+__all__ = ["Adresse", "Eintrag", "Karte", "Fahrzeug", "Einsatzmittelgruppe", "HinweisText",
+           "HinweisCode", "Hinweis", "Alarm", "Fahrzeugvorlage", "Stichwortvorlage", "Kataloge",
+           "Arbeitsmappe", "Planung"]
 
 
 class Karte(BaseModel):
@@ -151,3 +131,5 @@ class Arbeitsmappe(BaseModel):
     version: int = 1
     alarme: list[Alarm] = []
     kataloge: Kataloge = Kataloge()
+    """Der Ablaufplan. Abschaltbar; solange er aus ist, ändert er am Alarmzettel nichts."""
+    planung: Planung = Planung()

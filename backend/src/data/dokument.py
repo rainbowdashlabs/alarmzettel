@@ -40,6 +40,63 @@ def _adresse_felder(basis: str, adresse: dict) -> dict[str, Any]:
             for feld in ("strasse", "hnr", "objekt", "plz", "ort")}
 
 
+PLANUNGSLISTEN = ("rollen", "fahrerlaubnisse")
+
+# Jede Liste des Plans mit den Feldern, die als Pfad je Eintrag geschrieben werden. Die
+# geschachtelten Teile — Adresse, Verfügbarkeit, Schritte, Besatzung — hängen darunter.
+PLANUNGSEINTRAEGE = {
+    "tage": ("datum", "name"),
+    "orte": ("name",),
+    "personen": ("name", "anzahl"),
+    "programmpunkte": ("name", "ortId", "alarmId"),
+    "laeufe": ("fahrzeugId", "personId"),
+}
+
+SCHRITTFELDER = ("art", "mittel", "von", "bis", "ortId", "programmpunktId")
+
+
+def _eintragsfelder(basis: str, eintrag: dict, felder, stelle: int) -> dict[str, Any]:
+    werte: dict[str, Any] = {_pfad(basis, "sortierung"): eintrag.get("sortierung", float(stelle))}
+    for feld in felder:
+        werte[_pfad(basis, feld)] = eintrag.get(feld, "")
+    return werte
+
+
+def _planungsfelder(planung: dict) -> dict[str, Any]:
+    """
+    Den Plan flach machen. Die Ketten sind das Tiefste im Dokument — Lauf, Schritt, Besatzung —
+    und jede Ebene trägt ihre eigene id, damit zwei Leute an verschiedenen Schritten desselben
+    Laufs arbeiten können, ohne sich zu überschreiben.
+    """
+    werte: dict[str, Any] = {_pfad("planung", "aktiv"): planung.get("aktiv", False)}
+    for liste in PLANUNGSLISTEN:
+        for wert in planung.get(liste, []):
+            werte[_pfad("planung", liste, wert)] = True
+
+    for liste, felder in PLANUNGSEINTRAEGE.items():
+        for stelle, eintrag in enumerate(planung.get(liste, [])):
+            basis = _pfad("planung", liste, eintrag["id"])
+            werte.update(_eintragsfelder(basis, eintrag, felder, stelle))
+
+            if liste == "orte":
+                werte.update(_adresse_felder(_pfad(basis, "adresse"), eintrag.get("adresse") or {}))
+            elif liste == "personen":
+                for satz in ("rollen", "fahrerlaubnis"):
+                    for wert in eintrag.get(satz, []):
+                        werte[_pfad(basis, satz, wert)] = True
+                for platz, fenster in enumerate(eintrag.get("verfuegbar", [])):
+                    werte.update(_eintragsfelder(_pfad(basis, "verfuegbar", fenster["id"]),
+                                                 fenster, ("von", "bis"), platz))
+            elif liste == "laeufe":
+                for platz, schritt in enumerate(eintrag.get("schritte", [])):
+                    sbasis = _pfad(basis, "schritte", schritt["id"])
+                    werte.update(_eintragsfelder(sbasis, schritt, SCHRITTFELDER, platz))
+                    for rang, sitzt in enumerate(schritt.get("besatzung", [])):
+                        werte.update(_eintragsfelder(_pfad(sbasis, "besatzung", sitzt["id"]),
+                                                     sitzt, ("personId", "faehrt"), rang))
+    return werte
+
+
 def flach(arbeitsmappe: dict) -> dict[str, Any]:
     """Turns a working set into the flat map the merge operates on."""
     werte: dict[str, Any] = {}
@@ -95,6 +152,8 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
         vbasis = _pfad("kataloge", "fahrzeuge", vorlage.get("id") or vorlage.get("funkrufname", ""))
         for feld in ("funkrufname", "staerke", "ezp", "status"):
             werte[_pfad(vbasis, feld)] = vorlage.get(feld, "")
+
+    werte.update(_planungsfelder(arbeitsmappe.get("planung") or {}))
     return werte
 
 
@@ -117,6 +176,43 @@ def sortierung_setzen(arbeitsmappe: dict) -> dict:
     return arbeitsmappe
 
 
+def _planung_lesen(planung: dict, rest: list[str], wert: Any) -> None:
+    """
+    Einen Pfad des Plans zurück in die geschachtelte Form legen. Die Ebenen unter einem Eintrag
+    tragen ein `_` im Namen, solange sie noch Wörterbücher nach id sind; `rund` macht am Ende
+    sortierte Listen daraus.
+    """
+    if not rest:
+        return
+    if len(rest) == 1:
+        planung[rest[0]] = wert
+        return
+    if rest[0] in PLANUNGSLISTEN:
+        planung[rest[0]].append(rest[1])
+        return
+    if rest[0] not in PLANUNGSEINTRAEGE:
+        return
+
+    eintrag = planung[rest[0]].setdefault(rest[1], {"id": rest[1]})
+    tiefer = rest[2:]
+    if len(tiefer) == 1:
+        eintrag[tiefer[0]] = wert
+    elif tiefer[0] == "adresse" and len(tiefer) == 2:
+        eintrag.setdefault("adresse", {})[tiefer[1]] = wert
+    elif tiefer[0] in ("rollen", "fahrerlaubnis") and len(tiefer) == 2:
+        eintrag.setdefault(tiefer[0], []).append(tiefer[1])
+    elif tiefer[0] == "verfuegbar" and len(tiefer) == 3:
+        fenster = eintrag.setdefault("_verfuegbar", {}).setdefault(tiefer[1], {"id": tiefer[1]})
+        fenster[tiefer[2]] = wert
+    elif tiefer[0] == "schritte" and len(tiefer) >= 3:
+        schritt = eintrag.setdefault("_schritte", {}).setdefault(tiefer[1], {"id": tiefer[1]})
+        if len(tiefer) == 3:
+            schritt[tiefer[2]] = wert
+        elif tiefer[2] == "besatzung" and len(tiefer) == 5:
+            schritt.setdefault("_besatzung", {}).setdefault(
+                tiefer[3], {"id": tiefer[3]})[tiefer[4]] = wert
+
+
 def _leerer_alarm(kennung: str) -> dict:
     return {"id": kennung, "anfahrtsadresse": {}, "einsatzadresse": {}, "karte": {},
             "hinweise": [], "einsatzmittel": []}
@@ -127,9 +223,14 @@ def rund(werte: dict[str, Any]) -> dict:
     alarme: dict[str, dict] = {}
     kataloge: dict[str, Any] = {"stichwoerter": {}, "status": [], "trupp": [], "fahrzeuge": {},
                                 "arbeitsgruppe": "", "wache": {}}
+    planung: dict[str, Any] = {"aktiv": False, "rollen": [], "fahrerlaubnisse": [],
+                               **{liste: {} for liste in PLANUNGSEINTRAEGE}}
 
     for pfad, wert in werte.items():
         stueck = teile(pfad)
+        if stueck[0] == "planung":
+            _planung_lesen(planung, stueck[1:], wert)
+            continue
         if stueck[0] == "kataloge" and len(stueck) == 2:
             kataloge[stueck[1]] = wert
             continue
@@ -182,7 +283,20 @@ def rund(werte: dict[str, Any]) -> dict:
                                       key=lambda e: (e.get("text", ""), e["id"]))
     for liste in ("status", "trupp"):
         kataloge[liste].sort()
-    return {"version": 1, "alarme": fertig, "kataloge": kataloge}
+
+    for liste in PLANUNGSEINTRAEGE:
+        planung[liste] = geordnet(planung[liste])
+    for person in planung["personen"]:
+        person["verfuegbar"] = geordnet(person.pop("_verfuegbar", {}))
+    for lauf in planung["laeufe"]:
+        schritte = geordnet(lauf.pop("_schritte", {}))
+        for schritt in schritte:
+            schritt["besatzung"] = geordnet(schritt.pop("_besatzung", {}))
+        lauf["schritte"] = schritte
+    for liste in PLANUNGSLISTEN:
+        planung[liste].sort()
+
+    return {"version": 1, "alarme": fertig, "kataloge": kataloge, "planung": planung}
 
 
 class Dokument:

@@ -1,4 +1,5 @@
 import type {Arbeitsmappe} from '../interfaces/Alarm'
+import type {Planung} from '../interfaces/Planung'
 
 /**
  * The working set as a flat map of path to value — the same shape the server merges on, so the
@@ -22,6 +23,74 @@ const ALARM_UNTEROBJEKTE = ['id', 'sortierung', 'anfahrtsadresse', 'einsatzadres
 
 function adresse(basis: string, werte: Flachbild, quelle: Record<string, unknown> = {}) {
     for (const feld of ADRESSFELDER) werte[pfad(basis, feld)] = quelle[feld] ?? ''
+}
+
+const PLANUNGSLISTEN = ['rollen', 'fahrerlaubnisse'] as const
+
+/**
+ * Jede Liste des Plans mit den Feldern, die als Pfad je Eintrag geschrieben werden. Was darunter
+ * hängt — Adresse, Verfügbarkeit, Schritte, Besatzung — steht in `planungsfelder`. Spiegelt
+ * `PLANUNGSEINTRAEGE` in `backend/src/data/dokument.py`.
+ */
+const PLANUNGSEINTRAEGE = {
+    tage: ['datum', 'name'],
+    orte: ['name'],
+    personen: ['name', 'anzahl'],
+    programmpunkte: ['name', 'ortId', 'alarmId'],
+    laeufe: ['fahrzeugId', 'personId'],
+} as const
+
+const SCHRITTFELDER = ['art', 'mittel', 'von', 'bis', 'ortId', 'programmpunktId'] as const
+
+type Eintragsdaten = Record<string, unknown> & { id: string, sortierung?: number }
+
+function eintragsfelder(basis: string, werte: Flachbild, eintrag: Eintragsdaten,
+                        felder: readonly string[], stelle: number) {
+    werte[pfad(basis, 'sortierung')] = eintrag.sortierung ?? stelle
+    for (const feld of felder) werte[pfad(basis, feld)] = eintrag[feld] ?? ''
+}
+
+/**
+ * Den Plan flach machen. Die Ketten sind das Tiefste im Dokument — Lauf, Schritt, Besatzung — und
+ * jede Ebene trägt ihre eigene id, damit zwei Leute an verschiedenen Schritten desselben Laufs
+ * arbeiten können, ohne sich zu überschreiben.
+ */
+function planungsfelder(werte: Flachbild, planung: Planung) {
+    werte[pfad('planung', 'aktiv')] = planung.aktiv ?? false
+    for (const liste of PLANUNGSLISTEN) {
+        for (const wert of planung[liste] ?? []) werte[pfad('planung', liste, wert)] = true
+    }
+
+    for (const [liste, felder] of Object.entries(PLANUNGSEINTRAEGE)) {
+        const eintraege = (planung[liste as keyof Planung] ?? []) as unknown as Eintragsdaten[]
+        eintraege.forEach((eintrag, stelle) => {
+            const basis = pfad('planung', liste, eintrag.id)
+            eintragsfelder(basis, werte, eintrag, felder, stelle)
+
+            if (liste === 'orte') {
+                adresse(pfad(basis, 'adresse'), werte, eintrag.adresse as never)
+            } else if (liste === 'personen') {
+                for (const satz of ['rollen', 'fahrerlaubnis'] as const) {
+                    for (const wert of (eintrag[satz] ?? []) as string[]) {
+                        werte[pfad(basis, satz, wert)] = true
+                    }
+                }
+                ;((eintrag.verfuegbar ?? []) as Eintragsdaten[]).forEach((fenster, platz) => {
+                    eintragsfelder(pfad(basis, 'verfuegbar', fenster.id), werte, fenster,
+                                   ['von', 'bis'], platz)
+                })
+            } else if (liste === 'laeufe') {
+                ;((eintrag.schritte ?? []) as Eintragsdaten[]).forEach((schritt, platz) => {
+                    const sbasis = pfad(basis, 'schritte', schritt.id)
+                    eintragsfelder(sbasis, werte, schritt, SCHRITTFELDER, platz)
+                    ;((schritt.besatzung ?? []) as Eintragsdaten[]).forEach((sitzt, rang) => {
+                        eintragsfelder(pfad(sbasis, 'besatzung', sitzt.id), werte, sitzt,
+                                       ['personId', 'faehrt'], rang)
+                    })
+                })
+            }
+        })
+    }
 }
 
 export function flach(mappe: Arbeitsmappe): Flachbild {
@@ -78,6 +147,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
             werte[pfad(vbasis, feld)] = vorlage[feld] ?? ''
         }
     }
+    if (mappe.planung) planungsfelder(werte, mappe.planung)
     return werte
 }
 
