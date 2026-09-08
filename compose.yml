@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8000"
+    environment:
+      SESSION_TTL_MINUTES: ${SESSION_TTL_MINUTES:-30}
+      FREIGABE_TAGE: ${FREIGABE_TAGE:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    volumes:
+      - freigaben:/data
+    restart: unless-stopped
+
+volumes:
+  freigaben:

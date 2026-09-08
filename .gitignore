@@ -1,0 +1,17 @@
+.direnv
+.idea
+.concept
+node_modules
+dist
+__pycache__
+*.pyc
+.env
+backend/src/render/tmp/
+
+# Tabellendokumente gehören nicht ins Repository. Das schließt die Vorlage, die alten
+# Alarmtabellen und den heruntergeladenen Codekatalog der Berliner Feuerwehr ein — letzterer
+# wird von tools/build_sna_tree.py geholt, wenn er fehlt.
+*.ods
+*.odt
+*.xlsx
+*.xls

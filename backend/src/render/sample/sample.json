@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "alarme": [
+    {
+      "id": "sample-0",
+      "behoerde": "Berliner Feuerwehr",
+      "titel": "Alarm für",
+      "einsatzNr": "0",
+      "einsatzDatum": "01.01.2026",
+      "einsatzZeit": "12:00",
+      "meldungDatum": "01.01.2026",
+      "meldungZeit": "11:58",
+      "aPlatz": "MUSTER-01",
+      "polizei": "N",
+      "sonderrechte": "J",
+      "arbeitsgruppe": "Muster 1",
+      "wachalarmNr": "",
+      "stichwort": "BRAND K.",
+      "kurzinfo": "Brand im Freien - Unbekannte Situation",
+      "anfahrtsadresse": {
+        "strasse": "Musterstraße",
+        "hnr": "1",
+        "objekt": "",
+        "plz": "10000",
+        "ort": "Musterort"
+      },
+      "einsatzadresse": {
+        "strasse": "Musterstraße",
+        "hnr": "1",
+        "objekt": "",
+        "plz": "10000",
+        "ort": "Musterort"
+      },
+      "karte": {
+        "kab": "S.00 A0",
+        "fwPlan": "",
+        "ePlan": "",
+        "polarKoordinaten": "0,0°/ ,000 km"
+      },
+      "meldungsquelle": "49300000000000",
+      "rueckrufnummer": "",
+      "anrufer": "Max Mustermann",
+      "betroffener": "",
+      "meldender": "",
+      "wasIstPassiert": "",
+      "hinweise": [
+        {
+          "typ": "text",
+          "text": "ANRUFER IST DRITTMELDER",
+          "id": "hinweis-0",
+          "sortierung": 0
+        },
+        {
+          "typ": "code",
+          "code": "67B03",
+          "meldung": "Notfallmeldung: Mülltonne qualmt.",
+          "antworten": [
+            "Der Anrufer ist nicht am Einsatzort (Anrufer 4. Hand).",
+            "Es handelt sich um einen Brand im Freien.",
+            "Ein KLEINER Bereich brennt.",
+            "Der Anrufer meldet, dass der Brand gelöscht wurde.",
+            "Niemand ist eingeklemmt/eingeschlossen/verschüttet oder in unmittelbarer Gefahr.",
+            "Es ist nicht bekannt, ob eine Gefahr durch Elektrizität vorliegt.",
+            "Es ist nicht bekannt, ob jemand verletzt ist."
+          ],
+          "id": "hinweis-1",
+          "sortierung": 1
+        }
+      ],
+      "einsatzmittel": [
+        {
+          "adresse": {
+            "strasse": "Musterstraße",
+            "hnr": "1",
+            "plz": "10000",
+            "ort": "Musterort"
+          },
+          "gruppe": "keine Gruppe",
+          "fahrzeuge": [
+            {
+              "funkrufname": "LHF 0001.1 (0000)",
+              "ezp": "6",
+              "status": "R2(A1)",
+              "trupp": "Stärke=6:11F, 12F,13F",
+              "hinweis": "",
+              "alarmFuer": true,
+              "id": "fahrzeug-0-0",
+              "sortierung": 0
+            }
+          ],
+          "id": "gruppe-0",
+          "sortierung": 0
+        }
+      ],
+      "sortierung": 0
+    }
+  ],
+  "kataloge": {
+    "stichwoerter": [],
+    "fahrzeuge": [],
+    "status": [],
+    "trupp": []
+  }
+}

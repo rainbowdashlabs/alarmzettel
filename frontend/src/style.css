@@ -1,0 +1,281 @@
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "tailwindcss";
+
+/*
+  Two themes over one token set, carried over from CallStats so the two tools look like siblings.
+  Light is the register — ink and steel on paper, red kept strictly for signals. Nothing but the
+  --c-* values changes between the themes.
+*/
+:root {
+    --c-page: #f4f6f8;
+    --c-surface: #ffffff;
+    --c-raised: #eef1f4;
+    --c-ink: #10141a;
+    --c-muted: #5c6775;
+    --c-faint: #8a94a2;
+    --c-rule: #dce1e7;
+    --c-hairline: #eef1f4;
+    --c-signal: #d5271b;
+    --c-signal-ink: #a81e15;
+    --c-signal-soft: #fdf5f4;
+    --c-band: #10141a;
+    --c-band-track: #eef1f4;
+    --c-action: #10141a;
+    --c-action-ink: #ffffff;
+    --c-focus: #d5271b;
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --c-page: #12161c;
+        --c-surface: #1a2027;
+        --c-raised: #212932;
+        --c-ink: #edf0f3;
+        --c-muted: #8892a0;
+        --c-faint: #5c6775;
+        --c-rule: #2a333e;
+        --c-hairline: #212932;
+        --c-signal: #e0331f;
+        --c-signal-ink: #ff6a58;
+        --c-signal-soft: #2a1614;
+        --c-band: #4fa3e3;
+        --c-band-track: #12161c;
+        --c-action: #edf0f3;
+        --c-action-ink: #12161c;
+        --c-focus: #4fa3e3;
+        color-scheme: dark;
+    }
+}
+
+:root[data-theme="dark"] {
+    --c-page: #12161c;
+    --c-surface: #1a2027;
+    --c-raised: #212932;
+    --c-ink: #edf0f3;
+    --c-muted: #8892a0;
+    --c-faint: #5c6775;
+    --c-rule: #2a333e;
+    --c-hairline: #212932;
+    --c-signal: #e0331f;
+    --c-signal-ink: #ff6a58;
+    --c-signal-soft: #2a1614;
+    --c-band: #4fa3e3;
+    --c-band-track: #12161c;
+    --c-action: #edf0f3;
+    --c-action-ink: #12161c;
+    --c-focus: #4fa3e3;
+    color-scheme: dark;
+}
+
+@theme {
+    --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+    --font-condensed: "Barlow Condensed", "Barlow", ui-sans-serif, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+    --color-page: var(--c-page);
+    --color-surface: var(--c-surface);
+    --color-raised: var(--c-raised);
+    --color-ink: var(--c-ink);
+    --color-muted: var(--c-muted);
+    --color-faint: var(--c-faint);
+    --color-rule: var(--c-rule);
+    --color-hairline: var(--c-hairline);
+    --color-signal: var(--c-signal);
+    --color-signal-ink: var(--c-signal-ink);
+    --color-signal-soft: var(--c-signal-soft);
+    --color-band: var(--c-band);
+    --color-band-track: var(--c-band-track);
+    --color-action: var(--c-action);
+    --color-action-ink: var(--c-action-ink);
+    --color-focus: var(--c-focus);
+
+    --radius-card: 4px;
+    --radius-control: 4px;
+}
+
+html {
+    background-color: var(--c-page);
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: var(--c-page);
+    color: var(--c-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+a {
+    color: var(--c-signal-ink);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--c-signal);
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--c-focus);
+    outline-offset: 2px;
+}
+
+/* Labels and column heads. Condensed and letterspaced so they read as signage, not prose. */
+.label {
+    font-family: var(--font-condensed);
+    font-weight: 600;
+    font-size: 13px;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-muted);
+}
+
+.eyebrow {
+    font-family: var(--font-condensed);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-muted);
+}
+
+.headline {
+    font-family: var(--font-condensed);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.05;
+}
+
+.tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.card {
+    background-color: var(--c-surface);
+    border: 1px solid var(--c-rule);
+    border-radius: var(--radius-card);
+}
+
+.field {
+    height: 38px;
+    width: 100%;
+    background-color: var(--c-surface);
+    border: 1px solid var(--c-rule);
+    border-radius: var(--radius-control);
+    padding: 0 10px;
+    color: var(--c-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+}
+
+.field::placeholder {
+    color: var(--c-faint);
+}
+
+.field:focus {
+    outline: none;
+    border-color: var(--c-focus);
+    box-shadow: 0 0 0 1px var(--c-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* A field label sitting above its input, the way the printed sheet stacks label over value. */
+.feld-label {
+    font-family: var(--font-condensed);
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c-muted);
+    display: block;
+    margin-bottom: 3px;
+}
+
+textarea.field {
+    height: auto;
+    min-height: 76px;
+    padding: 8px 10px;
+    line-height: 1.45;
+    resize: vertical;
+}
+
+.abschnitt {
+    background-color: var(--c-surface);
+    border: 1px solid var(--c-rule);
+    border-radius: var(--radius-card);
+    padding: 16px;
+}
+
+.abschnitt-titel {
+    font-family: var(--font-condensed);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c-ink);
+    margin-bottom: 12px;
+}
+
+.knopf {
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--c-rule);
+    border-radius: var(--radius-control);
+    background: var(--c-surface);
+    color: var(--c-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.knopf:hover {
+    background: var(--c-raised);
+}
+
+.knopf-primaer {
+    background: var(--c-action);
+    border-color: var(--c-action);
+    color: var(--c-action-ink);
+}
+
+.knopf-primaer:hover {
+    opacity: 0.88;
+    background: var(--c-action);
+}
+
+.knopf-gefahr:hover {
+    border-color: var(--c-signal);
+    color: var(--c-signal);
+    background: var(--c-signal-soft);
+}
+
+.knopf-klein {
+    height: 28px;
+    padding: 0 9px;
+    font-size: 13px;
+}

@@ -1,0 +1,40 @@
+services:
+  frontend:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5175:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://app:8000
+    depends_on:
+      app:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runtime
+    command: uvicorn --app-dir src main:app --host 0.0.0.0 --port 8000 --reload --proxy-headers
+    volumes:
+      - ./backend/src:/app/src
+      - freigaben_dev:/data
+    ports:
+      - "8080:8000"
+    environment:
+      SESSION_TTL_MINUTES: 30
+      FREIGABE_VERZEICHNIS: /data/freigaben
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  frontend_node_modules:
+  freigaben_dev:

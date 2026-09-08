@@ -1,0 +1,4 @@
+# Anchored, or it would also swallow src/data — the package holding the merge, the shares and
+# the Typst call.
+/data/
+/static/
