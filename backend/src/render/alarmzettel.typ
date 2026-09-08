@@ -79,6 +79,16 @@
   text(size: WERT, weight: "regular")[#lines.map(l => par(l)).join()]
 }
 
+/// The Trupp field holds strength and Trupps in one string — "Stärke=6: SF, AT, WT" — because
+/// that is how the dispatch system writes it. The sheet prints them in two columns, and the
+/// colon is where the string comes apart. Anything written without one is not a strength, so it
+/// goes under Trupp, which is the wider of the two.
+#let trupp-teile(wert) = {
+  let roh = str(wert)
+  let teile = roh.split(":")
+  if teile.len() < 2 { ("", roh) } else { (teile.first() + ":", teile.slice(1).join(":").trim()) }
+}
+
 /// "Straße Nr, PLZ Ort", skipping the parts that are blank. Joining an empty array yields none
 /// rather than an empty string, so an address with nothing in it has to drop out here too.
 #let address-line(adr) = {
@@ -107,7 +117,7 @@
   let boxed-lr = (left: THICK, right: THICK)
 
   let legend = align(center,
-    L("(Funkrufname / EZP / Status / Trupp / Hinweis)", size: 7pt, weight: "regular"))
+    L("(Funkrufname / EZP / Status / Stärke / Trupp / Hinweis)", size: 7pt, weight: "regular"))
 
   let vehicle-rows = ()
   for grp in get(a, "einsatzmittel", fallback: ()) {
@@ -123,12 +133,14 @@
     for fz in get(grp, "fahrzeuge", fallback: ()) {
       // The grey cell marks the one vehicle this sheet is for; every other row is plain.
       let angesprochen = get(fz, "alarmFuer", fallback: false) == true
+      let (staerke, trupps) = trupp-teile(get(fz, "trupp"))
       vehicle-rows.push(cell(colspan: 2, fill: if angesprochen { GREY } else { none },
                              stroke: none-stroke)[#V(get(fz, "funkrufname"))])
-      vehicle-rows.push(cell(colspan: 5, stroke: none-stroke)[#V(get(fz, "ezp"), weight: "regular")])
+      vehicle-rows.push(cell(colspan: 2, stroke: none-stroke)[#V(get(fz, "ezp"), weight: "regular")])
       vehicle-rows.push(cell(colspan: 3, stroke: none-stroke)[#V(get(fz, "status"), weight: "regular")])
-      vehicle-rows.push(cell(colspan: 5, stroke: none-stroke)[#V(get(fz, "trupp"), weight: "regular")])
-      vehicle-rows.push(cell(colspan: 3, stroke: none-stroke)[#V(get(fz, "hinweis"), weight: "regular")])
+      vehicle-rows.push(cell(colspan: 2, stroke: none-stroke)[#V(staerke, weight: "regular")])
+      vehicle-rows.push(cell(colspan: 5, stroke: none-stroke)[#V(trupps, weight: "regular")])
+      vehicle-rows.push(cell(colspan: 4, stroke: none-stroke)[#V(get(fz, "hinweis"), weight: "regular")])
       vehicle-rows.push(cell(stroke: none-stroke)[])
     }
   }
@@ -259,7 +271,7 @@
     ..vehicle-rows,
 
     // 36-38 — Abschluss
-    cell(colspan: 18)[#align(center)[#strut#L("(Funkrufname / EZP / Status / Trupp / Hinweis)", size: 7pt, weight: "regular")]], cell[],
+    cell(colspan: 18)[#align(center)[#strut#L("(Funkrufname / EZP / Status / Stärke / Trupp / Hinweis)", size: 7pt, weight: "regular")]], cell[],
     cell(colspan: 18)[#spacer(7pt)], cell[],
     cell(colspan: 18, align(center, L("*** Ende des Drucks ***", size: 14pt))), cell[],
   )
