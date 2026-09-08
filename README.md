@@ -188,9 +188,17 @@ committed.
 
 **Fire and technical rescue are invented.** The Berlin fire brigade's Alarm- und Ausrückeordnung is
 classified *Nur für den Dienstgebrauch*, and the FPDS determinants are licensed IAED material;
-neither is publicly available. The two branches in `tools/sna_authored.py` are built to be
-plausible, but they are made up. They are marked as such in the dialog and should be replaced with
-the real AAO before anyone relies on them.
+neither is publicly available. The two branches in `tools/sna_authored.py` — nine fire protocols,
+ten technical ones, 291 determinants — are built to be plausible, but they are made up. They are
+marked as such in the dialog and should be replaced with the real AAO before anyone relies on them.
+
+Two questions cut across every protocol. **Who is calling** is asked first and printed as the
+first Hinweis, because what the caller can still see decides how much of the rest is worth
+believing; it does not move the determinant, so all five answers lead to the same next question —
+five edges into one node, which is the plainest case of the graph converging rather than
+branching. **Whether people are in danger** is asked last on every fire, because that answer is
+what sets the Stichwort: the situation fixes a base level and this raises it, so the same
+Wohnungsbrand is BRAND 2, 3 or 4 depending on who is still inside.
 
 Addresses come from the city's [address
 WFS](https://daten.berlin.de/datensaetze/adressen-berlin-wfs-634ab8ba) — 402 756 points with

@@ -92,6 +92,15 @@ function ausSuche(gewaehlt: SnaTreffer) {
   knotenId.value = knotenEintrag?.[0] ?? null
 }
 
+/**
+ * The numbered answers, as they will be written into the Hinweis. Choosing a discipline or a
+ * protocol is a turn in the graph rather than something the caller said, so those steps carry no
+ * statement and are not numbered — the Hinweis drops them too, and the two have to agree or the
+ * preview would promise a line the slip does not print.
+ */
+const abfrageweg = computed(
+    () => treffer.value?.pfad.filter(schritt => schritt.aussage.trim()) ?? [])
+
 function uebernehmen() {
   if (treffer.value) emit('uebernehmen', treffer.value, meldung.value.trim())
 }
@@ -199,7 +208,7 @@ watch(amEnde, (erreicht) => {
             <div>
               <div class="feld-label">{{ t('sna.abfrageweg') }}</div>
               <ol class="grid gap-1">
-                <li v-for="(schritt, index) in treffer.pfad" :key="index" class="text-sm flex gap-2">
+                <li v-for="(schritt, index) in abfrageweg" :key="index" class="text-sm flex gap-2">
                   <span class="tabular text-muted w-6 text-right shrink-0">{{ index + 1 }}.</span>
                   <span>{{ schritt.aussage }}</span>
                 </li>

@@ -169,20 +169,58 @@ def notfallrettung(graph, rows):
     ])
 
 
+def authored_answer(graph, entry):
+    """
+    One answer and whatever hangs below it. Five parts end the interrogation at a determinant,
+    four carry a further question, and the nesting goes as deep as an authored protocol needs —
+    which for a fire is deeper than for anything else, because the question that sets the
+    Stichwort is asked last.
+    """
+    label, statement = entry[0], entry[1]
+    if len(entry) == 5:
+        target = graph.terminal(entry[2], entry[3], entry[4], entry[3])
+    else:
+        question, children = entry[2], entry[3]
+        target = graph.branch(question or "Welche Situation trifft zu?",
+                              [authored_answer(graph, child) for child in children])
+    return {"label": label, "aussage": statement, "ziel": target}
+
+
 def authored(graph, protocols, question):
     entries = []
     for number, name, protocol_question, branches in protocols:
-        answers = []
-        for label, statement, sub_question, children in branches:
-            target = graph.branch(sub_question or "Welche Situation trifft zu?", [
-                {"label": c[0], "aussage": c[1],
-                 "ziel": graph.terminal(c[2], c[3], c[4], c[3])}
-                for c in children
-            ])
-            answers.append({"label": label, "aussage": statement, "ziel": target})
-        entries.append({"label": name, "aussage": "", "nr": number,
-                        "ziel": graph.branch(protocol_question, answers)})
+        entries.append({
+            "label": name, "aussage": "", "nr": number,
+            "ziel": graph.branch(protocol_question,
+                                 [authored_answer(graph, branch) for branch in branches]),
+        })
     return graph.branch(question, entries)
+
+
+MELDENDE = (
+    ("Anrufer ist am Einsatzort (1. Hand)",
+     "Der Anrufer ist am Einsatzort."),
+    ("Anrufer war am Einsatzort (2. Hand)",
+     "Der Anrufer war am Einsatzort, ist es jetzt nicht mehr."),
+    ("Anrufer meldet für einen Dritten (3. Hand)",
+     "Der Anrufer meldet für eine dritte Person und ist nicht am Einsatzort."),
+    ("Anrufer hat es nur gehört oder gesehen (4. Hand)",
+     "Der Anrufer ist nicht am Einsatzort (Anrufer 4. Hand)."),
+    ("Automatische Meldung",
+     "Die Meldung stammt aus einer automatischen Anlage."),
+)
+
+
+def meldende(graph, ziel):
+    """
+    Who is on the phone, asked before anything else and printed as the first Hinweis. What the
+    caller can still see decides how much of the rest is worth believing, but it does not move
+    the determinant — so every answer leads to the same next question. Five edges into one node,
+    which is the plainest case of the graph converging rather than branching.
+    """
+    return graph.branch("Wer meldet?", [
+        {"label": label, "aussage": aussage, "ziel": ziel} for label, aussage in MELDENDE
+    ])
 
 
 ERFUNDEN = (
@@ -193,17 +231,24 @@ ERFUNDEN = (
 )
 
 
+MELDER_HINWEIS = (
+    "Die Codes und Anlässe stammen aus den offenen Daten der Berliner Feuerwehr. Nur die erste "
+    "Frage nach dem Meldenden ist ergänzt."
+)
+
+
 def main():
     rows, legend = load_rows()
     graph = Graph()
     disciplines = [
         {"id": "notf", "label": "Notfallrettung", "quelle": "bf-open-data",
-         "einstieg": notfallrettung(graph, rows)},
+         "hinweis": MELDER_HINWEIS,
+         "einstieg": meldende(graph, notfallrettung(graph, rows))},
         {"id": "brand", "label": "Brand", "quelle": "erfunden", "hinweis": ERFUNDEN,
-         "einstieg": authored(graph, sna_authored.BRAND, "Was brennt?")},
+         "einstieg": meldende(graph, authored(graph, sna_authored.BRAND, "Was brennt?"))},
         {"id": "th", "label": "Technische Hilfeleistung", "quelle": "erfunden",
          "hinweis": ERFUNDEN,
-         "einstieg": authored(graph, sna_authored.TH, "Welche Lage liegt vor?")},
+         "einstieg": meldende(graph, authored(graph, sna_authored.TH, "Welche Lage liegt vor?"))},
     ]
     tree = {
         "stand": "2026-05-21",
