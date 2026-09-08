@@ -1,15 +1,35 @@
-from fastapi import APIRouter, Header, HTTPException, Response
+"""
+Der Alarmzettel als PDF, gerendert aus der laufenden Sitzung.
 
+Die Arbeitsmappe liegt ohnehin auf dem Server, also wird sie nicht noch einmal hochgeladen: der
+Browser sagt nur, was er gedruckt haben will.
+"""
+
+from fastapi import APIRouter, HTTPException, Request, Response
+
+from data.katalog import mit_katalog
 from data.typst import RenderError, render
 from entities.alarm import Arbeitsmappe
-from services.session import require
+from services.sitzung import COOKIE, sitzungen
+from data.sitzung import SitzungFehler
 
 router = APIRouter(prefix="/render", tags=["render"])
 
 
+def _mappe(request: Request) -> Arbeitsmappe:
+    token = request.cookies.get(COOKIE)
+    if not token:
+        raise HTTPException(status_code=401, detail="Keine laufende Sitzung.")
+    try:
+        inhalt, _ = sitzungen.lesen(token)
+    except SitzungFehler as fehler:
+        raise HTTPException(status_code=404, detail=str(fehler)) from fehler
+    return Arbeitsmappe.model_validate(inhalt)
+
+
 def _pdf(arbeitsmappe: Arbeitsmappe, filename: str) -> Response:
     try:
-        pdf = render(arbeitsmappe)
+        pdf = render(mit_katalog(arbeitsmappe))
     except RenderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",
@@ -17,19 +37,18 @@ def _pdf(arbeitsmappe: Arbeitsmappe, filename: str) -> Response:
 
 
 @router.post("")
-def render_session(x_session_id: str | None = Header(default=None)) -> Response:
-    """Renders everything the session currently holds, one sheet per Alarm."""
-    session = require(x_session_id)
-    return _pdf(session.arbeitsmappe, "alarmzettel.pdf")
+def render_sitzung(request: Request) -> Response:
+    """Alles, was die Sitzung gerade hält, ein Blatt je Alarm."""
+    return _pdf(_mappe(request), "alarmzettel.pdf")
 
 
 @router.post("/{alarm_id}")
-def render_alarm(alarm_id: str, x_session_id: str | None = Header(default=None)) -> Response:
-    """Renders a single Alarm — what the preview pane asks for while editing."""
-    session = require(x_session_id)
-    mappe = session.arbeitsmappe
+def render_alarm(alarm_id: str, request: Request) -> Response:
+    """Ein einzelner Alarm — das, was die Vorschau beim Bearbeiten anfragt."""
+    mappe = _mappe(request)
     treffer = [alarm for alarm in mappe.alarme if alarm.id == alarm_id]
     if not treffer:
         raise HTTPException(status_code=404, detail="Alarm nicht in der Sitzung.")
-    return _pdf(Arbeitsmappe(version=mappe.version, alarme=treffer, kataloge=mappe.kataloge),
+    return _pdf(Arbeitsmappe(version=mappe.version, alarme=treffer, kataloge=mappe.kataloge,
+                             planung=mappe.planung),
                 f"alarmzettel-{alarm_id}.pdf")

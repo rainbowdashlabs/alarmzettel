@@ -30,16 +30,15 @@ import {
 import {faCircle} from '@fortawesome/free-regular-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 import {initTheme} from './theme'
-import {ensureSession} from './api/session'
-import {wiederaufnehmen} from './store/sync'
+import {sitzungStarten} from './store/sitzung'
+
 
 library.add(faAngleDown, faAngleRight, faAngleUp, faArrowLeft, faCheck, faCircle, faCircleCheck,
     faCopy, faDownload, faFilePdf, faListCheck, faMoon, faPen, faPlus, faRotate, faShareNodes, faSun, faTable, faTrash,
     faUpload, faUsers, faXmark)
 
 initTheme()
-void ensureSession()
-void wiederaufnehmen()
+void sitzungStarten()
 
 createApp(App)
     .use(router)

@@ -9,25 +9,19 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 
 from services.adressen import adressen
-from services.freigabe import freigaben
-from services.session import sessions
+from services.sitzung import sitzungen
 from web.app import router
 from web.settings import settings
 
 
-async def _sweep_expired():
+async def _aufraeumen():
     """
-    Sessions also expire on access, and a share is checked when it is read; this clears out the
-    ones nobody comes back to. Shares are reaped far less often than sessions - their retention
-    is measured in days.
+    Sitzungen laufen 30 Tage nach der letzten Benutzung ab. Das prüft niemand beim Zugriff, also
+    geht hier in großem Abstand ein Aufräumer durch — die Frist ist in Tagen gemessen.
     """
-    runden = 0
     while True:
-        await asyncio.sleep(settings.session_sweep_seconds)
-        sessions.sweep()
-        runden += 1
-        if runden % 60 == 0:
-            await asyncio.to_thread(freigaben.aufraeumen)
+        await asyncio.sleep(settings.sitzung_sweep_seconds)
+        await asyncio.to_thread(sitzungen.aufraeumen)
 
 
 async def _adressen_holen():
@@ -49,10 +43,10 @@ async def _adressen_holen():
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # A restart is the one moment the whole share directory is worth walking: it is also where
-    # files orphaned by an unclean shutdown get picked up.
-    await asyncio.to_thread(freigaben.aufraeumen)
-    aufgaben = [asyncio.create_task(_sweep_expired()), asyncio.create_task(_adressen_holen())]
+    # Ein Neustart ist der eine Moment, in dem sich das ganze Verzeichnis zu durchlaufen lohnt:
+    # hier werden auch die Dateien eingesammelt, die ein unsauberes Ende hinterlassen hat.
+    await asyncio.to_thread(sitzungen.aufraeumen)
+    aufgaben = [asyncio.create_task(_aufraeumen()), asyncio.create_task(_adressen_holen())]
     yield
     for aufgabe in aufgaben:
         aufgabe.cancel()
@@ -73,7 +67,8 @@ app.include_router(router)
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "sessions": len(sessions), "freigaben": freigaben.anzahl(),
+    return {"status": "ok", "sitzungen": sitzungen.anzahl(),
+            "imSpeicher": sitzungen.im_speicher(),
             "adressen": adressen.bestand()["anzahl"]}
 
 

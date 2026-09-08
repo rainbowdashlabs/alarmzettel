@@ -191,6 +191,14 @@ export default {
         abbrechen: 'Abbrechen',
         weiter: 'Fortfahren',
     },
+    sitzung: {
+        neu: 'Neue Sitzung',
+        neuTitel: 'Eine leere Sitzung anlegen. Die aktuelle bleibt erhalten.',
+        wechseln: 'Sitzung',
+        keine: 'Noch keine andere Sitzung.',
+        entfernen: 'Aus dieser Liste nehmen',
+        laeuftAb: 'Läuft am {datum} ab, wenn sie bis dahin niemand öffnet.',
+    },
     theme: {umschalten: 'Darstellung umschalten'},
     nichtGefunden: {
         titel: 'Seite nicht gefunden',

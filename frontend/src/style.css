@@ -380,3 +380,24 @@ textarea.field {
     border-color: var(--c-action);
     color: var(--c-action-ink);
 }
+
+/* Die Liste der bekannten Sitzungen hängt am Kopf der Seite, nicht an einem Feld. */
+.sitzungsliste {
+    min-width: 15rem;
+    right: 0;
+    left: auto;
+}
+
+.sitzungsliste li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: calc(var(--radius-control) - 2px);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.sitzungsliste li:hover {
+    background: var(--c-raised);
+}

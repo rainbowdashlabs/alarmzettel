@@ -1,19 +1,20 @@
 import client from './http'
-import {pushArbeitsmappe} from './session'
-import type {Arbeitsmappe} from '../interfaces/Alarm'
 
-async function pdf(path: string, arbeitsmappe: Arbeitsmappe): Promise<Blob> {
-    await pushArbeitsmappe(arbeitsmappe)
-    const {data} = await client.post(path, null, {responseType: 'blob'})
+/**
+ * Die Arbeitsmappe liegt auf dem Server, also wird sie nicht mitgeschickt — gedruckt wird, was
+ * die laufende Sitzung hält.
+ */
+async function pdf(pfad: string): Promise<Blob> {
+    const {data} = await client.post(pfad, null, {responseType: 'blob'})
     return data as Blob
 }
 
-export function renderAlle(arbeitsmappe: Arbeitsmappe): Promise<Blob> {
-    return pdf('/api/render', arbeitsmappe)
+export function renderAlle(): Promise<Blob> {
+    return pdf('/api/render')
 }
 
-export function renderEinen(arbeitsmappe: Arbeitsmappe, alarmId: string): Promise<Blob> {
-    return pdf(`/api/render/${alarmId}`, arbeitsmappe)
+export function renderEinen(alarmId: string): Promise<Blob> {
+    return pdf(`/api/render/${alarmId}`)
 }
 
 /** Turns the error body a failed render returns — a Blob — back into readable text. */

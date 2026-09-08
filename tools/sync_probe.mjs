@@ -51,7 +51,7 @@ async function serverStarten() {
          '--port', String(HAFEN), '--log-level', 'warning'],
         {
             cwd: WURZEL,
-            env: {...process.env, FREIGABE_VERZEICHNIS: resolve(ABLAGE, 'freigaben')},
+            env: {...process.env, SITZUNG_VERZEICHNIS: resolve(ABLAGE, 'sitzungen')},
             stdio: ['ignore', 'ignore', 'inherit'],
         })
 
@@ -126,7 +126,7 @@ function pruefe(behauptung, bedingung, gefunden) {
 
 await serverStarten()
 
-const angelegt = await fetch(`${basis}/api/freigabe`, {
+const angelegt = await fetch(`${basis}/api/sitzung`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: readFileSync(resolve(WURZEL, 'backend/src/render/sample/sample.json'), 'utf8'),
@@ -302,7 +302,7 @@ function abweichung(erwartet, gefunden, wo = '') {
     return erwartet === gefunden ? undefined : `${wo}: "${erwartet}" statt "${gefunden}"`
 }
 
-const server = await (await fetch(`${basis}/api/freigabe/${token}`)).json()
+const server = await (await fetch(`${basis}/api/sitzung/${token}`)).json()
 const unterschiedZumServer = abweichung(server.arbeitsmappe.alarme, anna.arbeitsmappe.alarme)
 pruefe('und der Server dasselbe wie beide', unterschiedZumServer === undefined,
     unterschiedZumServer)

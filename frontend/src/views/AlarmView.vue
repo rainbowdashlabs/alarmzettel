@@ -8,7 +8,7 @@ import AlarmHinweise from '../components/alarm/AlarmHinweise.vue'
 import AlarmEinsatzmittel from '../components/alarm/AlarmEinsatzmittel.vue'
 import PdfVorschau from '../components/PdfVorschau.vue'
 import {t} from '../i18n'
-import {alarmFinden, arbeitsmappe} from '../store/arbeitsmappe'
+import {alarmFinden} from '../store/arbeitsmappe'
 import {fehlertext, renderEinen} from '../api/render'
 import {jetztAbgleichen} from '../store/sync'
 
@@ -17,7 +17,7 @@ const fehler = ref<string | null>(null)
 const alarm = computed(() => alarmFinden(String(route.params.id)))
 
 function rendern(): Promise<Blob> {
-  return renderEinen(arbeitsmappe, String(route.params.id))
+  return renderEinen(String(route.params.id))
 }
 
 async function pdf() {

@@ -38,24 +38,32 @@ screen are the ones printed on the slip.
 
 ## Where the data lives
 
-In the browser. The working set sits in `localStorage` and goes out and back in as JSON.
+On the server, in a session. A working set is a JSON file in a volume, managed through a small
+SQLite file beside it, and the browser remembers which one it is working in through a cookie. A
+reload, a new tab or a browser restart therefore costs nothing.
 
-The server keeps a session, but only as scratch space for rendering: an entry in memory that
-expires after 30 minutes without use and is gone on the next restart anyway. Nothing is written to
-disk for it, there is no database and therefore no login. If a session expires while someone is
-typing, the next request creates a new one and resends the working set — nothing is lost.
+**Sharing is handing the session's link on.** There is no separate mechanism for it — "my working
+set" and "a shared working set" were always the same thing, and now they are the same code.
+Whoever opens the link either takes a copy into a session of their own or switches into this one
+and works on the same state as everyone else.
 
-The one exception is a shared working set, below.
+Retention runs from the **last use**, not from creation: a session in use stays alive, one nobody
+opens disappears after 30 days along with its file. Cleanup runs at startup and hourly; it also
+removes files with no index entry, of the kind an unclean shutdown leaves behind.
 
-## Shared workspaces
+Two buttons in the header: **Neue Sitzung** starts an empty one — the old one stays where it is —
+and **Sitzung** lists the ones this browser knows, labelled by what is in them, with the date the
+current one expires. That list belongs to the browser rather than to any working set, so it lives
+in `localStorage`.
 
-Anyone wanting to hand a working set on creates a link. Behind it is a copy as a JSON file in a
-volume, managed through a small SQLite file beside it. Whoever opens the link either takes a copy
-into their own browser or joins the workspace and works on the same state as everyone else.
+The browser also keeps a **copy** of the working set in `localStorage`. The server is the truth;
+the copy is there so an outage does not eat the last state and so the JSON can still be saved
+without one.
 
-The retention runs from the **last use**, not from creation: a link that stays in use stays alive,
-one nobody opens disappears after 30 days along with its file. Cleanup runs at startup and hourly;
-it also removes files with no index entry, of the kind an unclean shutdown leaves behind.
+**In memory the server keeps only a cache.** Open sessions are held so that the sync request every
+three seconds does not re-read and re-parse a file each time; a session nobody has touched for a
+while is dropped, and read back from disk when it is next wanted. Eviction is a cost question and
+can never lose data.
 
 ### Editing together
 
@@ -89,9 +97,9 @@ loads the browser's real sync module twice outside a browser, brings up its own 
 two participants against each other — concurrent edits on one alarm, a deletion reaching someone
 still typing into it, a dropped connection. Both run in CI.
 
-**The link is the password.** There is no other authentication — whoever has it can read the
-working set, change it, and delete it. The token is long and random, but a forwarded link is a
-forwarded working set. The slips are exercise material with invented personal details; nothing else belongs
+**The link is the password**, and so is the cookie. There is no other authentication — whoever
+has either can read the working set, change it, and delete it. The token is long and random, but a
+forwarded link is a forwarded working set. The slips are exercise material with invented personal details; nothing else belongs
 in them.
 
 ## Running it
@@ -112,11 +120,12 @@ it hands out will name the wrong scheme.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `SESSION_TTL_MINUTES` | `30` | how long an unused render session survives |
-| `SESSION_SWEEP_SECONDS` | `60` | how often expired sessions are cleared out |
-| `FREIGABE_TAGE` | `30` | how long a share stays available after its last use |
-| `FREIGABE_VERZEICHNIS` | `/data/freigaben` | where shared working sets live |
-| `FREIGABE_MAX_BYTES` | `4194304` | size limit for one shared working set |
+| `SITZUNG_TAGE` | `30` | how long a session stays available after its last use |
+| `SITZUNG_VERZEICHNIS` | `/data/freigaben` | where sessions live |
+| `SITZUNG_MAX_BYTES` | `8388608` | size limit for one working set |
+| `SITZUNG_CACHE_EINTRAEGE` | `64` | how many sessions are held in memory |
+| `SITZUNG_CACHE_MINUTEN` | `30` | how long an untouched session stays in memory |
+| `SITZUNG_SWEEP_SECONDS` | `3600` | how often expired sessions are cleared out |
 | `ADRESSEN_DATEI` | `/data/adressen.sqlite` | where the downloaded address list is cached |
 | `ADRESSEN_TAGE` | `30` | how old the address list may get before it is fetched again |
 | `ADRESSEN_LADEN` | `true` | set false to never fetch it |

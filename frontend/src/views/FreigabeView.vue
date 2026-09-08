@@ -2,23 +2,23 @@
 import {onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {t} from '../i18n'
-import {freigabeLesen} from '../api/freigabe'
+import {sitzungLesen} from '../api/sitzung'
 import {fehlertext} from '../api/render'
 import {arbeitsmappe, ersetzen, uebernehmen} from '../store/arbeitsmappe'
-import {beitreten} from '../store/sync'
+import {sitzungWechseln, nameSetzen} from '../store/sitzung'
 import Rueckfrage from '../components/base/Rueckfrage.vue'
-import type {GeleseneFreigabe} from '../api/freigabe'
+import type {GeleseneSitzung} from '../api/sitzung'
 
 const route = useRoute()
 const router = useRouter()
-const freigabe = ref<GeleseneFreigabe | null>(null)
+const freigabe = ref<GeleseneSitzung | null>(null)
 const fehler = ref<string | null>(null)
 const name = ref(localStorage.getItem('alarmzettel_name') ?? '')
 const rueckfrage = ref<'mitarbeiten' | 'kopie' | null>(null)
 
 onMounted(async () => {
   try {
-    freigabe.value = await freigabeLesen(String(route.params.token))
+    freigabe.value = await sitzungLesen(String(route.params.token))
   } catch (error) {
     fehler.value = await fehlertext(error)
   }
@@ -53,7 +53,8 @@ async function mitarbeiten() {
   rueckfrage.value = null
   localStorage.setItem('alarmzettel_name', name.value.trim())
   try {
-    await beitreten(String(route.params.token), name.value.trim())
+    nameSetzen(name.value)
+    await sitzungWechseln(String(route.params.token))
     router.push('/')
   } catch (error) {
     fehler.value = await fehlertext(error)

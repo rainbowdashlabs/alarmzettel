@@ -4,7 +4,6 @@ import subprocess
 import uuid
 from pathlib import Path
 
-from data.katalog import mit_katalog
 from entities.alarm import Arbeitsmappe
 from web.settings import settings
 
@@ -28,7 +27,7 @@ def render(arbeitsmappe: Arbeitsmappe) -> bytes:
     scratch.mkdir(parents=True, exist_ok=True)
     try:
         data = scratch / "data.json"
-        data.write_text(mit_katalog(arbeitsmappe).model_dump_json(), encoding="utf-8")
+        data.write_text(arbeitsmappe.model_dump_json(), encoding="utf-8")
         output = scratch / "alarmzettel.pdf"
         relative = data.relative_to(root).as_posix()
 

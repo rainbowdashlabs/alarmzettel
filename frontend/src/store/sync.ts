@@ -40,9 +40,8 @@ const RUHE_MS = 400
 const SPEICHER = 'alarmzettel_arbeitsraum'
 
 /**
- * Which workspace this browser is in, remembered across a reload. Without it, refreshing the page
- * — or following a link out and back — quietly drops someone out of the shared room while they
- * carry on typing into a copy only they can see.
+ * Welche Sitzung dieser Browser fährt, über einen Reload hinweg. Das Token steht ohnehin im
+ * Cookie; hier steht es nur mit dem Namen zusammen, unter dem gearbeitet wird.
  */
 function merken(token: string, wer: string) {
     try {
@@ -167,7 +166,7 @@ async function austauschen() {
         const gesendetBild = flach(arbeitsmappe)
         const gesendet = unterschied(serverBild, gesendetBild)
         const {data} = await client.post<Antwort>(
-            `/api/freigabe/${verbindung.token}/aenderungen`,
+            `/api/sitzung/${verbindung.token}/aenderungen`,
             {seit: verbindung.stand, wer: verbindung.wer, aenderungen: gesendet})
         einarbeiten(data, gesendet, gesendetBild)
         verbindung.fehler = null
@@ -204,15 +203,15 @@ function beiAenderung() {
 watch(arbeitsmappe, beiAenderung, {deep: true})
 
 /**
- * Joins a workspace. Everything on screen is replaced by what the workspace holds — a shared
- * room is not merged with whatever happened to be in this browser, or one person's leftovers
- * would land on everyone else.
+ * Verbindet mit einer Sitzung. Was auf dem Bildschirm steht, wird durch das ersetzt, was die
+ * Sitzung hält — sie wird nicht mit dem zusammengeführt, was zufällig in diesem Browser lag,
+ * sonst landen die Reste des einen bei allen anderen.
  */
 export async function beitreten(token: string, wer: string) {
     // Fetched before anything is thrown away, so a workspace that cannot be reached leaves this
     // browser with what it had.
     const {data} = await client.get<Antwort>(
-        `/api/freigabe/${token}/aenderungen`, {params: {seit: 0}})
+        `/api/sitzung/${token}/aenderungen`, {params: {seit: 0}})
 
     verlassen()
     verbindung.token = token

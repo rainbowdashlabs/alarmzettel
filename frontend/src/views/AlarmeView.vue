@@ -7,8 +7,7 @@ import {
 } from '../store/arbeitsmappe'
 import {renderAlle, fehlertext} from '../api/render'
 import {tabelleImportieren} from '../api/tabelle'
-import {teilen} from '../api/freigabe'
-import {bestehendeFreigabe, freigabeMerken} from '../store/freigabe'
+import {sitzung} from '../store/sitzung'
 import Rueckfrage from '../components/base/Rueckfrage.vue'
 import {jetztAbgleichen} from '../store/sync'
 
@@ -45,30 +44,26 @@ async function pdf() {
     // this browser happened to see a few seconds ago. Outside a shared workspace this does
     // nothing.
     await jetztAbgleichen()
-    speichern(await renderAlle(arbeitsmappe), 'alarmzettel.pdf')
+    speichern(await renderAlle(), 'alarmzettel.pdf')
   } catch (error) {
     fehler.value = await fehlertext(error)
   }
 }
 
-/** The link is the only credential, so what that means is said next to it, not buried. */
+/**
+ * Teilen heißt: den Link zu dieser Sitzung weitergeben. Es gibt nichts anzulegen — die
+ * Arbeitsmappe liegt schon auf dem Server, und der Link darauf ist der Schlüssel dazu.
+ */
 async function teilenLassen() {
   fehler.value = null
   meldung.value = null
   try {
-    // The new workspace is a copy of this working set, so it is worth making that copy from the
-    // current state rather than from one a few seconds old.
+    // Vor dem Weitergeben abgleichen, damit der andere den aktuellen Stand sieht.
     await jetztAbgleichen()
-    const vorhanden = await bestehendeFreigabe()
-    if (vorhanden) {
-      freigabeLink.value = vorhanden
-      meldung.value = t('freigabe.schonGeteilt')
-      return
-    }
-    const freigabe = await teilen(arbeitsmappe)
-    freigabeMerken(freigabe.token)
-    freigabeLink.value = freigabe.url
-    meldung.value = t('freigabe.erzeugt', {tage: freigabe.tage})
+    freigabeLink.value = sitzung.token
+        ? `${window.location.origin}/sitzung/${sitzung.token}`
+        : null
+    meldung.value = freigabeLink.value ? t('freigabe.erzeugt', {tage: 30}) : null
   } catch (error) {
     fehler.value = await fehlertext(error)
   }
