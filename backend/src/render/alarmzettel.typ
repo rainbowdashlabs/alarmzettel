@@ -156,18 +156,18 @@
     cell(colspan: 3)[#L("Einsatz Uhrzeit", weight: "regular")], cell(colspan: 3)[#L("Meldung Datum", weight: "regular")],
     cell(colspan: 5)[#L("Meldung Uhrzeit", weight: "regular")], cell(colspan: 3)[#L("A-Platz", weight: "regular")],
 
-    cell[#V(get(a, "einsatzNr"), size: 11pt)], cell(colspan: 4)[#V(get(a, "einsatzDatum"), size: 11pt)],
-    cell(colspan: 3)[#V(get(a, "einsatzZeit"), size: 11pt)], cell(colspan: 3)[#V(get(a, "meldungDatum"), size: 11pt)],
-    cell(colspan: 5)[#V(get(a, "meldungZeit"), size: 11pt)], cell(colspan: 3)[#V(get(a, "aPlatz"), size: 11pt)],
+    cell[#V(get(a, "einsatzNr"))], cell(colspan: 4)[#V(get(a, "einsatzDatum"))],
+    cell(colspan: 3)[#V(get(a, "einsatzZeit"))], cell(colspan: 3)[#V(get(a, "meldungDatum"))],
+    cell(colspan: 5)[#V(get(a, "meldungZeit"))], cell(colspan: 3)[#V(get(a, "aPlatz"))],
 
     // 4/5 — Polizei, Sonderrechte, Arbeitsgruppe
     cell[#L("Polizei", weight: "regular")], cell(colspan: 4)[#L("Sonderrechte", weight: "regular")],
     cell(colspan: 3)[#L("Arbeitsgruppe", weight: "regular")], cell(colspan: 3)[], cell(colspan: 5)[],
     cell(colspan: 3)[#L("Wachalarm-Nr.", weight: "regular")],
 
-    cell[#V(get(a, "polizei"), size: 11pt)], cell(colspan: 4)[#V(get(a, "sonderrechte"), size: 11pt)],
-    cell(colspan: 3)[#V(get(a, "arbeitsgruppe"), size: 11pt)], cell(colspan: 3)[], cell(colspan: 5)[],
-    cell(colspan: 3)[#V(get(a, "wachalarmNr"), size: 11pt)],
+    cell[#V(get(a, "polizei"))], cell(colspan: 4)[#V(get(a, "sonderrechte"))],
+    cell(colspan: 3)[#V(get(a, "arbeitsgruppe"))], cell(colspan: 3)[], cell(colspan: 5)[],
+    cell(colspan: 3)[#V(get(a, "wachalarmNr"))],
 
     // 6 — obere Kante des Kastens
     ..((1, 4, 3, 3, 5, 3).map(n => cell(colspan: n, stroke: (bottom: THICK))[#spacer(2pt)])),
