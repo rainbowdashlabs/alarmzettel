@@ -52,8 +52,10 @@ function entfernen(schluessel: Wortliste, index: number) {
 }
 
 function fahrzeugHinzufuegen() {
-  arbeitsmappe.kataloge.fahrzeuge.push(
-      {id: crypto.randomUUID(), funkrufname: '', staerke: '', ezp: '', status: ''})
+  arbeitsmappe.kataloge.fahrzeuge.push({
+    id: crypto.randomUUID(), funkrufname: '',
+    staerke: '', ezp: '', status: '', plaetze: '', fuehrerschein: '',
+  })
 }
 
 /** As with a Stichwort: what the vehicle rows last printed stays on them. */
@@ -108,6 +110,15 @@ function truppVorschau(staerke: string): string {
     </div>
 
     <section class="abschnitt">
+      <h2 class="abschnitt-titel">{{ t('planung.titel') }}</h2>
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input v-model="arbeitsmappe.planung.aktiv" type="checkbox" class="h-4 w-4"/>
+        <span class="text-sm">{{ t('planung.einschalten') }}</span>
+      </label>
+      <p class="text-muted text-[13px] mt-2">{{ t('planung.einschaltenHinweis') }}</p>
+    </section>
+
+    <section class="abschnitt">
       <h2 class="abschnitt-titel">{{ t('kataloge.dienststelle') }}</h2>
       <div class="grid md:grid-cols-3 gap-3">
         <TextFeld v-model="arbeitsmappe.kataloge.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>
@@ -135,12 +146,17 @@ function truppVorschau(staerke: string): string {
       <div class="grid gap-2">
         <div v-for="(fahrzeug, index) in arbeitsmappe.kataloge.fahrzeuge" :key="index"
              class="grid md:grid-cols-[1fr_auto] gap-2 items-end">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div class="grid grid-cols-2 gap-2"
+               :class="arbeitsmappe.planung.aktiv ? 'md:grid-cols-6' : 'md:grid-cols-4'">
             <TextFeld v-model="fahrzeug.funkrufname" :label="t('feld.funkrufname')"
                       @change="fahrzeugUmbenannt(fahrzeug)"/>
             <TextFeld v-model="fahrzeug.staerke" :label="t('feld.staerke')"/>
             <TextFeld v-model="fahrzeug.ezp" :label="t('feld.ezp')"/>
             <TextFeld v-model="fahrzeug.status" :label="t('feld.status')"/>
+            <TextFeld v-if="arbeitsmappe.planung.aktiv" v-model="fahrzeug.plaetze"
+                      :label="t('planung.plaetze')"/>
+            <TextFeld v-if="arbeitsmappe.planung.aktiv" v-model="fahrzeug.fuehrerschein"
+                      :label="t('planung.fuehrerschein')"/>
           </div>
           <button type="button" class="knopf knopf-klein knopf-gefahr"
                   :title="t('kataloge.eintragEntfernen')" @click="fahrzeugEntfernen(index)">

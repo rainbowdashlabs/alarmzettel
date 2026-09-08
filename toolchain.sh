@@ -207,6 +207,17 @@ case "$cmd" in
         run node tools/pfade_vergleichen.mjs "$daten" > "$browser"
         if diff -u "$server" "$browser"; then
             echo "$(wc -l < "$server") Pfade, Browser und Server gleich"
+
+            # Und der Rückweg: eine Seite, die einen Pfad schreibt, den ihr eigener Aufbau nicht
+            # liest, besteht den Pfadvergleich und verliert die Daten trotzdem bei jedem Abgleich.
+            run python tools/pfade_vergleichen.py "$daten" --rund > "$server"
+            run node tools/pfade_vergleichen.mjs "$daten" --rund > "$browser"
+            if diff -u "$server" "$browser"; then
+                echo "und beide bauen daraus dieselbe Arbeitsmappe"
+            else
+                echo "Aus denselben Pfaden entstehen verschiedene Arbeitsmappen." >&2
+                exit 1
+            fi
         else
             echo "Die Pfade unterscheiden sich." >&2
             exit 1

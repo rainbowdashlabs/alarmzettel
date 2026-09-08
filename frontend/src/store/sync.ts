@@ -81,17 +81,33 @@ function vorhandeneStellen(bild: Flachbild): Set<string> {
 }
 
 /**
+ * Pfadabschnitte, unter denen Einträge mit einer eigenen id hängen. Was direkt darauf folgt, ist
+ * ein Eintrag; der Abschnitt selbst ist nur die Liste, in der er steht.
+ */
+const LISTEN = new Set([
+    'alarme', 'hinweise', 'einsatzmittel', 'fahrzeuge', 'stichwoerter', 'status', 'trupp',
+    'tage', 'orte', 'personen', 'programmpunkte', 'laeufe', 'verfuegbar', 'schritte',
+    'besatzung', 'rollen', 'fahrerlaubnis', 'fahrerlaubnisse',
+])
+
+/**
  * The shortest prefix of a removed path that is gone entirely — the entity itself rather than
  * one of its fields.
  *
  * Deleting an Alarm removes its fields, and marking only those as gone is not enough: the entity
  * has no tombstone of its own, so the next person to edit it — not yet knowing it was deleted —
  * writes one field back and the whole thing returns. Burying the entity stops that.
+ *
+ * Es muss aber ein *Eintrag* sein, nie die Liste, in der er steht. Wird der letzte Tag gelöscht,
+ * ist auch `planung / tage` vollständig verschwunden — ein Grabstein darauf würde die Liste für
+ * immer zumauern, denn der Server hält alles unter einem Grabstein für gelöscht. Ein Eintrag
+ * erkennt sich daran, dass der Abschnitt über ihm eine Liste ist.
  */
 function grabstelle(pfad: string, vorhanden: Set<string>): string {
     const teile = pfad.split(TRENNER)
     for (let laenge = 2; laenge < teile.length; laenge++) {
         const praefix = teile.slice(0, laenge).join(TRENNER)
+        if (!LISTEN.has(teile[laenge - 2]!)) continue
         if (!vorhanden.has(praefix)) return praefix
     }
     return pfad

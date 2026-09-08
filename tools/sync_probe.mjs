@@ -251,6 +251,24 @@ pruefe('gelöschter Hinweis bleibt weg',
 pruefe('gleichzeitig geänderter Hinweis überlebt',
     alarmVon(ben).hinweise.find((h) => h.id === 'neuer-hinweis')?.text === 'Von Anna geändert')
 
+console.log('\nDie Liste läuft leer und füllt sich wieder')
+// Wird der letzte Eintrag einer Liste gelöscht, ist die Liste selbst vollständig verschwunden.
+// Ein Grabstein darauf würde sie zumauern: der Server hält alles unterhalb eines Grabsteins für
+// gelöscht, und kein späterer Eintrag käme je wieder hinein.
+alarmVon(anna).hinweise = []
+await abgleichen(anna)
+await abgleichen(ben)
+pruefe('leergeräumte Liste kommt bei beiden leer an',
+    alarmVon(anna).hinweise.length === 0 && alarmVon(ben).hinweise.length === 0)
+
+alarmVon(anna).hinweise.push({id: 'nach-dem-leeren', sortierung: 0, typ: 'text',
+    text: 'Nach dem Leerräumen'})
+await abgleichen(anna)
+await abgleichen(ben)
+pruefe('und nimmt danach wieder etwas auf',
+    alarmVon(ben).hinweise.some((h) => h.text === 'Nach dem Leerräumen'),
+    `${alarmVon(ben).hinweise.length} Hinweise bei Ben`)
+
 console.log('\nVerbindung weg und wieder da')
 alarmVon(anna).meldender = 'Während der Störung getippt'
 const echtesFetch = globalThis.fetch

@@ -95,6 +95,10 @@ export interface Fahrzeugvorlage {
     staerke: string
     ezp: string
     status: string
+    /** Wie viele Köpfe hineinpassen. Nur für den Ablaufplan; der Alarmzettel kennt das nicht. */
+    plaetze: string
+    /** Welche Fahrerlaubnisklasse es verlangt, gegen `Person.fahrerlaubnis` geprüft. */
+    fuehrerschein: string
 }
 
 /** A Stichwort is only its text, so the id is the whole reason an Alarm can follow a rename. */

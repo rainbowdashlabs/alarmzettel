@@ -40,6 +40,8 @@ def _adresse_felder(basis: str, adresse: dict) -> dict[str, Any]:
             for feld in ("strasse", "hnr", "objekt", "plz", "ort")}
 
 
+FAHRZEUGFELDER = ("funkrufname", "staerke", "ezp", "status", "plaetze", "fuehrerschein")
+
 PLANUNGSLISTEN = ("rollen", "fahrerlaubnisse")
 
 # Jede Liste des Plans mit den Feldern, die als Pfad je Eintrag geschrieben werden. Die
@@ -150,7 +152,7 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
         werte[_pfad("kataloge", "stichwoerter", kennung, "text")] = eintrag.get("text", "")
     for vorlage in kataloge.get("fahrzeuge", []):
         vbasis = _pfad("kataloge", "fahrzeuge", vorlage.get("id") or vorlage.get("funkrufname", ""))
-        for feld in ("funkrufname", "staerke", "ezp", "status"):
+        for feld in FAHRZEUGFELDER:
             werte[_pfad(vbasis, feld)] = vorlage.get(feld, "")
 
     werte.update(_planungsfelder(arbeitsmappe.get("planung") or {}))

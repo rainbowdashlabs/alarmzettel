@@ -35,6 +35,9 @@ screen are the ones printed on the slip.
   from the station to the Einsatzadresse.
 - **Share and edit together** — a working set gets a link. Whoever opens it either works on their
   own copy or joins everyone else on the same one.
+- **Ablaufplanung** — optional and off by default: places, people with roles, licence classes and
+  availability, seats and licence class per vehicle. Switched off it changes nothing about the
+  alarm slip.
 
 ## Where the data lives
 

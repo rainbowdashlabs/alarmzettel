@@ -25,6 +25,9 @@ function adresse(basis: string, werte: Flachbild, quelle: Record<string, unknown
     for (const feld of ADRESSFELDER) werte[pfad(basis, feld)] = quelle[feld] ?? ''
 }
 
+const FAHRZEUGFELDER =
+    ['funkrufname', 'staerke', 'ezp', 'status', 'plaetze', 'fuehrerschein'] as const
+
 const PLANUNGSLISTEN = ['rollen', 'fahrerlaubnisse'] as const
 
 /**
@@ -143,9 +146,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
     }
     for (const vorlage of mappe.kataloge.fahrzeuge) {
         const vbasis = pfad('kataloge', 'fahrzeuge', vorlage.id)
-        for (const feld of ['funkrufname', 'staerke', 'ezp', 'status'] as const) {
-            werte[pfad(vbasis, feld)] = vorlage[feld] ?? ''
-        }
+        for (const feld of FAHRZEUGFELDER) werte[pfad(vbasis, feld)] = vorlage[feld] ?? ''
     }
     if (mappe.planung) planungsfelder(werte, mappe.planung)
     return werte
@@ -158,8 +159,55 @@ function geordnet<T extends Sortierbar>(eintraege: Record<string, T>): T[] {
         (a, b) => (a.sortierung ?? 0) - (b.sortierung ?? 0) || a.id.localeCompare(b.id))
 }
 
+type Sammlung = Record<string, Record<string, unknown>>
+
+/**
+ * Einen Pfad des Plans zurück in die geschachtelte Form legen. Die Ebenen unter einem Eintrag
+ * heißen hier `_…`, solange sie noch nach id geschlüsselt sind; `rund` macht am Ende sortierte
+ * Listen daraus. Spiegelt `_planung_lesen` in `backend/src/data/dokument.py`.
+ */
+function planungLesen(planung: Record<string, unknown>, rest: string[], wert: unknown) {
+    if (!rest.length) return
+    if (rest.length === 1) {
+        planung[rest[0]!] = wert
+        return
+    }
+    if ((PLANUNGSLISTEN as readonly string[]).includes(rest[0]!)) {
+        (planung[rest[0]!] as string[]).push(rest[1]!)
+        return
+    }
+    if (!(rest[0]! in PLANUNGSEINTRAEGE)) return
+
+    const sammlung = planung[rest[0]!] as Sammlung
+    const eintrag = (sammlung[rest[1]!] ??= {id: rest[1]})
+    const tiefer = rest.slice(2)
+    if (tiefer.length === 1) {
+        eintrag[tiefer[0]!] = wert
+    } else if (tiefer[0] === 'adresse' && tiefer.length === 2) {
+        ((eintrag.adresse ??= {}) as Record<string, unknown>)[tiefer[1]!] = wert
+    } else if ((tiefer[0] === 'rollen' || tiefer[0] === 'fahrerlaubnis') && tiefer.length === 2) {
+        ((eintrag[tiefer[0]] ??= []) as string[]).push(tiefer[1]!)
+    } else if (tiefer[0] === 'verfuegbar' && tiefer.length === 3) {
+        const fenster = (eintrag._verfuegbar ??= {}) as Sammlung
+        ;(fenster[tiefer[1]!] ??= {id: tiefer[1]})[tiefer[2]!] = wert
+    } else if (tiefer[0] === 'schritte' && tiefer.length >= 3) {
+        const schritte = (eintrag._schritte ??= {}) as Sammlung
+        const schritt = (schritte[tiefer[1]!] ??= {id: tiefer[1]})
+        if (tiefer.length === 3) {
+            schritt[tiefer[2]!] = wert
+        } else if (tiefer[2] === 'besatzung' && tiefer.length === 5) {
+            const besatzung = (schritt._besatzung ??= {}) as Sammlung
+            ;(besatzung[tiefer[3]!] ??= {id: tiefer[3]})[tiefer[4]!] = wert
+        }
+    }
+}
+
 export function rund(werte: Flachbild): unknown {
     const alarme: Record<string, Record<string, never>> = {}
+    const planung: Record<string, unknown> = {
+        aktiv: false, rollen: [] as string[], fahrerlaubnisse: [] as string[],
+        ...Object.fromEntries(Object.keys(PLANUNGSEINTRAEGE).map(liste => [liste, {}])),
+    }
     const kataloge: Record<string, unknown> = {
         stichwoerter: {} as Record<string, Record<string, unknown>>,
         status: [] as string[], trupp: [] as string[],
@@ -169,6 +217,10 @@ export function rund(werte: Flachbild): unknown {
 
     for (const [schluessel, wert] of Object.entries(werte)) {
         const teile = schluessel.split(TRENNER)
+        if (teile[0] === 'planung') {
+            planungLesen(planung, teile.slice(1), wert)
+            continue
+        }
         if (teile[0] === 'kataloge' && teile.length === 2) {
             kataloge[teile[1]!] = wert
             continue
@@ -240,5 +292,25 @@ export function rund(werte: Flachbild): unknown {
     for (const liste of ['status', 'trupp'] as const) {
         (kataloge[liste] as string[]).sort()
     }
-    return {version: 1, alarme: fertig, kataloge}
+
+    const nachSortierung = (eintraege: Sammlung) => geordnet(eintraege as never as Record<string, Sortierbar>)
+    for (const liste of Object.keys(PLANUNGSEINTRAEGE)) {
+        planung[liste] = nachSortierung(planung[liste] as Sammlung)
+    }
+    for (const person of planung.personen as Record<string, unknown>[]) {
+        person.verfuegbar = nachSortierung((person._verfuegbar ?? {}) as Sammlung)
+        delete person._verfuegbar
+    }
+    for (const lauf of planung.laeufe as Record<string, unknown>[]) {
+        const schritte = nachSortierung((lauf._schritte ?? {}) as Sammlung) as Record<string, unknown>[]
+        for (const schritt of schritte) {
+            schritt.besatzung = nachSortierung((schritt._besatzung ?? {}) as Sammlung)
+            delete schritt._besatzung
+        }
+        lauf.schritte = schritte
+        delete lauf._schritte
+    }
+    for (const liste of PLANUNGSLISTEN) (planung[liste] as string[]).sort()
+
+    return {version: 1, alarme: fertig, kataloge, planung}
 }

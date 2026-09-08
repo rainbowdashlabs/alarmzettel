@@ -1,9 +1,11 @@
 import {reactive, watch} from 'vue'
 import {fahrzeugwerte} from '../scripts/katalog'
 import {neuSortieren} from '../scripts/listen'
+import type {Planung} from '../interfaces/Planung'
 import {
     ARBEITSMAPPE_VERSION,
     naechste,
+    leereAdresse,
     leereArbeitsmappe,
     leererAlarm,
     type Alarm,
@@ -29,8 +31,10 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
     // A file written before vehicles carried their strength lists bare Funkrufnamen.
     const alteNamen = quelle.kataloge?.funkrufnamen
     if (Array.isArray(alteNamen) && !quelle.kataloge?.fahrzeuge?.length) {
-        kataloge.fahrzeuge = alteNamen.map(funkrufname =>
-            ({id: crypto.randomUUID(), funkrufname, staerke: '', ezp: '', status: ''}))
+        kataloge.fahrzeuge = alteNamen.map(funkrufname => ({
+            id: crypto.randomUUID(), funkrufname,
+            staerke: '', ezp: '', status: '', plaetze: '', fuehrerschein: '',
+        }))
     }
 
     // A file written before either catalogue had an identity of its own: Stichwörter were bare
@@ -48,9 +52,39 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
         version: ARBEITSMAPPE_VERSION,
         alarme: (quelle.alarme ?? []).map(alarm => ({...leererAlarm(), ...alarm})),
         kataloge,
-        // Eine Datei ohne Plan bekommt einen leeren; ausgeschaltet ändert er nichts.
-        planung: {...leer.planung, ...(quelle.planung ?? {})},
+        planung: planungFuellen(leer.planung, quelle.planung),
     })))
+}
+
+/**
+ * Füllt den Plan auf, was eine Datei oder ein Abgleich weggelassen hat.
+ *
+ * Eine Menge, die leer ist, hat keinen einzigen Pfad — eine Person ohne Rollen kommt deshalb ganz
+ * ohne `rollen` zurück. Der Editor darf darauf nicht stoßen, also wird hier jeder Eintrag auf
+ * seine volle Form gebracht, so wie es die Alarme längst tun.
+ */
+function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
+    const planung: Planung = {...leer, ...(quelle ?? {})}
+    planung.tage = (planung.tage ?? []).map(tag => ({...tag}))
+    planung.orte = (planung.orte ?? []).map(ort => ({...ort, adresse: {...leereAdresse(), ...ort.adresse}}))
+    planung.personen = (planung.personen ?? []).map(person => ({
+        ...person,
+        anzahl: person.anzahl || 1,
+        rollen: person.rollen ?? [],
+        fahrerlaubnis: person.fahrerlaubnis ?? [],
+        verfuegbar: person.verfuegbar ?? [],
+    }))
+    planung.programmpunkte = (planung.programmpunkte ?? []).map(punkt => ({...punkt}))
+    planung.laeufe = (planung.laeufe ?? []).map(lauf => ({
+        ...lauf,
+        schritte: (lauf.schritte ?? []).map(schritt => ({
+            ...schritt, besatzung: schritt.besatzung ?? [],
+        })),
+    }))
+    for (const liste of ['rollen', 'fahrerlaubnisse'] as const) {
+        planung[liste] = planung[liste] ?? []
+    }
+    return planung
 }
 
 /** Points an Alarm at the catalogue entry whose text it already carries, where it has none yet. */
@@ -262,7 +296,7 @@ export function fahrzeugSichern(funkrufname: string): string {
     const vorhanden = fahrzeugIdFuer(sauber)
     if (vorhanden) return vorhanden
     const vorlage = {id: crypto.randomUUID(), funkrufname: sauber,
-                     staerke: '', ezp: '', status: ''}
+                     staerke: '', ezp: '', status: '', plaetze: '', fuehrerschein: ''}
     arbeitsmappe.kataloge.fahrzeuge.push(vorlage)
     return vorlage.id
 }

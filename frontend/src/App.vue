@@ -5,6 +5,7 @@ import {activeTheme, toggleTheme} from './theme'
 import {ref} from 'vue'
 import {verbindung} from './store/sync'
 import {neueSitzung, sitzung, sitzungVergessen, sitzungWechseln} from './store/sitzung'
+import {arbeitsmappe} from './store/arbeitsmappe'
 
 const wechsler = ref(false)
 const arbeitet = ref(false)
@@ -37,6 +38,9 @@ async function tun(was: () => Promise<void>) {
         <nav class="flex flex-wrap gap-x-5 gap-y-1 grow">
           <RouterLink to="/" class="nav-link">{{ t('nav.alarme') }}</RouterLink>
           <RouterLink to="/kataloge" class="nav-link">{{ t('nav.kataloge') }}</RouterLink>
+          <RouterLink v-if="arbeitsmappe.planung.aktiv" to="/planung" class="nav-link">
+            {{ t('nav.planung') }}
+          </RouterLink>
         </nav>
 
         <div class="flex items-center gap-2 shrink-0">

@@ -7,6 +7,8 @@ const routes: RouteRecordRaw[] = [
         meta: {titleKey: 'routes.alarme'}},
     {path: '/alarm/:id', name: 'Alarm', component: () => import('../views/AlarmView.vue'),
         meta: {titleKey: 'routes.alarm'}},
+    {path: '/planung', name: 'Planung', component: () => import('../views/PlanungView.vue'),
+        meta: {titleKey: 'routes.planung'}},
     {path: '/sitzung/:token', name: 'Sitzung', component: () => import('../views/FreigabeView.vue'),
         meta: {titleKey: 'routes.freigabe'}},
     // Links, die schon herumgereicht wurden, zeigen auf den alten Pfad und sollen weiter gehen.

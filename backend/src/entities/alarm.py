@@ -103,6 +103,10 @@ class Fahrzeugvorlage(BaseModel):
     staerke: str = ""
     ezp: str = ""
     status: str = ""
+    """Wie viele Köpfe hineinpassen. Nur für den Ablaufplan; der Alarmzettel kennt das nicht."""
+    plaetze: str = ""
+    """Welche Fahrerlaubnisklasse es verlangt, gegen `Person.fahrerlaubnis` geprüft."""
+    fuehrerschein: str = ""
 
 
 class Stichwortvorlage(BaseModel):

@@ -1,9 +1,13 @@
 /**
- * Prints the paths the browser's flattener produces for a working set, so they can be compared
- * with the ones the server produces. The two implementations have to agree exactly: a path only
- * one side knows would look to the other like an entry that was never there.
+ * Prints what the browser's flattener makes of a working set, so it can be compared with what the
+ * server makes of it. The two implementations have to agree exactly: a path only one side knows
+ * would look to the other like an entry that was never there.
  *
- *     node tools/pfade_vergleichen.mjs <arbeitsmappe.json>
+ *     node tools/pfade_vergleichen.mjs <arbeitsmappe.json> [--rund]
+ *
+ * `--rund` prints the working set rebuilt from those paths instead. Comparing only the paths
+ * leaves the way back untested — a flattener that writes a path its own rebuilder ignores passes
+ * the path check and still loses that data on every sync.
  */
 import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
@@ -43,6 +47,19 @@ mappe.alarme.forEach((alarm, stelle) => {
     })
 })
 
-for (const pfad of Object.keys(modul.flach(mappe)).sort()) {
-    process.stdout.write(pfad.split(modul.TRENNER).join(' / ') + '\n')
+/** Schlüssel sortiert, damit der Vergleich vom Inhalt handelt und nicht von der Reihenfolge. */
+function geordnet(wert) {
+    if (Array.isArray(wert)) return wert.map(geordnet)
+    if (wert && typeof wert === 'object') {
+        return Object.fromEntries(Object.keys(wert).sort().map(k => [k, geordnet(wert[k])]))
+    }
+    return wert
+}
+
+if (process.argv.includes('--rund')) {
+    process.stdout.write(JSON.stringify(geordnet(modul.rund(modul.flach(mappe))), null, 1) + '\n')
+} else {
+    for (const pfad of Object.keys(modul.flach(mappe)).sort()) {
+        process.stdout.write(pfad.split(modul.TRENNER).join(' / ') + '\n')
+    }
 }
