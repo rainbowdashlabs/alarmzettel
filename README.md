@@ -92,6 +92,10 @@ in them.
 docker compose up
 ```
 
+That builds the image from this checkout. A prebuilt one is published to GHCR on every push to
+`main`, so `ghcr.io/rainbowdashlabs/alarmzettel:latest` works instead of `build: .` if you would
+rather not build it yourself.
+
 The application is then on <http://localhost:8080>. The `freigaben` volume holds the shared
 working sets; everything else is stateless.
 
