@@ -3,6 +3,7 @@ import AuswahlFeld from '../base/AuswahlFeld.vue'
 import TextFeld from '../base/TextFeld.vue'
 import {t} from '../../i18n'
 import {
+  fahrzeugSichern,
   fahrzeugvorlage,
   funkrufnameVorschlaege,
   statusVorschlaege,
@@ -35,14 +36,19 @@ function fahrzeugEntfernen(gruppe: number, fahrzeug: number) {
  * Alarm leaves empty, so the sheet holds no value the editor does not show.
  */
 function werte(fahrzeug: Fahrzeug) {
-  return fahrzeugwerte(fahrzeug, fahrzeugvorlage(fahrzeug.funkrufname))
+  return fahrzeugwerte(fahrzeug, fahrzeugvorlage(fahrzeug))
 }
 
 /**
  * A different vehicle answers for itself. Anything overridden for the one before it would
  * otherwise stay behind and quietly describe the wrong wagen.
+ *
+ * A Funkrufname is linked to its catalogue entry by id rather than by the name, so renaming the
+ * vehicle later reaches this row too. One written for the first time joins the catalogue, which
+ * is also where its Stärke, EZP and Status will be filled in once.
  */
 function vorlageUebernehmen(fahrzeug: Fahrzeug) {
+  fahrzeug.vorlageId = fahrzeugSichern(fahrzeug.funkrufname)
   fahrzeug.ezp = ''
   fahrzeug.status = ''
   fahrzeug.staerke = ''

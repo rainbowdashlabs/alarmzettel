@@ -80,11 +80,19 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
     kataloge = arbeitsmappe.get("kataloge") or {}
     werte[_pfad("kataloge", "arbeitsgruppe")] = kataloge.get("arbeitsgruppe", "")
     werte.update(_adresse_felder(_pfad("kataloge", "wache"), kataloge.get("wache") or {}))
-    for liste in ("stichwoerter", "status", "trupp"):
+    # Status and Trupp are words and nothing else, so the word is its own key. Stichwörter and
+    # vehicles are pointed at by the Alarme, so they are keyed by an id that a rename survives.
+    for liste in ("status", "trupp"):
         for wert in kataloge.get(liste, []):
             werte[_pfad("kataloge", liste, wert)] = True
+    for eintrag in kataloge.get("stichwoerter", []):
+        # A Stichwort was a bare string before the catalogue had ids. Reading one as its own id
+        # keeps an old file working; the browser gives it a real one the next time it saves.
+        eintrag = {"id": eintrag, "text": eintrag} if isinstance(eintrag, str) else eintrag
+        kennung = eintrag.get("id") or eintrag.get("text", "")
+        werte[_pfad("kataloge", "stichwoerter", kennung, "text")] = eintrag.get("text", "")
     for vorlage in kataloge.get("fahrzeuge", []):
-        vbasis = _pfad("kataloge", "fahrzeuge", vorlage.get("funkrufname", ""))
+        vbasis = _pfad("kataloge", "fahrzeuge", vorlage.get("id") or vorlage.get("funkrufname", ""))
         for feld in ("funkrufname", "staerke", "ezp", "status"):
             werte[_pfad(vbasis, feld)] = vorlage.get(feld, "")
     return werte
@@ -117,7 +125,7 @@ def _leerer_alarm(kennung: str) -> dict:
 def rund(werte: dict[str, Any]) -> dict:
     """Builds the working set back out of the flat map, in sort-key order."""
     alarme: dict[str, dict] = {}
-    kataloge: dict[str, Any] = {"stichwoerter": [], "status": [], "trupp": [], "fahrzeuge": {},
+    kataloge: dict[str, Any] = {"stichwoerter": {}, "status": [], "trupp": [], "fahrzeuge": {},
                                 "arbeitsgruppe": "", "wache": {}}
 
     for pfad, wert in werte.items():
@@ -128,10 +136,12 @@ def rund(werte: dict[str, Any]) -> dict:
         if stueck[0] == "kataloge" and len(stueck) >= 3:
             if stueck[1] == "wache" and len(stueck) == 3:
                 kataloge["wache"][stueck[2]] = wert
-            elif stueck[1] in ("stichwoerter", "status", "trupp"):
+            elif stueck[1] in ("status", "trupp"):
                 kataloge[stueck[1]].append(stueck[2])
+            elif stueck[1] == "stichwoerter" and len(stueck) == 4:
+                kataloge["stichwoerter"].setdefault(stueck[2], {"id": stueck[2]})[stueck[3]] = wert
             elif stueck[1] == "fahrzeuge" and len(stueck) == 4:
-                kataloge["fahrzeuge"].setdefault(stueck[2], {})[stueck[3]] = wert
+                kataloge["fahrzeuge"].setdefault(stueck[2], {"id": stueck[2]})[stueck[3]] = wert
             continue
         if stueck[0] != "alarme" or len(stueck) < 3:
             continue
@@ -165,8 +175,12 @@ def rund(werte: dict[str, Any]) -> dict:
         alarm["einsatzmittel"] = gruppen
         fertig.append(alarm)
 
-    kataloge["fahrzeuge"] = [vorlage for _, vorlage in sorted(kataloge["fahrzeuge"].items())]
-    for liste in ("stichwoerter", "status", "trupp"):
+    # Sorted by what they read as, not by their ids, so both sides agree on the order.
+    kataloge["fahrzeuge"] = sorted(kataloge["fahrzeuge"].values(),
+                                   key=lambda v: (v.get("funkrufname", ""), v["id"]))
+    kataloge["stichwoerter"] = sorted(kataloge["stichwoerter"].values(),
+                                      key=lambda e: (e.get("text", ""), e["id"]))
+    for liste in ("status", "trupp"):
         kataloge[liste].sort()
     return {"version": 1, "alarme": fertig, "kataloge": kataloge}
 

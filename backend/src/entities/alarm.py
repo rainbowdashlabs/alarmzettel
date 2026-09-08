@@ -38,6 +38,8 @@ class Karte(BaseModel):
 
 
 class Fahrzeug(Eintrag):
+    """The catalogue entry this stands for; empty where the Funkrufname was typed by hand."""
+    vorlageId: str = ""
     funkrufname: str = ""
     ezp: str = ""
     status: str = ""
@@ -91,6 +93,8 @@ class Alarm(BaseModel):
     sonderrechte: str = ""
     arbeitsgruppe: str = ""
     wachalarmNr: str = ""
+    """The catalogue entry this stands for; empty where the Stichwort was typed by hand."""
+    stichwortId: str = ""
     stichwort: str = ""
     kurzinfo: str = ""
     anfahrtsadresse: Adresse = Adresse()
@@ -110,18 +114,28 @@ class Fahrzeugvorlage(BaseModel):
     """
     A vehicle as the station keeps it: crew strength, Einsatzpunkt and status are known in
     advance and come along when the vehicle is picked. Each stays editable on the Alarm.
+
+    An Alarm points at the id, so renaming the vehicle reaches every sheet that calls for it.
     """
 
+    id: str = Field(default_factory=_kennung)
     funkrufname: str = ""
     staerke: str = ""
     ezp: str = ""
     status: str = ""
 
 
+class Stichwortvorlage(BaseModel):
+    """A Stichwort is only its text, so the id is the whole reason an Alarm can follow a rename."""
+
+    id: str = Field(default_factory=_kennung)
+    text: str = ""
+
+
 class Kataloge(BaseModel):
     """Suggestion lists the user maintains; the open data covers only the medical codes."""
 
-    stichwoerter: list[str] = []
+    stichwoerter: list[Stichwortvorlage] = []
     fahrzeuge: list[Fahrzeugvorlage] = []
     status: list[str] = []
     trupp: list[str] = []

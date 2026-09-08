@@ -10,7 +10,7 @@ whatever asked for it, and because a rule worth having is worth a test.
 """
 
 from data.staerke import trupp_text
-from entities.alarm import Arbeitsmappe, Fahrzeug, Fahrzeugvorlage
+from entities.alarm import Alarm, Arbeitsmappe, Fahrzeug, Fahrzeugvorlage
 
 
 def _schluessel(funkrufname: str) -> str:
@@ -18,8 +18,17 @@ def _schluessel(funkrufname: str) -> str:
 
 
 def vorlagen(arbeitsmappe: Arbeitsmappe) -> dict[str, Fahrzeugvorlage]:
-    return {_schluessel(vorlage.funkrufname): vorlage
-            for vorlage in arbeitsmappe.kataloge.fahrzeuge if vorlage.funkrufname.strip()}
+    """
+    Every catalogue vehicle under both keys it can be found by: its id, which is what an Alarm
+    points at, and its Funkrufname, which is all a hand-typed or imported row has to go on.
+    """
+    gefunden: dict[str, Fahrzeugvorlage] = {}
+    for vorlage in arbeitsmappe.kataloge.fahrzeuge:
+        if vorlage.funkrufname.strip():
+            gefunden.setdefault(_schluessel(vorlage.funkrufname), vorlage)
+        if vorlage.id:
+            gefunden[vorlage.id] = vorlage
+    return gefunden
 
 
 def _trupp_aus_staerke(staerke: str) -> str:
@@ -32,25 +41,40 @@ def _trupp_aus_staerke(staerke: str) -> str:
 def aufloesen(fahrzeug: Fahrzeug, vorlage: Fahrzeugvorlage | None) -> Fahrzeug:
     """
     One vehicle as it prints. The Trupp line follows the strength that came out of the same
-    resolution, so a strength taken from the catalogue brings its Trupps along.
+    resolution, so a strength taken from the catalogue brings its Trupps along, and a vehicle
+    that points at a catalogue entry prints that entry's Funkrufname however it was renamed.
     """
     ezp = fahrzeug.ezp or (vorlage.ezp if vorlage else "")
     status = fahrzeug.status or (vorlage.status if vorlage else "")
     staerke = fahrzeug.staerke or (vorlage.staerke if vorlage else "")
     trupp = fahrzeug.trupp or _trupp_aus_staerke(staerke)
+    verwiesen = vorlage if vorlage and fahrzeug.vorlageId == vorlage.id else None
+    funkrufname = verwiesen.funkrufname if verwiesen else fahrzeug.funkrufname
     return fahrzeug.model_copy(
-        update={"ezp": ezp, "status": status, "staerke": staerke, "trupp": trupp})
+        update={"funkrufname": funkrufname, "ezp": ezp, "status": status,
+                "staerke": staerke, "trupp": trupp})
+
+
+def _stichwort(alarm: Alarm, stichwoerter: dict[str, str]) -> str:
+    """What the Alarm points at, or what it says itself where it points at nothing."""
+    return stichwoerter.get(alarm.stichwortId, alarm.stichwort)
 
 
 def mit_katalog(arbeitsmappe: Arbeitsmappe) -> Arbeitsmappe:
-    """The working set with every vehicle resolved against the catalogue, ready to render."""
+    """The working set with everything resolved against the catalogue, ready to render."""
     bekannt = vorlagen(arbeitsmappe)
+    stichwoerter = {eintrag.id: eintrag.text for eintrag in arbeitsmappe.kataloge.stichwoerter}
     alarme = []
     for alarm in arbeitsmappe.alarme:
         gruppen = []
         for gruppe in alarm.einsatzmittel:
-            fahrzeuge = [aufloesen(fahrzeug, bekannt.get(_schluessel(fahrzeug.funkrufname)))
-                         for fahrzeug in gruppe.fahrzeuge]
+            fahrzeuge = [
+                aufloesen(fahrzeug,
+                          bekannt.get(fahrzeug.vorlageId)
+                          or bekannt.get(_schluessel(fahrzeug.funkrufname)))
+                for fahrzeug in gruppe.fahrzeuge
+            ]
             gruppen.append(gruppe.model_copy(update={"fahrzeuge": fahrzeuge}))
-        alarme.append(alarm.model_copy(update={"einsatzmittel": gruppen}))
+        alarme.append(alarm.model_copy(update={
+            "stichwort": _stichwort(alarm, stichwoerter), "einsatzmittel": gruppen}))
     return arbeitsmappe.model_copy(update={"alarme": alarme})

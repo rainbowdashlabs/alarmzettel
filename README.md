@@ -26,9 +26,10 @@ screen are the ones printed on the slip.
   imported.
 - **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp, plus the
   Arbeitsgruppe every new alarm starts with and the station the sheets are written for. An alarm
-  names a vehicle and takes its crew strength, EZP and status from the catalogue, so correcting a
-  vehicle once corrects every sheet that calls for it; anything typed on the alarm overrides that
-  one field.
+  points at a Stichwort and a vehicle rather than copying them, so correcting either once corrects
+  every sheet that uses it — rename included. A vehicle also lends its crew strength, EZP and
+  status; anything typed on the alarm overrides that one field. A Stichwort or Funkrufname written
+  for the first time joins the catalogue by itself.
 - **Addresses** — type `Archenholdstr 21` into the street field and pick the suggestion; street,
   house number, postcode and Ortsteil all land at once, and the Polar-Koordinaten are measured
   from the station to the Einsatzadresse.
@@ -155,7 +156,7 @@ They talk to the real API and really render; where Typst is missing they skip th
 ```
 backend/src/
   entities/     the models, and with them the API schema
-  data/         session store, shares, addresses, the Typst call, the spreadsheet reader
+  data/         session store, shares, addresses, catalogue resolution, the Typst call
   services/     one module per router, with the tests beside them
   render/       alarmzettel.typ and the bundled fonts
 frontend/src/

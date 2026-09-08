@@ -64,11 +64,16 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
 
     werte[pfad('kataloge', 'arbeitsgruppe')] = mappe.kataloge.arbeitsgruppe ?? ''
     adresse(pfad('kataloge', 'wache'), werte, mappe.kataloge.wache as never)
-    for (const liste of ['stichwoerter', 'status', 'trupp'] as const) {
+    // Status and Trupp are words and nothing else, so the word is its own key. Stichwörter and
+    // vehicles are pointed at by the Alarme, so they are keyed by an id that a rename survives.
+    for (const liste of ['status', 'trupp'] as const) {
         for (const wert of mappe.kataloge[liste]) werte[pfad('kataloge', liste, wert)] = true
     }
+    for (const eintrag of mappe.kataloge.stichwoerter) {
+        werte[pfad('kataloge', 'stichwoerter', eintrag.id, 'text')] = eintrag.text ?? ''
+    }
     for (const vorlage of mappe.kataloge.fahrzeuge) {
-        const vbasis = pfad('kataloge', 'fahrzeuge', vorlage.funkrufname)
+        const vbasis = pfad('kataloge', 'fahrzeuge', vorlage.id)
         for (const feld of ['funkrufname', 'staerke', 'ezp', 'status'] as const) {
             werte[pfad(vbasis, feld)] = vorlage[feld] ?? ''
         }
@@ -86,8 +91,9 @@ function geordnet<T extends Sortierbar>(eintraege: Record<string, T>): T[] {
 export function rund(werte: Flachbild): unknown {
     const alarme: Record<string, Record<string, never>> = {}
     const kataloge: Record<string, unknown> = {
-        stichwoerter: [] as string[], status: [] as string[], trupp: [] as string[],
-        fahrzeuge: {} as Record<string, unknown>, arbeitsgruppe: '',
+        stichwoerter: {} as Record<string, Record<string, unknown>>,
+        status: [] as string[], trupp: [] as string[],
+        fahrzeuge: {} as Record<string, Record<string, unknown>>, arbeitsgruppe: '',
         wache: {} as Record<string, unknown>,
     }
 
@@ -101,11 +107,11 @@ export function rund(werte: Flachbild): unknown {
             const liste = teile[1]!
             if (liste === 'wache' && teile.length === 3) {
                 (kataloge['wache'] as Record<string, unknown>)[teile[2]!] = wert
-            } else if (liste === 'stichwoerter' || liste === 'status' || liste === 'trupp') {
+            } else if (liste === 'status' || liste === 'trupp') {
                 (kataloge[liste] as string[]).push(teile[2]!)
-            } else if (liste === 'fahrzeuge' && teile.length === 4) {
-                const gruppe = kataloge['fahrzeuge'] as Record<string, Record<string, unknown>>
-                ;(gruppe[teile[2]!] ??= {})[teile[3]!] = wert
+            } else if ((liste === 'stichwoerter' || liste === 'fahrzeuge') && teile.length === 4) {
+                const eintraege = kataloge[liste] as Record<string, Record<string, unknown>>
+                ;(eintraege[teile[2]!] ??= {id: teile[2]})[teile[3]!] = wert
             }
             continue
         }
@@ -152,9 +158,16 @@ export function rund(werte: Flachbild): unknown {
         return alarm
     })
 
-    kataloge['fahrzeuge'] = Object.keys(kataloge['fahrzeuge'] as object).sort()
-        .map(name => (kataloge['fahrzeuge'] as Record<string, unknown>)[name])
-    for (const liste of ['stichwoerter', 'status', 'trupp'] as const) {
+    // Sorted by what they read as, not by their ids, so both sides agree on the order.
+    const nachText = (feld: string) => (eintraege: Record<string, Record<string, unknown>>) =>
+        Object.values(eintraege).sort((a, b) =>
+            String(a[feld] ?? '').localeCompare(String(b[feld] ?? '')) ||
+            String(a['id']).localeCompare(String(b['id'])))
+    kataloge['fahrzeuge'] = nachText('funkrufname')(
+        kataloge['fahrzeuge'] as Record<string, Record<string, unknown>>)
+    kataloge['stichwoerter'] = nachText('text')(
+        kataloge['stichwoerter'] as Record<string, Record<string, unknown>>)
+    for (const liste of ['status', 'trupp'] as const) {
         (kataloge[liste] as string[]).sort()
     }
     return {version: 1, alarme: fertig, kataloge}

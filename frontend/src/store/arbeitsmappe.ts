@@ -30,14 +30,48 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
     // A file written before vehicles carried their strength lists bare Funkrufnamen.
     const alteNamen = quelle.kataloge?.funkrufnamen
     if (Array.isArray(alteNamen) && !quelle.kataloge?.fahrzeuge?.length) {
-        kataloge.fahrzeuge = alteNamen.map(funkrufname => ({funkrufname, staerke: '', ezp: '', status: ''}))
+        kataloge.fahrzeuge = alteNamen.map(funkrufname =>
+            ({id: crypto.randomUUID(), funkrufname, staerke: '', ezp: '', status: ''}))
     }
 
-    return sortierungSetzen(katalogVerknuepfen({
+    // A file written before either catalogue had an identity of its own: Stichwörter were bare
+    // strings and vehicles were known by their Funkrufname. Both get an id here, and the Alarme
+    // that use them are pointed at it, so a later rename reaches the sheets that were already
+    // written. Matching on the text is only safe this once — from now on the id is the link.
+    kataloge.stichwoerter = (kataloge.stichwoerter ?? []).map(eintrag =>
+        typeof eintrag === 'string'
+            ? {id: crypto.randomUUID(), text: eintrag}
+            : {...eintrag, id: eintrag.id || crypto.randomUUID()})
+    kataloge.fahrzeuge = kataloge.fahrzeuge.map(vorlage =>
+        ({...vorlage, id: vorlage.id || crypto.randomUUID()}))
+
+    return sortierungSetzen(katalogVerknuepfen(verweiseHerstellen({
         version: ARBEITSMAPPE_VERSION,
         alarme: (quelle.alarme ?? []).map(alarm => ({...leererAlarm(), ...alarm})),
         kataloge,
-    }))
+    })))
+}
+
+/** Points an Alarm at the catalogue entry whose text it already carries, where it has none yet. */
+function verweiseHerstellen(mappe: Arbeitsmappe): Arbeitsmappe {
+    const nachText = <T extends {id: string}>(eintraege: T[], lesen: (eintrag: T) => string) =>
+        new Map(eintraege.filter(e => lesen(e).trim())
+            .map(e => [lesen(e).trim().toLowerCase(), e.id]))
+    const stichwoerter = nachText(mappe.kataloge.stichwoerter, e => e.text)
+    const fahrzeuge = nachText(mappe.kataloge.fahrzeuge, v => v.funkrufname)
+
+    for (const alarm of mappe.alarme) {
+        if (!alarm.stichwortId) {
+            alarm.stichwortId = stichwoerter.get(alarm.stichwort.trim().toLowerCase()) ?? ''
+        }
+        for (const gruppe of alarm.einsatzmittel ?? []) {
+            for (const fahrzeug of gruppe.fahrzeuge ?? []) {
+                if (fahrzeug.vorlageId) continue
+                fahrzeug.vorlageId = fahrzeuge.get(fahrzeug.funkrufname.trim().toLowerCase()) ?? ''
+            }
+        }
+    }
+    return mappe
 }
 
 /**
@@ -139,8 +173,8 @@ export function alarmFinden(id: string): Alarm | undefined {
     return arbeitsmappe.alarme.find(alarm => alarm.id === id)
 }
 
-/** The catalogue lists that are plain words; vehicles carry more than a name and are separate. */
-type Wortliste = Extract<keyof Arbeitsmappe['kataloge'], 'stichwoerter' | 'status' | 'trupp'>
+/** The catalogue lists that are plain words; the two that Alarme point at are separate. */
+type Wortliste = Extract<keyof Arbeitsmappe['kataloge'], 'status' | 'trupp'>
 
 /**
  * Suggestions for a field: what the user put in the catalogue, plus whatever already appears
@@ -154,7 +188,42 @@ export function vorschlaege(katalog: Wortliste,
 }
 
 export function stichwortVorschlaege(): string[] {
-    return vorschlaege('stichwoerter', alarm => [alarm.stichwort])
+    const ausKatalog = arbeitsmappe.kataloge.stichwoerter.map(eintrag => eintrag.text)
+    const benutzt = arbeitsmappe.alarme.map(alarm => alarm.stichwort)
+    return [...new Set([...ausKatalog, ...benutzt].map(wert => wert.trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'de'))
+}
+
+/** The catalogue entry an Alarm points at, or the one whose text it matches. */
+export function stichwortvorlage(alarm: Alarm) {
+    if (alarm.stichwortId) {
+        const gefunden = arbeitsmappe.kataloge.stichwoerter.find(e => e.id === alarm.stichwortId)
+        if (gefunden) return gefunden
+    }
+    const gesucht = alarm.stichwort.trim().toLowerCase()
+    return arbeitsmappe.kataloge.stichwoerter.find(e => e.text.trim().toLowerCase() === gesucht)
+}
+
+/** The id of the catalogue entry reading exactly like this, so picking one links to it. */
+export function stichwortIdFuer(text: string): string {
+    const gesucht = text.trim().toLowerCase()
+    return arbeitsmappe.kataloge.stichwoerter
+        .find(eintrag => eintrag.text.trim().toLowerCase() === gesucht)?.id ?? ''
+}
+
+/**
+ * The catalogue entry for this Stichwort, adding it if it is new. A word typed for the first
+ * time joins the catalogue, so it is offered next time and can be corrected in one place later —
+ * which only works if the Alarm points at an entry rather than merely spelling the same word.
+ */
+export function stichwortSichern(text: string): string {
+    const sauber = text.trim()
+    if (!sauber) return ''
+    const vorhanden = stichwortIdFuer(sauber)
+    if (vorhanden) return vorhanden
+    const eintrag = {id: crypto.randomUUID(), text: sauber}
+    arbeitsmappe.kataloge.stichwoerter.push(eintrag)
+    return eintrag.id
 }
 
 export function funkrufnameVorschlaege(): string[] {
@@ -165,11 +234,37 @@ export function funkrufnameVorschlaege(): string[] {
         .sort((a, b) => a.localeCompare(b, 'de'))
 }
 
-/** The catalogue entry for a Funkrufname, so picking a vehicle can bring its defaults along. */
-export function fahrzeugvorlage(funkrufname: string) {
-    const gesucht = funkrufname.trim().toLowerCase()
+/**
+ * The catalogue entry a vehicle stands for: the one it points at, or failing that the one whose
+ * Funkrufname it reads like — a vehicle typed by hand or imported from a spreadsheet has no id.
+ */
+export function fahrzeugvorlage(fahrzeug: {vorlageId?: string, funkrufname: string}) {
+    if (fahrzeug.vorlageId) {
+        const gefunden = arbeitsmappe.kataloge.fahrzeuge.find(v => v.id === fahrzeug.vorlageId)
+        if (gefunden) return gefunden
+    }
+    const gesucht = fahrzeug.funkrufname.trim().toLowerCase()
     return arbeitsmappe.kataloge.fahrzeuge.find(
         vorlage => vorlage.funkrufname.trim().toLowerCase() === gesucht)
+}
+
+/** The id of the catalogue vehicle named exactly this, so picking one links to it. */
+export function fahrzeugIdFuer(funkrufname: string): string {
+    const gesucht = funkrufname.trim().toLowerCase()
+    return arbeitsmappe.kataloge.fahrzeuge
+        .find(vorlage => vorlage.funkrufname.trim().toLowerCase() === gesucht)?.id ?? ''
+}
+
+/** As with a Stichwort: a Funkrufname written for the first time joins the catalogue. */
+export function fahrzeugSichern(funkrufname: string): string {
+    const sauber = funkrufname.trim()
+    if (!sauber) return ''
+    const vorhanden = fahrzeugIdFuer(sauber)
+    if (vorhanden) return vorhanden
+    const vorlage = {id: crypto.randomUUID(), funkrufname: sauber,
+                     staerke: '', ezp: '', status: ''}
+    arbeitsmappe.kataloge.fahrzeuge.push(vorlage)
+    return vorlage.id
 }
 
 export function statusVorschlaege(): string[] {

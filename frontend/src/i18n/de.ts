@@ -124,6 +124,7 @@ export default {
         titel: 'Kataloge',
         beschreibung: 'Eigene Vorschlagslisten. Sie werden mit der Arbeitsmappe gespeichert und geladen.',
         stichwoerter: 'Stichwörter',
+        stichwoerterHinweis: 'Wird ein Stichwort hier geändert, ändern sich alle Alarme mit, die es benutzen.',
         fahrzeuge: 'Fahrzeuge',
         fahrzeugeHinweis: 'Stärke, EZP und Status werden beim Auswählen des Funkrufnamens übernommen und bleiben im Alarm änderbar.',
         dienststelle: 'Dienststelle',

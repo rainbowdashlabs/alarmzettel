@@ -79,20 +79,37 @@
               "hinweis": "",
               "alarmFuer": true,
               "id": "fahrzeug-0-0",
-              "sortierung": 0
+              "sortierung": 0,
+              "vorlageId": "vorlage-0"
             }
           ],
           "id": "gruppe-0",
           "sortierung": 0
         }
       ],
-      "sortierung": 0
+      "sortierung": 0,
+      "stichwortId": "stichwort-0"
     }
   ],
   "kataloge": {
-    "stichwoerter": [],
-    "fahrzeuge": [],
-    "status": [],
+    "stichwoerter": [
+      {
+        "id": "stichwort-0",
+        "text": "BRAND K."
+      }
+    ],
+    "fahrzeuge": [
+      {
+        "id": "vorlage-0",
+        "funkrufname": "LHF 0001.1 (0000)",
+        "staerke": "6",
+        "ezp": "6",
+        "status": "R2(A1)"
+      }
+    ],
+    "status": [
+      "R2(A1)"
+    ],
     "trupp": [],
     "arbeitsgruppe": "Muster 1"
   }

@@ -22,7 +22,8 @@ MAPPE = {
                            "trupp": "Stärke=6: SF, AT, WT", "hinweis": "", "alarmFuer": True}],
         }],
     }],
-    "kataloge": {"stichwoerter": ["BRAND K."], "status": ["R2(A1)"], "trupp": [],
+    "kataloge": {"stichwoerter": [{"id": "s1", "text": "BRAND K."}],
+                 "status": ["R2(A1)"], "trupp": [],
                  "fahrzeuge": [{"funkrufname": "LHF 0001.1", "staerke": "6", "ezp": "6",
                                 "status": "R2(A1)"}]},
 }
@@ -43,11 +44,21 @@ class RundreiseTest(unittest.TestCase):
         self.assertEqual("LHF 0001.1", alarm["einsatzmittel"][0]["fahrzeuge"][0]["funkrufname"])
         self.assertTrue(alarm["einsatzmittel"][0]["fahrzeuge"][0]["alarmFuer"])
 
+    def test_a_stichwort_keeps_its_text_and_its_identity(self):
+        mappe = dict(MAPPE, kataloge=dict(
+            MAPPE["kataloge"],
+            stichwoerter=[{"id": "s9", "text": "Allergie / Kontakt mit Tieren"}]))
+        self.assertEqual([{"id": "s9", "text": "Allergie / Kontakt mit Tieren"}],
+                         rund(flach(mappe))["kataloge"]["stichwoerter"])
+
     def test_catalogue_entries_containing_a_slash_stay_one_entry(self):
-        """Stichwörter carry slashes, so the path separator cannot be one."""
-        mappe = dict(MAPPE, kataloge=dict(MAPPE["kataloge"],
-                                          stichwoerter=["Allergie / Kontakt mit Tieren"]))
-        self.assertEqual(["Allergie / Kontakt mit Tieren"],
+        """A status is still keyed by its own text, so the path separator cannot be a slash."""
+        mappe = dict(MAPPE, kataloge=dict(MAPPE["kataloge"], status=["R2 / A1"]))
+        self.assertEqual(["R2 / A1"], rund(flach(mappe))["kataloge"]["status"])
+
+    def test_a_stichwort_written_before_the_catalogue_had_ids_still_loads(self):
+        mappe = dict(MAPPE, kataloge=dict(MAPPE["kataloge"], stichwoerter=["BRAND K."]))
+        self.assertEqual([{"id": "BRAND K.", "text": "BRAND K."}],
                          rund(flach(mappe))["kataloge"]["stichwoerter"])
 
     def test_entries_come_back_in_sort_order(self):

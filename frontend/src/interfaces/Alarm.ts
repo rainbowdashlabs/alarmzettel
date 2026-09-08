@@ -25,6 +25,8 @@ export interface Karte {
 }
 
 export interface Fahrzeug extends Eintrag {
+    /** The catalogue entry this stands for, if any. Empty where the Funkrufname was typed. */
+    vorlageId: string
     funkrufname: string
     ezp: string
     status: string
@@ -68,6 +70,8 @@ export interface Alarm extends Eintrag {
     sonderrechte: string
     arbeitsgruppe: string
     wachalarmNr: string
+    /** The catalogue entry this stands for, if any. Empty where the Stichwort was typed. */
+    stichwortId: string
     stichwort: string
     kurzinfo: string
     anfahrtsadresse: Adresse
@@ -85,14 +89,22 @@ export interface Alarm extends Eintrag {
 
 /** A vehicle as the station keeps it: picking it brings its strength, EZP and status along. */
 export interface Fahrzeugvorlage {
+    /** What an Alarm points at, so renaming the vehicle reaches every sheet that uses it. */
+    id: string
     funkrufname: string
     staerke: string
     ezp: string
     status: string
 }
 
+/** A Stichwort is only its text, so the id is the whole reason an Alarm can follow a rename. */
+export interface Stichwortvorlage {
+    id: string
+    text: string
+}
+
 export interface Kataloge {
-    stichwoerter: string[]
+    stichwoerter: Stichwortvorlage[]
     fahrzeuge: Fahrzeugvorlage[]
     status: string[]
     trupp: string[]
@@ -123,7 +135,7 @@ export function naechste(eintraege: Eintrag[]): number {
 
 export function leeresFahrzeug(sortierung = 0): Fahrzeug {
     return {
-        id: crypto.randomUUID(), sortierung,
+        id: crypto.randomUUID(), sortierung, vorlageId: '',
         funkrufname: '', ezp: '', status: '', staerke: '', trupp: '', hinweis: '', alarmFuer: false,
     }
 }
@@ -151,6 +163,10 @@ export const STICHWOERTER = [
     'TH 1', 'TH 2', 'TH 3', 'TH K.', 'TH M.',
 ]
 
+export function stichwortvorlagen(): Stichwortvorlage[] {
+    return STICHWOERTER.map(text => ({id: crypto.randomUUID(), text}))
+}
+
 export function leererAlarm(): Alarm {
     const heute = new Date()
     const datum = heute.toLocaleDateString('de-DE')
@@ -166,6 +182,7 @@ export function leererAlarm(): Alarm {
         meldungDatum: datum,
         meldungZeit: zeit,
         aPlatz: aPlatzKennung(),
+        stichwortId: '',
         polizei: 'N',
         sonderrechte: 'J',
         arbeitsgruppe: '',
@@ -191,7 +208,7 @@ export function leereArbeitsmappe(): Arbeitsmappe {
         version: ARBEITSMAPPE_VERSION,
         alarme: [],
         kataloge: {
-            stichwoerter: [...STICHWOERTER], fahrzeuge: [], status: [], trupp: [],
+            stichwoerter: stichwortvorlagen(), fahrzeuge: [], status: [], trupp: [],
             arbeitsgruppe: '', wache: leereAdresse(),
         },
     }
