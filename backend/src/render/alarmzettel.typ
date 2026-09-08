@@ -8,6 +8,10 @@
 /// rows keep their proportions whatever size is set here.
 #let WERT = 10pt
 
+/// The two lines the eye goes to first on a sheet being read out, so they print above the rest.
+#let STICHWORT = WERT + 3pt
+#let KURZINFO = WERT + 2pt
+
 #let THICK = 2.25pt
 #let DOTTED = (paint: black, thickness: 0.75pt, dash: (array: (0.7pt, 0.75pt)))
 #let GREY = rgb("#D9D9D9")
@@ -168,11 +172,14 @@
     // 6 — obere Kante des Kastens
     ..((1, 4, 3, 3, 5, 3).map(n => cell(colspan: n, stroke: (bottom: THICK))[#spacer(2pt)])),
 
-    // 7-10 — Stichwort und Kurzinfo
-    cell(colspan: 19, stroke: (top: THICK, left: THICK, right: THICK))[#strut#L("Alarmierungsstichwort", size: 9pt)],
-    cell(colspan: 19, stroke: boxed-lr)[#V(get(a, "stichwort"))],
+    // 7-10 — Stichwort und Kurzinfo, mit Luft um beide
+    cell(colspan: 19, stroke: (top: THICK, left: THICK, right: THICK))[#spacer(2pt)],
+    cell(colspan: 19, stroke: boxed-lr)[#strut#L("Alarmierungsstichwort", size: 9pt)],
+    cell(colspan: 19, stroke: boxed-lr)[#V(get(a, "stichwort"), size: STICHWORT)],
+    cell(colspan: 19, stroke: boxed-lr)[#spacer(2pt)],
     cell(colspan: 19, stroke: boxed-lr)[#strut#L("Kurzinfo zum Einsatzanlass", size: 9pt)],
-    cell(colspan: 19, stroke: boxed-lr)[#V(get(a, "kurzinfo"))],
+    cell(colspan: 19, stroke: boxed-lr)[#V(get(a, "kurzinfo"), size: KURZINFO)],
+    cell(colspan: 19, stroke: boxed-lr)[#spacer(2pt)],
 
     // 11-18 — Anfahrts- und Einsatzadresse
     cell(colspan: 9, fill: GREY, stroke: boxed-l, align(center, L("Anfahrtsadresse", size: 9pt))),
