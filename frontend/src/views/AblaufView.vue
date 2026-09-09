@@ -2,6 +2,7 @@
 import {defineAsyncComponent, ref, watch} from 'vue'
 import {RouterLink} from 'vue-router'
 import LagenAnsicht from '../components/planung/LagenAnsicht.vue'
+import KlappAbschnitt from '../components/base/KlappAbschnitt.vue'
 import LaufKette from '../components/planung/LaufKette.vue'
 import OrtsSicht from '../components/planung/OrtsSicht.vue'
 import PersonenPlan from '../components/planung/PersonenPlan.vue'
@@ -124,21 +125,19 @@ async function drucken() {
       {{ t('ablauf.keineKetten') }}
     </p>
 
-    <section v-for="lauf in arbeitsmappe.planung.laeufe" :key="lauf.id" class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel">
-          <font-awesome-icon :icon="lauf.fahrzeugId ? 'fa-solid fa-table' : 'fa-solid fa-users'"
-                             class="mr-2 text-muted"/>
-          {{ beschriftung(lauf) }}
-        </h2>
+    <KlappAbschnitt v-for="lauf in arbeitsmappe.planung.laeufe" :key="lauf.id"
+                    :name="`kette-${lauf.id}`" :titel="beschriftung(lauf)"
+                    :symbol="lauf.fahrzeugId ? 'fa-solid fa-table' : 'fa-solid fa-users'"
+                    :anzahl="lauf.schritte.length" vorgabe>
+      <template #werkzeug>
         <button type="button" class="knopf knopf-klein knopf-gefahr"
                 @click="entfernen(arbeitsmappe.planung.laeufe, lauf)">
           <font-awesome-icon icon="fa-solid fa-trash"/>
           {{ t('ablauf.ketteEntfernen') }}
         </button>
-      </div>
+      </template>
       <LaufKette :lauf="lauf"/>
-    </section>
+    </KlappAbschnitt>
     </template>
   </div>
 </template>

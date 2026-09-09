@@ -4,25 +4,30 @@ import {ref, watch} from 'vue'
 /**
  * Ein Abschnitt, der sich zuklappen lässt.
  *
- * Der Katalog führt inzwischen elf Listen; alle gleichzeitig offen ist eine Seite, durch die man
- * scrollt, statt sie zu lesen. Was offen war, merkt sich der Browser — es gehört zu ihm und
- * nicht zur Arbeitsmappe, so wie das Farbthema.
+ * Der Katalog führt inzwischen elf Listen und der Ablauf eine Kette je Fahrzeug; alles
+ * gleichzeitig offen ist eine Seite, durch die man scrollt, statt sie zu lesen. Was offen war,
+ * merkt sich der Browser — es gehört zu ihm und nicht zur Arbeitsmappe, so wie das Farbthema.
  */
-const {name, titel, anzahl} = defineProps<{
+const {name, titel, anzahl, symbol, vorgabe = false} = defineProps<{
   /** Schlüssel, unter dem der Zustand gemerkt wird. */
   name: string
   titel: string
   /** Was drinsteht, ohne aufzuklappen. */
   anzahl?: number
+  /** Ein Zeichen vor dem Titel, wo der Abschnitt eines von mehrerlei ist. */
+  symbol?: string
+  /** Wie er dasteht, solange nichts gemerkt ist. */
+  vorgabe?: boolean
 }>()
 
 const SPEICHER = 'alarmplaner_kataloge'
 
 function gemerkt(): boolean {
   try {
-    return Boolean(JSON.parse(localStorage.getItem(SPEICHER) ?? '{}')[name])
+    const stand = JSON.parse(localStorage.getItem(SPEICHER) ?? '{}')[name]
+    return stand === undefined ? vorgabe : Boolean(stand)
   } catch {
-    return false
+    return vorgabe
   }
 }
 
@@ -42,6 +47,7 @@ watch(offen, wert => {
       <button type="button" class="flex items-center gap-3 grow text-left" @click="offen = !offen">
         <font-awesome-icon :icon="offen ? 'fa-solid fa-angle-down' : 'fa-solid fa-angle-right'"
                            class="text-muted"/>
+        <font-awesome-icon v-if="symbol" :icon="symbol" class="text-muted"/>
         <h2 class="abschnitt-titel">{{ titel }}</h2>
         <span v-if="anzahl !== undefined" class="text-muted tabular text-sm">{{ anzahl }}</span>
       </button>
