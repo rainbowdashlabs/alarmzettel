@@ -4,12 +4,45 @@ import AppFuss from './components/base/AppFuss.vue'
 import {t} from './i18n'
 import {activeTheme, toggleTheme} from './theme'
 import {ref} from 'vue'
-import {verbindung} from './store/sync'
+import {jetztAbgleichen, verbindung} from './store/sync'
 import {neueSitzung, sitzung, sitzungVergessen, sitzungWechseln} from './store/sitzung'
 import {arbeitsmappe} from './store/arbeitsmappe'
+import {lesetoken} from './api/sitzung'
 
 const wechsler = ref(false)
 const arbeitet = ref(false)
+const teiler = ref(false)
+const nurLesenToken = ref<string | null>(null)
+const kopiert = ref<string | null>(null)
+
+/** Ein Link auf diese Sitzung, so wie dieser Browser sie erreicht. */
+function linkAuf(token: string | null): string {
+  return token ? `${window.location.origin}/sitzung/${token}` : ''
+}
+
+/**
+ * Teilen heißt hier: den Link weitergeben. Vorher wird abgeglichen, damit der andere den Stand
+ * sieht, den alle haben. Der Lesen-Link entsteht beim ersten Öffnen dieses Menüs und bleibt
+ * danach derselbe — wer eine Sitzung nur ansieht, kann keinen erzeugen und braucht auch keinen.
+ */
+async function teilen() {
+  teiler.value = !teiler.value
+  kopiert.value = null
+  if (!teiler.value || !sitzung.token || sitzung.nurLesen) return
+  await jetztAbgleichen()
+  try {
+    nurLesenToken.value = await lesetoken(sitzung.token)
+  } catch {
+    nurLesenToken.value = null
+  }
+}
+
+async function kopieren(link: string) {
+  try {
+    await navigator.clipboard.writeText(link)
+    kopiert.value = link
+  } catch { /* ein Browser ohne Zwischenablage zeigt den Link zum Markieren */ }
+}
 
 /** Der Tag, an dem diese Sitzung verschwindet, wenn sie niemand öffnet. */
 function laeuftAb(): string {
@@ -52,6 +85,49 @@ async function tun(was: () => Promise<void>) {
           </button>
 
           <div class="auswahl">
+            <button type="button" class="knopf knopf-klein" :aria-expanded="teiler"
+                    :title="t('freigabe.teilenTitel')" @click="teilen">
+              <font-awesome-icon icon="fa-solid fa-share-nodes"/>
+              <span class="hidden md:inline">{{ t('freigabe.teilen') }}</span>
+            </button>
+
+            <div v-if="teiler" class="auswahl-liste sitzungsliste grid gap-3 p-3"
+                 style="min-width: 22rem">
+              <div v-if="!sitzung.nurLesen">
+                <div class="label mb-1">{{ t('freigabe.zumMitarbeiten') }}</div>
+                <div class="flex items-center gap-2">
+                  <input type="text" class="field text-[13px]" readonly
+                         :value="linkAuf(sitzung.token)"
+                         @focus="($event.target as HTMLInputElement).select()"/>
+                  <button type="button" class="knopf knopf-klein shrink-0"
+                          @click="kopieren(linkAuf(sitzung.token))">
+                    <font-awesome-icon icon="fa-solid fa-copy"/>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div class="label mb-1">{{ t('freigabe.zumAnsehen') }}</div>
+                <div class="flex items-center gap-2">
+                  <input type="text" class="field text-[13px]" readonly
+                         :value="sitzung.nurLesen ? linkAuf(sitzung.token)
+                           : (nurLesenToken ? linkAuf(nurLesenToken) : '…')"
+                         @focus="($event.target as HTMLInputElement).select()"/>
+                  <button type="button" class="knopf knopf-klein shrink-0"
+                          :disabled="!sitzung.nurLesen && !nurLesenToken"
+                          @click="kopieren(linkAuf(sitzung.nurLesen ? sitzung.token
+                            : nurLesenToken))">
+                    <font-awesome-icon icon="fa-solid fa-copy"/>
+                  </button>
+                </div>
+                <p class="text-muted text-[12px] mt-1">{{ t('freigabe.zumAnsehenHinweis') }}</p>
+              </div>
+
+              <p v-if="kopiert" class="text-[12px]">{{ t('freigabe.kopiert') }}</p>
+            </div>
+          </div>
+
+          <div class="auswahl">
             <button type="button" class="knopf knopf-klein" :aria-expanded="wechsler"
                     @click="wechsler = !wechsler">
               <font-awesome-icon icon="fa-solid fa-rotate"/>
@@ -89,6 +165,12 @@ async function tun(was: () => Promise<void>) {
            wenn der Abgleich klemmt, gibt es etwas zu sagen. -->
       <div v-if="verbindung.fehler" class="mx-auto w-full max-w-[1560px] px-4 md:px-6 py-2">
         <span class="text-signal-ink text-[13px]">{{ t('freigabe.abgleichFehler') }}</span>
+      </div>
+
+      <div v-if="sitzung.nurLesen"
+           class="mx-auto w-full max-w-[1560px] px-4 md:px-6 py-2 flex items-center gap-3 flex-wrap">
+        <span class="label text-signal-ink">{{ t('freigabe.nurLesen') }}</span>
+        <span class="text-muted text-[13px]">{{ t('freigabe.nurLesenHinweis') }}</span>
       </div>
     </header>
 

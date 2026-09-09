@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS sitzungen (
     angelegt    TEXT NOT NULL,
     zuletzt     TEXT NOT NULL,
     alarme      INTEGER NOT NULL DEFAULT 0,
-    bytes       INTEGER NOT NULL DEFAULT 0
+    bytes       INTEGER NOT NULL DEFAULT 0,
+    lesetoken   TEXT
 );
 CREATE INDEX IF NOT EXISTS sitzungen_zuletzt ON sitzungen (zuletzt);
 """
@@ -70,6 +71,19 @@ class Sitzungen:
         self._cache: OrderedDict[str, tuple[Dokument, float]] = OrderedDict()
         self._cache_lock = threading.Lock()
         self._umbenennen()
+
+    def _spalte_lesetoken(self, db) -> None:
+        """
+        Das Lesetoken kam später dazu. Eine Tabelle, die es noch nicht kennt — eine bestehende
+        Installation, oder die aus `freigaben` umbenannte —, bekommt die Spalte hier;
+        `CREATE TABLE IF NOT EXISTS` ergänzt eine vorhandene nicht. Der Index folgt danach,
+        sonst zeigte er auf eine Spalte, die es in diesem Moment noch nicht gibt.
+        """
+        spalten = {zeile[1] for zeile in db.execute("PRAGMA table_info(sitzungen)").fetchall()}
+        if "lesetoken" not in spalten:
+            db.execute("ALTER TABLE sitzungen ADD COLUMN lesetoken TEXT")
+        db.execute("CREATE UNIQUE INDEX IF NOT EXISTS sitzungen_lesetoken"
+                   " ON sitzungen (lesetoken) WHERE lesetoken IS NOT NULL")
 
     def _umbenennen(self) -> None:
         """
@@ -102,9 +116,10 @@ class Sitzungen:
         try:
             db.execute("PRAGMA journal_mode=WAL")
             # Bei jeder Verbindung, nicht nur beim Start: ein Volume, das unter dem laufenden
-            # Server geleert oder neu eingehängt wird, soll den Dienst nicht mitnehmen. Beide
-            # Anweisungen sind IF NOT EXISTS und kosten neben dem Dateilesen nichts.
+            # Server geleert oder neu eingehängt wird, soll den Dienst nicht mitnehmen. Alles
+            # hier ist auf Wiederholung gebaut und kostet neben dem Dateilesen nichts.
             db.executescript(SCHEMA)
+            self._spalte_lesetoken(db)
             yield db
             db.commit()
         finally:
@@ -188,6 +203,36 @@ class Sitzungen:
                     (token, jetzt.isoformat(), jetzt.isoformat()))
             self._schreiben(token, dokument, len(arbeitsmappe.get("alarme", [])))
         return token, jetzt + timedelta(days=self._tage)
+
+    def aufloesen(self, token: str) -> tuple[str, bool]:
+        """
+        Zu welcher Sitzung dieses Token gehört und ob es nur lesen darf. Ein unbekanntes Token
+        fliegt hier auf und nicht erst an der Datei — beides ist für den Aufrufer dasselbe: 404.
+        """
+        with self._verbindung() as db:
+            zeile = db.execute(
+                "SELECT token, lesetoken FROM sitzungen WHERE token = ? OR lesetoken = ?",
+                (token, token)).fetchone()
+        if zeile is None:
+            raise SitzungFehler("Diese Sitzung gibt es nicht (mehr).")
+        return zeile[0], token == zeile[1]
+
+    def lesetoken(self, token: str) -> str:
+        """
+        Das Token, das nur lesen darf. Es entsteht, wenn es zum ersten Mal gebraucht wird, und
+        bleibt dann — ein Link, den man weitergegeben hat, soll nicht unter der Hand sterben.
+        """
+        with self._sperre(token):
+            with self._verbindung() as db:
+                zeile = db.execute("SELECT lesetoken FROM sitzungen WHERE token = ?",
+                                   (token,)).fetchone()
+                if zeile is None:
+                    raise SitzungFehler("Diese Sitzung gibt es nicht (mehr).")
+                if zeile[0]:
+                    return zeile[0]
+                neu = secrets.token_urlsafe(32)
+                db.execute("UPDATE sitzungen SET lesetoken = ? WHERE token = ?", (neu, token))
+                return neu
 
     def lesen(self, token: str) -> tuple[dict, datetime]:
         """Reading pushes the expiry out, so a link in use does not go away underneath anyone."""

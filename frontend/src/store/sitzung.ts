@@ -23,6 +23,8 @@ export interface BekannteSitzung {
 export const sitzung = reactive({
     token: null as string | null,
     laeuftAb: null as string | null,
+    /** Diese Sitzung ist über einen Lesen-Link geöffnet: sehen ja, mitschreiben nein. */
+    nurLesen: false,
     bekannt: [] as BekannteSitzung[],
 })
 
@@ -73,6 +75,7 @@ export function nameSetzen(wert: string) {
 function uebernehmenIn(kopf: Sitzungskopf) {
     sitzung.token = kopf.token
     sitzung.laeuftAb = kopf.laeuftAb
+    sitzung.nurLesen = kopf.nurLesen
     merken(kopf.token)
 }
 
@@ -84,7 +87,7 @@ export async function sitzungStarten() {
     sitzung.bekannt = lesen<BekannteSitzung[]>(BEKANNT, [])
     const laufend = await laufendeSitzung()
     if (laufend) {
-        await beitreten(laufend.token, name())
+        await beitreten(laufend.token, name(), laufend.nurLesen)
         uebernehmenIn(laufend)
         return
     }
@@ -106,6 +109,6 @@ export async function neueSitzung() {
 /** In eine bekannte oder geteilte Sitzung wechseln. */
 export async function sitzungWechseln(token: string) {
     const kopf = await sitzungUebernehmen(token)
-    await beitreten(token, name())
+    await beitreten(token, name(), kopf.nurLesen)
     uebernehmenIn(kopf)
 }

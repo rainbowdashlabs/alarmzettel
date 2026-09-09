@@ -33,7 +33,8 @@ def _mappe(request: Request) -> Arbeitsmappe:
     if not token:
         raise HTTPException(status_code=401, detail="Keine laufende Sitzung.")
     try:
-        inhalt, _ = sitzungsdienst.sitzungen.lesen(token)
+        echt, _ = sitzungsdienst.sitzungen.aufloesen(token)
+        inhalt, _ = sitzungsdienst.sitzungen.lesen(echt)
     except SitzungFehler as fehler:
         raise HTTPException(status_code=404, detail=str(fehler)) from fehler
     return Arbeitsmappe.model_validate(inhalt)

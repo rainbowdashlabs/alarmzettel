@@ -106,3 +106,57 @@ class ApiTest(unittest.TestCase):
         frisch = TestClient(app)
         self.assertEqual(200, frisch.get(f"/api/sitzung/{token}").status_code)
         self.assertIsNone(frisch.cookies.get(COOKIE))
+
+
+class LesetokenTest(ApiTest):
+    """
+    Ein Lesetoken führt auf dieselbe Sitzung und darf nur ansehen. Die Grenze liegt hier und
+    nicht in der Oberfläche.
+    """
+
+    def paar(self):
+        token = self.sitzung()["token"]
+        antwort = self.client.post(f"/api/sitzung/{token}/lesetoken")
+        self.assertEqual(200, antwort.status_code, antwort.text)
+        return token, antwort.json()["token"]
+
+    def test_es_bleibt_bei_einem(self):
+        token, lesen = self.paar()
+        self.assertEqual(lesen, self.client.post(f"/api/sitzung/{token}/lesetoken").json()["token"])
+        self.assertNotEqual(token, lesen)
+
+    def test_lesen_geht_und_sagt_es(self):
+        token, lesen = self.paar()
+        frisch = TestClient(app)
+        antwort = frisch.get(f"/api/sitzung/{lesen}")
+        self.assertEqual(200, antwort.status_code)
+        self.assertTrue(antwort.json()["nurLesen"])
+        self.assertFalse(self.client.get(f"/api/sitzung/{token}").json()["nurLesen"])
+        self.assertEqual(1, len(antwort.json()["arbeitsmappe"]["alarme"]))
+
+    def test_abholen_geht_auch(self):
+        _, lesen = self.paar()
+        self.assertEqual(200, self.client.get(f"/api/sitzung/{lesen}/aenderungen").status_code)
+
+    def test_schreiben_wird_abgewiesen(self):
+        token, lesen = self.paar()
+        stapel = {"seit": 0, "wer": "Gast",
+                  "aenderungen": [{"pfad": "alarme\x1fa1\x1fstichwort", "wert": "Geändert"}]}
+        self.assertEqual(403,
+                         self.client.post(f"/api/sitzung/{lesen}/aenderungen", json=stapel).status_code)
+        self.assertEqual(200,
+                         self.client.post(f"/api/sitzung/{token}/aenderungen", json=stapel).status_code)
+
+    def test_loeschen_und_weitergeben_bleiben_dem_eigentlichen_vorbehalten(self):
+        _, lesen = self.paar()
+        self.assertEqual(403, self.client.delete(f"/api/sitzung/{lesen}").status_code)
+        self.assertEqual(403, self.client.post(f"/api/sitzung/{lesen}/lesetoken").status_code)
+
+    def test_wer_mit_dem_lesetoken_folgt_darf_drucken(self):
+        _, lesen = self.paar()
+        frisch = TestClient(app)
+        self.assertEqual(200, frisch.post(f"/api/sitzung/{lesen}/uebernehmen").status_code)
+        self.assertTrue(frisch.get("/api/sitzung").json()["nurLesen"])
+        pdf = frisch.post("/api/render")
+        self.assertEqual(200, pdf.status_code, pdf.text)
+        self.assertTrue(pdf.content.startswith(b"%PDF"))

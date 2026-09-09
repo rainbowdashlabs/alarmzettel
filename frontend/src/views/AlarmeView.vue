@@ -7,7 +7,6 @@ import {
 } from '../store/arbeitsmappe'
 import {renderAlle, fehlertext} from '../api/render'
 import {tabelleImportieren} from '../api/tabelle'
-import {sitzung} from '../store/sitzung'
 import Rueckfrage from '../components/base/Rueckfrage.vue'
 import {jetztAbgleichen} from '../store/sync'
 
@@ -16,7 +15,6 @@ const datei = ref<HTMLInputElement>()
 const tabelle = ref<HTMLInputElement>()
 const meldung = ref<string | null>(null)
 const fehler = ref<string | null>(null)
-const freigabeLink = ref<string | null>(null)
 const anstehend = ref<(() => void) | null>(null)
 
 /** Asks before replacing a working set that has something in it, without blocking the page. */
@@ -48,33 +46,6 @@ async function pdf() {
   } catch (error) {
     fehler.value = await fehlertext(error)
   }
-}
-
-/**
- * Teilen heißt: den Link zu dieser Sitzung weitergeben. Es gibt nichts anzulegen — die
- * Arbeitsmappe liegt schon auf dem Server, und der Link darauf ist der Schlüssel dazu.
- */
-async function teilenLassen() {
-  fehler.value = null
-  meldung.value = null
-  try {
-    // Vor dem Weitergeben abgleichen, damit der andere den aktuellen Stand sieht.
-    await jetztAbgleichen()
-    freigabeLink.value = sitzung.token
-        ? `${window.location.origin}/sitzung/${sitzung.token}`
-        : null
-    meldung.value = freigabeLink.value ? t('freigabe.erzeugt', {tage: 30}) : null
-  } catch (error) {
-    fehler.value = await fehlertext(error)
-  }
-}
-
-async function linkKopieren() {
-  if (!freigabeLink.value) return
-  try {
-    await navigator.clipboard.writeText(freigabeLink.value)
-    meldung.value = t('freigabe.kopiert')
-  } catch { /* a browser that refuses the clipboard still shows the link to select by hand */ }
 }
 
 function speichern(blob: Blob, name: string) {
@@ -144,10 +115,6 @@ async function laden(event: Event) {
           <font-awesome-icon icon="fa-solid fa-download"/>
           {{ t('datei.herunterladen') }}
         </button>
-        <button type="button" class="knopf" :disabled="!arbeitsmappe.alarme.length" @click="teilenLassen">
-          <font-awesome-icon icon="fa-solid fa-share-nodes"/>
-          {{ t('freigabe.teilen') }}
-        </button>
         <button type="button" class="knopf" :disabled="!arbeitsmappe.alarme.length" @click="pdf">
           <font-awesome-icon icon="fa-solid fa-file-pdf"/>
           {{ t('datei.pdfAlle') }}
@@ -162,16 +129,6 @@ async function laden(event: Event) {
     <input ref="datei" type="file" accept="application/json" class="hidden" @change="laden"/>
     <input ref="tabelle" type="file" class="hidden" @change="tabelleLaden"
            accept=".ods,.xlsx,application/vnd.oasis.opendocument.spreadsheet,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
-
-    <div v-if="freigabeLink" class="abschnitt grid gap-2">
-      <div class="flex gap-2 items-center flex-wrap">
-        <input :value="freigabeLink" readonly class="field grow min-w-60 tabular text-[13px]"/>
-        <button type="button" class="knopf shrink-0" @click="linkKopieren">
-          <font-awesome-icon icon="fa-solid fa-copy"/>
-        </button>
-      </div>
-      <p class="text-signal-ink text-[13px]">{{ t('freigabe.warnung') }}</p>
-    </div>
 
     <p v-if="meldung" class="text-sm text-muted">{{ meldung }}</p>
     <p v-if="fehler" class="text-sm text-signal-ink">{{ fehler }}</p>

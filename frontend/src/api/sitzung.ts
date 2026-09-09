@@ -11,6 +11,8 @@ export interface Sitzungskopf {
     url: string
     laeuftAb: string
     tage: number
+    /** Dieser Browser folgt der Sitzung mit einem Lesetoken: sehen ja, schreiben nein. */
+    nurLesen: boolean
 }
 
 export interface GeleseneSitzung extends Sitzungskopf {
@@ -35,6 +37,17 @@ export async function sitzungAnlegen(arbeitsmappe: Arbeitsmappe): Promise<Sitzun
 export async function sitzungLesen(token: string): Promise<GeleseneSitzung> {
     const {data} = await client.get<GeleseneSitzung>(`/api/sitzung/${token}`)
     return data
+}
+
+/**
+ * Das Token, mit dem eine Sitzung nur angesehen werden kann. Es entsteht beim ersten Fragen und
+ * bleibt danach dasselbe. Den Link daraus baut der Browser selbst — er weiß, unter welcher
+ * Adresse er erreichbar ist, der Server hinter einem Proxy nicht unbedingt.
+ */
+export async function lesetoken(token: string): Promise<string> {
+    const {data} = await client.post<{token: string, url: string}>(
+        `/api/sitzung/${token}/lesetoken`)
+    return data.token
 }
 
 /** Macht diese Sitzung zur laufenden — das ist Wechseln und Beitreten in einem. */

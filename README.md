@@ -39,8 +39,9 @@ screen are the ones printed on the slip.
 - **Addresses** — type `Archenholdstr 21` into the street field and pick the suggestion; street,
   house number, postcode and Ortsteil all land at once, and the Polar-Koordinaten are measured
   from the station to the Einsatzadresse.
-- **Share and edit together** — a working set gets a link. Whoever opens it either works on their
-  own copy or joins everyone else on the same one.
+- **Share and edit together** — a working set gets a link, and a second one that only reads.
+  Whoever opens the first either works on their own copy or joins everyone else on the same one;
+  whoever opens the second watches along without being able to change anything.
 - **Ablaufplanung** — optional and off by default. What the station keeps lives in the
   catalogue; the plan itself holds only the Lagen and the chains. An exercise day is planned as a
   chain per vehicle and per person: each step starts where the previous one ended, so a jump from A to B
@@ -100,6 +101,13 @@ set" and "a shared working set" were always the same thing, and now they are the
 Whoever opens the link either takes a copy into a session of their own or switches into this one
 and works on the same state as everyone else.
 
+Every session also has a **read-only link**: a second token on the same file that may read and
+fetch changes but never write one. It is for the people who should see the plan without standing
+in it — a group leader, an observer, the watch next door. Whoever opens it follows the session
+live, and anything they type stays in their own browser; the way out is the copy. The boundary
+sits on the server, which answers a write from a read token with 403, rather than in the
+interface, which is the only place it would hold. **Teilen** in the header hands out both links.
+
 Retention runs from the **last use**, not from creation: a session in use stays alive, one nobody
 opens disappears after 30 days along with its file. Cleanup runs at startup and hourly; it also
 removes files with no index entry, of the kind an unclean shutdown leaves behind.
@@ -151,7 +159,8 @@ two participants against each other — concurrent edits on one alarm, a deletio
 still typing into it, a dropped connection. Both run in CI.
 
 **The link is the password**, and so is the cookie. There is no other authentication — whoever
-has either can read the working set, change it, and delete it. The token is long and random, but a
+has either can read the working set, change it, and delete it; whoever has the read-only link can
+read it and nothing else. The token is long and random, but a
 forwarded link is a forwarded working set. The slips are exercise material with invented personal details; nothing else belongs
 in them.
 

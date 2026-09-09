@@ -17,6 +17,8 @@ interface Antwort {
 
 export const verbindung = reactive({
     token: null as string | null,
+    /** Mit einem Lesetoken wird nur geholt: der Server nähme ohnehin nichts an. */
+    nurLesen: false,
     wer: '',
     stand: 0,
     laeuft: false,
@@ -186,10 +188,13 @@ async function austauschen() {
     laeuftGerade = true
     try {
         const gesendetBild = flach(arbeitsmappe)
-        const gesendet = unterschied(serverBild, gesendetBild)
-        const {data} = await client.post<Antwort>(
-            `/api/sitzung/${verbindung.token}/aenderungen`,
-            {seit: verbindung.stand, wer: verbindung.wer, aenderungen: gesendet})
+        const gesendet = verbindung.nurLesen ? [] : unterschied(serverBild, gesendetBild)
+        const {data} = verbindung.nurLesen
+            ? await client.get<Antwort>(`/api/sitzung/${verbindung.token}/aenderungen`,
+                                        {params: {seit: verbindung.stand}})
+            : await client.post<Antwort>(
+                `/api/sitzung/${verbindung.token}/aenderungen`,
+                {seit: verbindung.stand, wer: verbindung.wer, aenderungen: gesendet})
         einarbeiten(data, gesendet, gesendetBild)
         verbindung.fehler = null
     } catch (fehler) {
@@ -229,7 +234,7 @@ watch(arbeitsmappe, beiAenderung, {deep: true})
  * Sitzung hält — sie wird nicht mit dem zusammengeführt, was zufällig in diesem Browser lag,
  * sonst landen die Reste des einen bei allen anderen.
  */
-export async function beitreten(token: string, wer: string) {
+export async function beitreten(token: string, wer: string, nurLesen = false) {
     // Fetched before anything is thrown away, so a workspace that cannot be reached leaves this
     // browser with what it had.
     const {data} = await client.get<Antwort>(
@@ -237,6 +242,7 @@ export async function beitreten(token: string, wer: string) {
 
     verlassen()
     verbindung.token = token
+    verbindung.nurLesen = nurLesen
     verbindung.wer = wer
     verbindung.stand = 0
     serverBild = {}
@@ -273,6 +279,7 @@ export function verlassen() {
     window.clearTimeout(ruhe)
     takt = undefined
     verbindung.token = null
+    verbindung.nurLesen = false
     verbindung.laeuft = false
     verbindung.fehler = null
     serverBild = {}

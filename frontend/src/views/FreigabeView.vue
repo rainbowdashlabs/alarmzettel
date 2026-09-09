@@ -43,15 +43,16 @@ function kopieUebernehmen() {
  * whatever happened to be open here, or one person's leftovers would land on everyone else.
  */
 function mitarbeitenAnfordern() {
-  if (!freigabe.value || !name.value.trim()) return
+  if (!freigabe.value || !(name.value.trim() || freigabe.value.nurLesen)) return
   if (arbeitsmappe.alarme.length) rueckfrage.value = 'mitarbeiten'
   else void mitarbeiten()
 }
 
+/** Mit einem Lesetoken heißt dasselbe „ansehen“: der Browser folgt der Sitzung, ohne zu schreiben. */
 async function mitarbeiten() {
-  if (!freigabe.value || !name.value.trim()) return
+  if (!freigabe.value) return
   rueckfrage.value = null
-  localStorage.setItem('alarmzettel_name', name.value.trim())
+  if (name.value.trim()) localStorage.setItem('alarmzettel_name', name.value.trim())
   try {
     nameSetzen(name.value)
     await sitzungWechseln(String(route.params.token))
@@ -85,7 +86,16 @@ function datum(wert: string): string {
         </li>
       </ul>
       <p class="text-muted text-[13px]">{{ t('freigabe.laeuftAb', {datum: datum(freigabe.laeuftAb)}) }}</p>
-      <div class="grid gap-2 border-t border-rule pt-3">
+      <div v-if="freigabe.nurLesen" class="grid gap-2 border-t border-rule pt-3">
+        <button type="button" class="knopf knopf-primaer justify-self-start"
+                @click="mitarbeitenAnfordern">
+          <font-awesome-icon icon="fa-solid fa-users"/>
+          {{ t('freigabe.ansehen') }}
+        </button>
+        <p class="text-muted text-[13px]">{{ t('freigabe.ansehenHinweis') }}</p>
+      </div>
+
+      <div v-else class="grid gap-2 border-t border-rule pt-3">
         <label class="feld-label" for="wer">{{ t('freigabe.name') }}</label>
         <div class="flex gap-2 flex-wrap">
           <input id="wer" v-model="name" type="text" class="field grow min-w-40"
