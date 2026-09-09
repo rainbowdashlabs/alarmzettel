@@ -32,7 +32,7 @@ class Plan:
 
     def __init__(self, arbeitsmappe: Arbeitsmappe) -> None:
         self.planung: Planung = arbeitsmappe.planung
-        self._orte = {ort.id: ort.name for ort in self.planung.orte}
+        self._orte = {ort.id: ort.name for ort in arbeitsmappe.kataloge.alle_orte()}
         self._personen = {person.id: person for person in self.planung.personen}
         self._lagen = {punkt.id: punkt.name for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {

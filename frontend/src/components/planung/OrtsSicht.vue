@@ -2,7 +2,7 @@
 import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {mehrereTage, personName, plandaten} from '../../store/planung'
+import {alleOrte, mehrereTage, personName, plandaten} from '../../store/planung'
 import {ortssicht} from '../../scripts/ablauf'
 import type {Ortsbelegung} from '../../scripts/ablauf'
 import {tagwechsel, uhrzeit} from '../../scripts/zeit'
@@ -12,7 +12,7 @@ import {tagwechsel, uhrzeit} from '../../scripts/zeit'
  * samt Leuten gerade zusammen?“ und macht Fahrerwechsel, Abholung und Übergabe sichtbar, statt
  * sie nur zu melden.
  */
-const sichten = computed(() => arbeitsmappe.planung.orte.map(ort => {
+const sichten = computed(() => alleOrte().map(ort => {
   const belegungen = ortssicht(plandaten(), ort.id)
   return {ort, belegungen, tage: tagwechsel(belegungen.map(belegung => belegung.von))}
 }))

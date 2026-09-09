@@ -9,7 +9,7 @@
  * `tools/ablauf_pruefen.mjs` außerhalb eines Browsers geprüft werden kann.
  */
 import type {Fahrzeugvorlage} from '../interfaces/Alarm'
-import type {Lauf, Person, Planung, Programmpunkt, Schritt} from '../interfaces/Planung'
+import type {Lauf, Ort, Person, Planung, Programmpunkt, Schritt} from '../interfaces/Planung'
 import type {Punkt} from './polar'
 import {entfernungKm} from './polar'
 import {alsMinuten, dauer, ueberschneidet} from './zeit'
@@ -30,6 +30,8 @@ const KNAPP = 0.6
 export interface Plandaten {
     planung: Planung
     fahrzeuge: Fahrzeugvorlage[]
+    /** Die Orte des Katalogs, die Dienststelle voran. */
+    orte: Ort[]
     punkte?: Record<string, Punkt>
 }
 

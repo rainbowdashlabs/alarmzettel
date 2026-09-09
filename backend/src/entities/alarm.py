@@ -1,13 +1,13 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from entities.basis import Adresse, Eintrag, kennung as _kennung
-from entities.planung import Planung
+from entities.planung import DIENSTSTELLE, Ort, Planung
 
 __all__ = ["Adresse", "Eintrag", "Karte", "Fahrzeug", "Einsatzmittelgruppe", "HinweisText",
            "HinweisCode", "Hinweis", "Alarm", "Fahrzeugvorlage", "Stichwortvorlage", "Kataloge",
-           "Arbeitsmappe", "Planung"]
+           "Arbeitsmappe", "Planung", "Ort", "DIENSTSTELLE"]
 
 
 class Karte(BaseModel):
@@ -123,14 +123,50 @@ class Kataloge(BaseModel):
     fahrzeuge: list[Fahrzeugvorlage] = []
     status: list[str] = []
     trupp: list[str] = []
+    """
+    Die angelegten Orte. Ein Ort gehört der Wache und nicht einem einzelnen Übungstag — deshalb
+    steht er hier neben den Fahrzeugen und nicht im Plan.
+    """
+    orte: list[Ort] = []
     """One fixed value for the whole working set; every new Alarm starts with it."""
     arbeitsgruppe: str = ""
     """The station the sheets are written for; the Polar-Koordinaten are measured from it."""
     wache: Adresse = Adresse()
+    """Wie die Dienststelle im Plan heißt. Sie ist ein Ort, den es immer gibt."""
+    wacheName: str = ""
+
+    def alle_orte(self) -> list[Ort]:
+        """
+        Die Dienststelle zuerst, dann die angelegten. Sie ist kein Eintrag, den jemand anlegt,
+        sondern einer, den es gibt, solange die Wache eine Adresse hat — und deshalb auch keiner,
+        den man löschen kann.
+        """
+        dienststelle = Ort(id=DIENSTSTELLE, sortierung=-1,
+                           name=self.wacheName or "Dienststelle", adresse=self.wache)
+        return [dienststelle, *self.orte]
 
 
 class Arbeitsmappe(BaseModel):
     """The whole working set, as it is downloaded, uploaded and held in the browser."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _orte_in_den_katalog(cls, werte: Any) -> Any:
+        """
+        Orte standen einmal im Plan. Sie gehören der Wache und nicht dem einzelnen Übungstag,
+        also ziehen sie einmalig in den Katalog um — die Schritte zeigen ohnehin nur auf ihre id.
+        """
+        if not isinstance(werte, dict):
+            return werte
+        plan = werte.get("planung")
+        kataloge = werte.get("kataloge")
+        if not isinstance(plan, dict) or not isinstance(kataloge, (dict, type(None))):
+            return werte
+        alte = plan.get("orte")
+        kataloge = kataloge or {}
+        if alte and not kataloge.get("orte"):
+            werte = {**werte, "kataloge": {**kataloge, "orte": alte}}
+        return werte
 
     version: int = 1
     alarme: list[Alarm] = []

@@ -23,11 +23,16 @@ export interface Tag extends Eintrag {
  * Ein eingetragener Ort mit einer Identität — kein Text in einer Zelle. Nur dadurch ist „am
  * selben Ort zur selben Zeit“ überhaupt entscheidbar, woran Fahrerwechsel, Zustieg und Übergabe
  * hängen.
+ *
+ * Orte stehen im Katalog: sie gehören der Wache und überdauern den einzelnen Übungstag.
  */
 export interface Ort extends Eintrag {
     name: string
     adresse: Adresse
 }
+
+/** Die Kennung des Orts, der die eigene Wache ist. Er wird nicht angelegt, es gibt ihn. */
+export const DIENSTSTELLE = 'wache'
 
 /** Ein Zeitfenster, in dem jemand überhaupt da ist. Keines eingetragen heißt: immer. */
 export interface Verfuegbarkeit extends Eintrag {
@@ -100,7 +105,6 @@ export interface Planung {
     /** Aus: kein Navigationspunkt, keine Daten, der Alarmzettel-Teil unverändert. */
     aktiv: boolean
     tage: Tag[]
-    orte: Ort[]
     personen: Person[]
     rollen: string[]
     fahrerlaubnisse: string[]
@@ -111,7 +115,7 @@ export interface Planung {
 export function leerePlanung(): Planung {
     return {
         aktiv: false,
-        tage: [], orte: [], personen: [],
+        tage: [], personen: [],
         rollen: [...ROLLEN], fahrerlaubnisse: [...FAHRERLAUBNISSE],
         programmpunkte: [], laeufe: [],
     }

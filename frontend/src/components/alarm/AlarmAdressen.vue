@@ -4,7 +4,7 @@ import TextFeld from '../base/TextFeld.vue'
 import {t} from '../../i18n'
 import {zuPunkt, type Adresspunkt} from '../../api/adressen'
 import {polarKoordinaten} from '../../scripts/polar'
-import {arbeitsmappe} from '../../store/arbeitsmappe'
+import {arbeitsmappe, ortSichern} from '../../store/arbeitsmappe'
 import type {Alarm} from '../../interfaces/Alarm'
 
 const alarm = defineModel<Alarm>({required: true})
@@ -15,8 +15,18 @@ defineProps<{ ausPlan?: boolean }>()
 /** The two addresses usually agree, so copying one over the other saves typing it twice. */
 async function uebernehmen() {
   alarm.value.einsatzadresse = {...alarm.value.anfahrtsadresse}
+  ortSichern(alarm.value.einsatzadresse)
   const ziel = await zuPunkt(alarm.value.einsatzadresse)
   if (ziel) await polarSetzen(ziel)
+}
+
+/**
+ * Eine aufgelöste Einsatzadresse wird ein Ort im Katalog. Damit kann der Ablaufplan sie
+ * auswählen, ohne dass sie ein zweites Mal getippt wird.
+ */
+function einsatzadresseGesetzt(ziel: Adresspunkt) {
+  ortSichern(alarm.value.einsatzadresse)
+  return polarSetzen(ziel)
 }
 
 /**
@@ -40,7 +50,7 @@ async function polarSetzen(ziel: Adresspunkt) {
     <div class="grid md:grid-cols-2 gap-5">
       <AdresseFeld v-model="alarm.anfahrtsadresse" :titel="t('adresse.anfahrt')"/>
       <AdresseFeld v-if="!ausPlan" v-model="alarm.einsatzadresse" :titel="t('adresse.einsatz')"
-                   @aufgeloest="polarSetzen"/>
+                   @aufgeloest="einsatzadresseGesetzt"/>
       <div v-else>
         <h3 class="label mb-2">{{ t('adresse.einsatz') }}</h3>
         <p class="text-muted text-sm">{{ t('ausPlan.adresse') }}</p>

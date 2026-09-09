@@ -73,7 +73,8 @@ def _reihe_suchen(belegt: list[int], von: int, bis: int) -> int:
 class _Namen:
     def __init__(self, arbeitsmappe: Arbeitsmappe) -> None:
         self.planung = arbeitsmappe.planung
-        self._orte = {ort.id: ort.name for ort in self.planung.orte}
+        self.orte = arbeitsmappe.kataloge.alle_orte()
+        self._orte = {ort.id: ort.name for ort in self.orte}
         self._personen = {person.id: person for person in self.planung.personen}
         self._lagen = {punkt.id: punkt.name for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
@@ -150,7 +151,7 @@ def bewegungsbild(arbeitsmappe: Arbeitsmappe, datum: str, modus: str = "fahrzeug
     beteiligt = {eintrag.schritt.ortId for _, eintrag, _, _ in stehend}
     for _, eintrag in fahrten:
         beteiligt |= {eintrag.von_ort_id, eintrag.schritt.ortId}
-    reihenfolge = [ort.id for ort in namen.planung.orte if ort.id and ort.id in beteiligt]
+    reihenfolge = [ort.id for ort in namen.orte if ort.id and ort.id in beteiligt]
 
     belegung: dict[str, list[int]] = {ort_id: [] for ort_id in reihenfolge}
     reihen: dict[tuple[str, str], int] = {}

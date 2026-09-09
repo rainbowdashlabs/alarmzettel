@@ -37,10 +37,16 @@ const {personenplan} = await laden('frontend/src/scripts/ablauf.ts')
 const {bewegungsbild, bewegungstage} = await laden('frontend/src/scripts/bewegungen.ts')
 
 const mappe = JSON.parse(readFileSync(quelle, 'utf8'))
-const daten = {planung: mappe.planung, fahrzeuge: mappe.kataloge?.fahrzeuge ?? []}
+const dienststelle = {
+    id: 'wache', sortierung: -1,
+    name: mappe.kataloge?.wacheName || 'Dienststelle',
+    adresse: mappe.kataloge?.wache ?? {},
+}
+const orte = [dienststelle, ...(mappe.kataloge?.orte ?? [])]
+const daten = {planung: mappe.planung, fahrzeuge: mappe.kataloge?.fahrzeuge ?? [], orte}
 
 const namen = (liste, id, feld) => liste?.find(eintrag => eintrag.id === id)?.[feld] ?? ''
-const ort = id => namen(mappe.planung.orte, id, 'name')
+const ort = id => namen(orte, id, 'name')
 const lage = id => namen(mappe.planung.programmpunkte, id, 'name')
 const fahrzeug = id => namen(mappe.kataloge?.fahrzeuge, id, 'funkrufname')
 

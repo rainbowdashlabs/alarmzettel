@@ -294,6 +294,63 @@ await abgleichen(anna)
 pruefe('nach dem Abgleich steht sie in Annas Arbeitsmappe',
     alarmVon(anna).stichwort === 'BRAND 4 KURZ VOR DEM DRUCK', alarmVon(anna).stichwort)
 
+// Eine Sitzung von vor dem Umzug trägt ihre Orte unter `planung|orte|…`. Sie entsteht nur über
+// die Pfade selbst: über das Modell ginge sie schon beim Anlegen in den Katalog.
+console.log('\nOrte einer älteren Sitzung überleben den Umzug in den Katalog')
+{
+    const alte = await (await fetch(`${basis}/api/sitzung`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({version: 1, alarme: []}),
+    })).json()
+
+    const T = '\u001f'
+    await fetch(`${basis}/api/sitzung/${alte.token}/aenderungen`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({seit: 0, wer: 'alt', aenderungen: [
+            {pfad: `planung${T}aktiv`, wert: true},
+            {pfad: `planung${T}orte${T}o1${T}sortierung`, wert: 0},
+            {pfad: `planung${T}orte${T}o1${T}name`, wert: 'Kindergarten'},
+            {pfad: `planung${T}orte${T}o1${T}adresse${T}strasse`, wert: 'Archenholdstraße'},
+            {pfad: `planung${T}orte${T}o1${T}adresse${T}hnr`, wert: '21'},
+            {pfad: `planung${T}tage${T}t1${T}datum`, wert: '2026-09-19'},
+            {pfad: `planung${T}personen${T}p1${T}name`, wert: 'Maria'},
+            {pfad: `planung${T}personen${T}p1${T}anzahl`, wert: 1},
+            {pfad: `planung${T}laeufe${T}l1${T}fahrzeugId`, wert: 'f1'},
+            {pfad: `planung${T}laeufe${T}l1${T}schritte${T}s1${T}art`, wert: 'aufenthalt'},
+            {pfad: `planung${T}laeufe${T}l1${T}schritte${T}s1${T}von`, wert: '2026-09-19T08:00'},
+            {pfad: `planung${T}laeufe${T}l1${T}schritte${T}s1${T}bis`, wert: '2026-09-19T09:00'},
+            {pfad: `planung${T}laeufe${T}l1${T}schritte${T}s1${T}ortId`, wert: 'o1'},
+        ]}),
+    })
+
+    const gelesen = await (await fetch(`${basis}/api/sitzung/${alte.token}`)).json()
+    pruefe('der Server liest den alten Pfad in den Katalog',
+        gelesen.arbeitsmappe.kataloge.orte.map((ort) => ort.name).join() === 'Kindergarten',
+        JSON.stringify(gelesen.arbeitsmappe.kataloge.orte))
+
+    const carla = await klient('carla')
+    await carla.beitreten(alte.token, 'Carla')
+    pruefe('und der Browser ebenso',
+        carla.arbeitsmappe.kataloge.orte.map((ort) => ort.name).join() === 'Kindergarten',
+        JSON.stringify(carla.arbeitsmappe.kataloge.orte))
+
+    await carla.jetztAbgleichen()
+    await carla.jetztAbgleichen()
+    const danach = (await (await fetch(`${basis}/api/sitzung/${alte.token}`)).json()).arbeitsmappe
+    pruefe('und der Abgleich begräbt sie nicht',
+        danach.kataloge.orte.map((ort) => ort.name).join() === 'Kindergarten',
+        JSON.stringify(danach.kataloge.orte))
+    pruefe('der übrige Plan steht auch noch',
+        danach.planung.aktiv === true && danach.planung.tage.length === 1 &&
+        danach.planung.personen.length === 1 && danach.planung.laeufe.length === 1,
+        JSON.stringify({aktiv: danach.planung.aktiv, tage: danach.planung.tage.length,
+                        personen: danach.planung.personen.length,
+                        laeufe: danach.planung.laeufe.length}))
+    pruefe('samt seinem Schritt am umgezogenen Ort',
+        danach.planung.laeufe[0]?.schritte[0]?.ortId === 'o1',
+        JSON.stringify(danach.planung.laeufe[0]?.schritte))
+}
+
 console.log('\nEin Abgleich ohne Neuigkeiten lässt das Dokument in Ruhe')
 {
     await anna.jetztAbgleichen()

@@ -1,13 +1,15 @@
 import {reactive, watch} from 'vue'
 import {fahrzeugwerte} from '../scripts/katalog'
 import {neuSortieren} from '../scripts/listen'
-import type {Planung} from '../interfaces/Planung'
+import {DIENSTSTELLE} from '../interfaces/Planung'
+import type {Ort, Planung} from '../interfaces/Planung'
 import {
     ARBEITSMAPPE_VERSION,
     naechste,
     leereAdresse,
     leereArbeitsmappe,
     leererAlarm,
+    type Adresse,
     type Alarm,
     type Arbeitsmappe,
 } from '../interfaces/Alarm'
@@ -48,6 +50,13 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
     kataloge.fahrzeuge = kataloge.fahrzeuge.map(vorlage =>
         ({...vorlage, id: vorlage.id || crypto.randomUUID()}))
 
+    // Orte standen einmal im Plan. Sie gehören der Wache und nicht dem einzelnen Übungstag, also
+    // ziehen sie einmalig in den Katalog um; die Schritte zeigen ohnehin nur auf ihre id.
+    const alteOrte = (quelle.planung as {orte?: Ort[]} | undefined)?.orte
+    kataloge.orte = (kataloge.orte?.length ? kataloge.orte : alteOrte ?? [])
+        .map(ort => ({...ort, adresse: {...leereAdresse(), ...ort.adresse}}))
+    kataloge.wacheName = kataloge.wacheName ?? ''
+
     return sortierungSetzen(katalogVerknuepfen(verweiseHerstellen({
         version: ARBEITSMAPPE_VERSION,
         alarme: (quelle.alarme ?? []).map(alarm => ({...leererAlarm(), ...alarm})),
@@ -69,7 +78,6 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
 function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
     const planung: Planung = {...leer, ...(quelle ?? {})}
     planung.tage = (planung.tage ?? []).map(tag => ({...tag}))
-    planung.orte = (planung.orte ?? []).map(ort => ({...ort, adresse: {...leereAdresse(), ...ort.adresse}}))
     planung.personen = (planung.personen ?? []).map(person => ({
         ...person,
         anzahl: person.anzahl || 1,
@@ -263,6 +271,31 @@ export function stichwortSichern(text: string): string {
     const eintrag = {id: crypto.randomUUID(), text: sauber}
     arbeitsmappe.kataloge.stichwoerter.push(eintrag)
     return eintrag.id
+}
+
+/**
+ * Eine Adresse, die in einem Alarm entsteht, wird ein Ort im Katalog — so, wie ein neu
+ * geschriebenes Stichwort und ein neuer Funkrufname dort landen. Damit steht der Einsatzort für
+ * die Ablaufplanung bereit, ohne ihn ein zweites Mal einzutippen.
+ *
+ * Ohne Hausnummer ist es noch keine Adresse, und was schon dasteht, wird nicht verdoppelt.
+ */
+export function ortSichern(adresse: Adresse): string {
+    const strasse = adresse.strasse.trim()
+    const hnr = adresse.hnr.trim()
+    if (!strasse || !hnr) return ''
+    const gleich = (eine: Adresse) =>
+        eine.strasse.trim().toLowerCase() === strasse.toLowerCase() &&
+        eine.hnr.trim().toLowerCase() === hnr.toLowerCase()
+    if (gleich(arbeitsmappe.kataloge.wache)) return DIENSTSTELLE
+    const vorhanden = arbeitsmappe.kataloge.orte.find(ort => gleich(ort.adresse))
+    if (vorhanden) return vorhanden.id
+    const ort: Ort = {
+        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.kataloge.orte),
+        name: `${strasse} ${hnr}`, adresse: {...adresse},
+    }
+    arbeitsmappe.kataloge.orte.push(ort)
+    return ort.id
 }
 
 export function funkrufnameVorschlaege(): string[] {

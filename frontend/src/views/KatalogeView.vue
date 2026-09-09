@@ -4,8 +4,10 @@ import AdresseFeld from '../components/base/AdresseFeld.vue'
 import TextFeld from '../components/base/TextFeld.vue'
 import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
+import {ortAnlegen} from '../store/planung'
 import {truppText} from '../scripts/staerke'
 import type {Fahrzeugvorlage, Kataloge, Stichwortvorlage} from '../interfaces/Alarm'
+import type {Ort} from '../interfaces/Planung'
 
 type Wortliste = Extract<keyof Kataloge, 'status' | 'trupp'>
 
@@ -15,6 +17,11 @@ const listen: { schluessel: Wortliste, titel: string }[] = [
 ]
 
 const stichwort = ref('')
+
+function ortEntfernen(ort: Ort) {
+  const stelle = arbeitsmappe.kataloge.orte.indexOf(ort)
+  if (stelle >= 0) arbeitsmappe.kataloge.orte.splice(stelle, 1)
+}
 
 function stichwortHinzufuegen() {
   const text = stichwort.value.trim()
@@ -122,11 +129,45 @@ function truppVorschau(staerke: string): string {
       <h2 class="abschnitt-titel">{{ t('kataloge.dienststelle') }}</h2>
       <div class="grid md:grid-cols-3 gap-3">
         <TextFeld v-model="arbeitsmappe.kataloge.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>
+        <TextFeld v-model="arbeitsmappe.kataloge.wacheName" :label="t('kataloge.wacheName')"
+                  :platzhalter="t('kataloge.wachePlatzhalter')"/>
       </div>
       <p class="text-muted text-[13px] mt-3 mb-4">{{ t('kataloge.arbeitsgruppeHinweis') }}</p>
 
       <AdresseFeld v-model="arbeitsmappe.kataloge.wache" :titel="t('kataloge.wache')"/>
       <p class="text-muted text-[13px] mt-3">{{ t('kataloge.wacheHinweis') }}</p>
+    </section>
+
+    <section class="abschnitt">
+      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <h2 class="abschnitt-titel mb-0">{{ t('kataloge.orte') }}</h2>
+        <button type="button" class="knopf knopf-klein" @click="ortAnlegen">
+          <font-awesome-icon icon="fa-solid fa-plus"/>
+          {{ t('kataloge.ortNeu') }}
+        </button>
+      </div>
+      <p class="text-muted text-[13px] mb-3">{{ t('kataloge.orteHinweis') }}</p>
+
+      <div class="grid gap-4">
+        <div class="border border-rule rounded p-3 bg-page">
+          <span class="label">{{ arbeitsmappe.kataloge.wacheName || t('kataloge.dienststelle') }}</span>
+          <p class="text-muted text-[13px] mt-1">{{ t('kataloge.dienststelleOrt') }}</p>
+        </div>
+
+        <div v-for="ort in arbeitsmappe.kataloge.orte" :key="ort.id"
+             class="border border-rule rounded p-3 bg-page grid gap-3">
+          <div class="grid md:grid-cols-[1fr_auto] gap-3 items-end">
+            <TextFeld v-model="ort.name" :label="t('kataloge.ortName')"
+                      :platzhalter="t('kataloge.ortPlatzhalter')"/>
+            <button type="button" class="knopf knopf-klein knopf-gefahr"
+                    @click="ortEntfernen(ort)">
+              <font-awesome-icon icon="fa-solid fa-trash"/>
+              {{ t('kataloge.ortEntfernen') }}
+            </button>
+          </div>
+          <AdresseFeld v-model="ort.adresse" :titel="t('kataloge.ortAdresse')"/>
+        </div>
+      </div>
     </section>
 
     <section class="abschnitt">

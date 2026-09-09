@@ -15,6 +15,7 @@ import {entfernungKm} from '../scripts/polar'
 import type {Plandaten} from '../scripts/ablauf'
 import type {Punkt} from '../scripts/polar'
 import {tagVon, verschieben} from '../scripts/zeit'
+import {DIENSTSTELLE} from '../interfaces/Planung'
 import type {
     Besatzung, Lauf, Mittel, Ort, Person, Programmpunkt, Schritt, Tag, Verfuegbarkeit,
 } from '../interfaces/Planung'
@@ -25,8 +26,22 @@ import type {
  */
 export const ortsPunkte = reactive<Record<string, Punkt>>({})
 
+/**
+ * Die Dienststelle zuerst, dann die angelegten. Sie ist kein Eintrag, den jemand anlegt, sondern
+ * einer, den es gibt, solange die Wache eine Adresse hat — und deshalb auch keiner, den man
+ * löschen kann.
+ */
+export function alleOrte(): Ort[] {
+    return [
+        {id: DIENSTSTELLE, sortierung: -1,
+         name: arbeitsmappe.kataloge.wacheName || 'Dienststelle',
+         adresse: arbeitsmappe.kataloge.wache},
+        ...arbeitsmappe.kataloge.orte,
+    ]
+}
+
 export async function punkteLaden() {
-    for (const ort of arbeitsmappe.planung.orte) {
+    for (const ort of alleOrte()) {
         const punkt = await zuPunkt(ort.adresse)
         if (punkt) ortsPunkte[ort.id] = punkt
         else delete ortsPunkte[ort.id]
@@ -38,6 +53,7 @@ export function plandaten(): Plandaten {
     return {
         planung: arbeitsmappe.planung,
         fahrzeuge: arbeitsmappe.kataloge.fahrzeuge,
+        orte: alleOrte(),
         punkte: ortsPunkte,
     }
 }
@@ -61,10 +77,10 @@ export function tagAnlegen(): Tag {
 
 export function ortAnlegen(): Ort {
     const ort: Ort = {
-        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.planung.orte),
+        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.kataloge.orte),
         name: '', adresse: leereAdresse(),
     }
-    arbeitsmappe.planung.orte.push(ort)
+    arbeitsmappe.kataloge.orte.push(ort)
     return ort
 }
 
@@ -139,7 +155,7 @@ export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30):
         id: crypto.randomUUID(), sortierung: naechste(lauf.schritte),
         art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss',
         von: beginn, bis: verschieben(beginn, minuten),
-        ortId: vorher?.ortId ?? arbeitsmappe.planung.orte[0]?.id ?? '',
+        ortId: vorher?.ortId ?? alleOrte()[0]?.id ?? '',
         programmpunktId: '', aufgebot: true,
         besatzung: (vorher?.besatzung ?? []).map(sitzt => ({
             ...sitzt, id: crypto.randomUUID(),
@@ -203,7 +219,7 @@ export function programmpunkt(id: string): Programmpunkt | undefined {
  */
 export async function fahrzeitSchaetzen(vonOrtId: string, nachOrtId: string,
                                         mittel: Mittel): Promise<number | null> {
-    const orte = arbeitsmappe.planung.orte
+    const orte = alleOrte()
     const von = orte.find(ort => ort.id === vonOrtId)
     const nach = orte.find(ort => ort.id === nachOrtId)
     if (!von || !nach || von.id === nach.id) return null
@@ -221,7 +237,7 @@ export function mehrereTage(): boolean {
 }
 
 export function ortName(ortId: string): string {
-    return arbeitsmappe.planung.orte.find(ort => ort.id === ortId)?.name ?? ''
+    return alleOrte().find(ort => ort.id === ortId)?.name ?? ''
 }
 
 export function personName(personId: string): string {

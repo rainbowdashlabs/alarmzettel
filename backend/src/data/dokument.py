@@ -48,7 +48,6 @@ PLANUNGSLISTEN = ("rollen", "fahrerlaubnisse")
 # geschachtelten Teile — Adresse, Verfügbarkeit, Schritte, Besatzung — hängen darunter.
 PLANUNGSEINTRAEGE = {
     "tage": ("datum", "name"),
-    "orte": ("name",),
     "personen": ("name", "anzahl"),
     "programmpunkte": ("name", "ortId", "alarmId"),
     "laeufe": ("fahrzeugId", "personId"),
@@ -146,6 +145,7 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
 
     kataloge = arbeitsmappe.get("kataloge") or {}
     werte[_pfad("kataloge", "arbeitsgruppe")] = kataloge.get("arbeitsgruppe", "")
+    werte[_pfad("kataloge", "wacheName")] = kataloge.get("wacheName", "")
     werte.update(_adresse_felder(_pfad("kataloge", "wache"), kataloge.get("wache") or {}))
     # Status and Trupp are words and nothing else, so the word is its own key. Stichwörter and
     # vehicles are pointed at by the Alarme, so they are keyed by an id that a rename survives.
@@ -162,6 +162,11 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
         vbasis = _pfad("kataloge", "fahrzeuge", vorlage.get("id") or vorlage.get("funkrufname", ""))
         for feld in FAHRZEUGFELDER:
             werte[_pfad(vbasis, feld)] = vorlage.get(feld, "")
+    for stelle, ort in enumerate(kataloge.get("orte", [])):
+        obasis = _pfad("kataloge", "orte", ort["id"])
+        werte[_pfad(obasis, "sortierung")] = ort.get("sortierung", float(stelle))
+        werte[_pfad(obasis, "name")] = ort.get("name", "")
+        werte.update(_adresse_felder(_pfad(obasis, "adresse"), ort.get("adresse") or {}))
 
     werte.update(_planungsfelder(arbeitsmappe.get("planung") or {}))
     return werte
@@ -232,13 +237,17 @@ def rund(werte: dict[str, Any]) -> dict:
     """Builds the working set back out of the flat map, in sort-key order."""
     alarme: dict[str, dict] = {}
     kataloge: dict[str, Any] = {"stichwoerter": {}, "status": [], "trupp": [], "fahrzeuge": {},
-                                "arbeitsgruppe": "", "wache": {}}
+                                "orte": {}, "arbeitsgruppe": "", "wache": {}}
     planung: dict[str, Any] = {"aktiv": False, "rollen": [], "fahrerlaubnisse": [],
                                **{liste: {} for liste in PLANUNGSEINTRAEGE}}
 
     for pfad, wert in werte.items():
         stueck = teile(pfad)
-        if stueck[0] == "planung":
+        # Orte standen einmal im Plan. Der alte Pfad behält seine Bedeutung, sonst verlöre eine
+        # bestehende Sitzung ihre Orte; geschrieben wird er nicht mehr.
+        if stueck[:2] == ["planung", "orte"]:
+            stueck = ["kataloge", *stueck[1:]]
+        elif stueck[0] == "planung":
             _planung_lesen(planung, stueck[1:], wert)
             continue
         if stueck[0] == "kataloge" and len(stueck) == 2:
@@ -253,6 +262,12 @@ def rund(werte: dict[str, Any]) -> dict:
                 kataloge["stichwoerter"].setdefault(stueck[2], {"id": stueck[2]})[stueck[3]] = wert
             elif stueck[1] == "fahrzeuge" and len(stueck) == 4:
                 kataloge["fahrzeuge"].setdefault(stueck[2], {"id": stueck[2]})[stueck[3]] = wert
+            elif stueck[1] == "orte" and len(stueck) >= 4:
+                ort = kataloge["orte"].setdefault(stueck[2], {"id": stueck[2], "adresse": {}})
+                if stueck[3] == "adresse" and len(stueck) == 5:
+                    ort["adresse"][stueck[4]] = wert
+                elif len(stueck) == 4:
+                    ort[stueck[3]] = wert
             continue
         if stueck[0] != "alarme" or len(stueck) < 3:
             continue
@@ -293,6 +308,7 @@ def rund(werte: dict[str, Any]) -> dict:
                                       key=lambda e: (e.get("text", ""), e["id"]))
     for liste in ("status", "trupp"):
         kataloge[liste].sort()
+    kataloge["orte"] = geordnet(kataloge["orte"])
 
     for liste in PLANUNGSEINTRAEGE:
         planung[liste] = geordnet(planung[liste])

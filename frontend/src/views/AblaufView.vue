@@ -8,10 +8,10 @@ import PersonenPlan from '../components/planung/PersonenPlan.vue'
 import {t} from '../i18n'
 import {fehlertext, renderAblaufplan} from '../api/render'
 import {arbeitsmappe} from '../store/arbeitsmappe'
-import {entfernen, laufAnlegen, laufVon, personName, punkteLaden} from '../store/planung'
+import {alleOrte, entfernen, laufAnlegen, laufVon, personName, punkteLaden} from '../store/planung'
 import {jetztAbgleichen} from '../store/sync'
 
-watch(() => arbeitsmappe.planung.orte.map(ort => Object.values(ort.adresse).join()).join('|'),
+watch(() => alleOrte().map(ort => Object.values(ort.adresse).join()).join('|'),
     () => punkteLaden(), {immediate: true})
 
 /** Ein Fahrzeug oder eine Person bekommt eine Kette, sobald es eingeplant wird. */
@@ -97,7 +97,7 @@ async function drucken() {
     <LagenAnsicht v-else-if="ansicht === 'lagen'"/>
 
     <template v-else>
-    <section v-if="!arbeitsmappe.planung.orte.length" class="abschnitt">
+    <section v-if="alleOrte().length < 2" class="abschnitt">
       <p class="text-muted text-sm">{{ t('ablauf.ersteOrte') }}</p>
     </section>
 

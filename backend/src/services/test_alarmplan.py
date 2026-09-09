@@ -14,16 +14,20 @@ MAPPE = {
     }, {
         "id": "a-frei", "stichwort": "Ohne Plan", "einsatzZeit": "12:00",
     }],
-    "kataloge": {"fahrzeuge": [
-        {"id": "f-lhf", "funkrufname": "LHF 6501.3", "ezp": "6", "status": "R2(A1)"},
-        {"id": "f-mtf", "funkrufname": "MTF 6502.1"},
-    ]},
+    "kataloge": {
+        "fahrzeuge": [
+            {"id": "f-lhf", "funkrufname": "LHF 6501.3", "ezp": "6", "status": "R2(A1)"},
+            {"id": "f-mtf", "funkrufname": "MTF 6502.1"},
+        ],
+        "orte": [
+            {"id": "o-nord", "name": "Wache Nord"},
+            {"id": "o-kita", "name": "Kindergarten",
+             "adresse": {"strasse": "Archenholdstraße", "hnr": "21", "plz": "10315",
+                         "ort": "Berlin"}},
+        ],
+    },
     "planung": {
         "aktiv": True,
-        "orte": [{"id": "o-nord", "name": "Wache Nord"},
-                 {"id": "o-kita", "name": "Kindergarten",
-                  "adresse": {"strasse": "Archenholdstraße", "hnr": "21", "plz": "10315",
-                              "ort": "Berlin"}}],
         "personen": [{"id": "p-alex", "name": "Alex", "anzahl": 1},
                      {"id": "p-mimen", "name": "Mimen", "anzahl": 4}],
         "programmpunkte": [{"id": "g-brand", "name": "Brand im Kindergarten",
@@ -161,6 +165,73 @@ class AnfahrtTest(unittest.TestCase):
             {"id": "g-zweite", "name": "Noch eine", "ortId": "o-nord", "alarmId": "a-brand"}]
         alarme = mit_plan(mappe(planung=MAPPE["planung"] | {"programmpunkte": punkte})).alarme
         self.assertEqual("Archenholdstraße", alarme[0].einsatzadresse.strasse)
+
+
+class VorbereitungTest(unittest.TestCase):
+    """
+    Ein Fahrzeug steht oft schon vorher am Ort und richtet her. Die Vorbereitung ist ein eigener
+    Schritt ohne Lage; alarmiert ist das Fahrzeug erst mit dem Schritt, der auf sie zeigt.
+    """
+
+    def alarm(self, laeufe: list[dict]):
+        return mit_plan(mappe(planung=MAPPE["planung"] | {"laeufe": laeufe})).alarme[0]
+
+    def test_die_vorbereitung_zaehlt_nicht_als_anfahrt(self):
+        laeufe = [{"id": "l", "fahrzeugId": "f-lhf", "schritte": [
+            {"id": "s1", "sortierung": 0.0, "art": "fahrt",
+             "von": "2026-09-19T07:00", "bis": "2026-09-19T07:30", "ortId": "o-kita"},
+            {"id": "s2", "sortierung": 1.0, "art": "aufenthalt",
+             "von": "2026-09-19T07:30", "bis": "2026-09-19T09:00", "ortId": "o-kita",
+             "besatzung": [{"id": "b1", "personId": "p-alex", "faehrt": True}]},
+            {"id": "s3", "sortierung": 2.0, "art": "aufenthalt", "programmpunktId": "g-brand",
+             "von": "2026-09-19T09:00", "bis": "2026-09-19T10:00", "ortId": "o-kita",
+             "besatzung": [{"id": "b2", "personId": "p-alex", "faehrt": True},
+                           {"id": "b3", "personId": "p-mimen"}]}]}]
+        alarm = self.alarm(laeufe)
+        self.assertEqual("09:00", alarm.einsatzZeit)
+        self.assertEqual("5", alarm.einsatzmittel[0].fahrzeuge[0].staerke)
+
+    def test_wer_zur_lage_faehrt_wird_ab_der_abfahrt_gezaehlt(self):
+        """Fährt das Fahrzeug dagegen für die Lage los, ist deren Beginn die Einsatzzeit."""
+        laeufe = [{"id": "l", "fahrzeugId": "f-lhf", "schritte": [
+            {"id": "s1", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T08:00", "bis": "2026-09-19T08:30", "ortId": "o-nord"},
+            {"id": "s2", "sortierung": 1.0, "art": "fahrt",
+             "von": "2026-09-19T08:30", "bis": "2026-09-19T09:00", "ortId": "o-kita"},
+            {"id": "s3", "sortierung": 2.0, "art": "aufenthalt", "programmpunktId": "g-brand",
+             "von": "2026-09-19T09:00", "bis": "2026-09-19T10:00", "ortId": "o-kita"}]}]
+        self.assertEqual("08:30", self.alarm(laeufe).einsatzZeit)
+
+
+class ZweiLagenTest(unittest.TestCase):
+    """Am selben Ort laufen zwei Lagen nacheinander — jede hat ihren eigenen Zettel."""
+
+    def alarme(self):
+        punkte = [
+            {"id": "g-brand", "name": "Brand", "ortId": "o-kita", "alarmId": "a-brand"},
+            {"id": "g-rea", "name": "Rea", "ortId": "o-kita", "alarmId": "a-frei"},
+        ]
+        laeufe = [{"id": "l", "fahrzeugId": "f-lhf", "schritte": [
+            {"id": "s1", "sortierung": 0.0, "art": "fahrt",
+             "von": "2026-09-19T08:30", "bis": "2026-09-19T09:00", "ortId": "o-kita"},
+            {"id": "s2", "sortierung": 1.0, "art": "aufenthalt", "programmpunktId": "g-brand",
+             "von": "2026-09-19T09:00", "bis": "2026-09-19T10:00", "ortId": "o-kita",
+             "besatzung": [{"id": "b1", "personId": "p-alex", "faehrt": True}]},
+            {"id": "s3", "sortierung": 2.0, "art": "aufenthalt", "programmpunktId": "g-rea",
+             "von": "2026-09-19T10:00", "bis": "2026-09-19T11:00", "ortId": "o-kita",
+             "besatzung": [{"id": "b2", "personId": "p-alex", "faehrt": True},
+                           {"id": "b3", "personId": "p-mimen"}]}]}]
+        return mit_plan(mappe(planung=MAPPE["planung"] | {
+            "programmpunkte": punkte, "laeufe": laeufe})).alarme
+
+    def test_jede_lage_bekommt_ihre_eigene_zeit(self):
+        zeiten = {alarm.id: alarm.einsatzZeit for alarm in self.alarme()}
+        self.assertEqual({"a-brand": "08:30", "a-frei": "10:00"}, zeiten)
+
+    def test_und_ihre_eigene_staerke(self):
+        staerken = {alarm.id: alarm.einsatzmittel[0].fahrzeuge[0].staerke
+                    for alarm in self.alarme()}
+        self.assertEqual({"a-brand": "1", "a-frei": "5"}, staerken)
 
 
 class KatalogZusammenspielTest(unittest.TestCase):

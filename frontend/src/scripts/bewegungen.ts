@@ -203,7 +203,7 @@ export function bewegungsbild(daten: Plandaten, datum: string,
         beteiligt.add(eintrag.vonOrtId)
         beteiligt.add(eintrag.schritt.ortId)
     }
-    const reihenfolge = daten.planung.orte
+    const reihenfolge = daten.orte
         .filter(ort => ort.id && beteiligt.has(ort.id))
         .map(ort => ort.id)
 
@@ -249,7 +249,7 @@ export function bewegungsbild(daten: Plandaten, datum: string,
         datum, modus, von, bis: Math.max(bis, von + STUNDE),
         baender: reihenfolge.map(ortId => ({
             ortId,
-            name: daten.planung.orte.find(ort => ort.id === ortId)?.name ?? '',
+            name: daten.orte.find(ort => ort.id === ortId)?.name ?? '',
             reihen: Math.max(1, belegung.get(ortId)?.length ?? 1),
         })),
         balken, linien,

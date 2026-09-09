@@ -24,8 +24,11 @@ screen are the ones printed on the slip.
 - **PDF** — one sheet per alarm, all of them in one file or singly.
 - **JSON** — the working set downloads and uploads again. Old ODS or XLSX spreadsheets are
   imported.
-- **Catalogues** — your own lists of Stichwörter, vehicles, status and Trupp, plus the
-  Arbeitsgruppe every new alarm starts with and the station the sheets are written for. An alarm
+- **Catalogues** — your own lists of Stichwörter, vehicles, places, status and Trupp, plus the
+  Arbeitsgruppe every new alarm starts with and the station the sheets are written for. A place
+  belongs to the station rather than to a single exercise day, so it lives here beside the
+  vehicles; the station itself is always a place and is never created or deleted. An
+  Einsatzadresse entered on an alarm joins the list by itself, the way a new Stichwort does. An alarm
   points at a Stichwort and a vehicle rather than copying them, so correcting either once corrects
   every sheet that uses it — rename included. A vehicle also lends its crew strength, EZP and
   status; anything typed on the alarm overrides that one field. A Stichwort or Funkrufname written
@@ -61,7 +64,9 @@ screen are the ones printed on the slip.
 - **Slips from the plan** — where a Lage points at an alarm, its times, Einsatzadresse and
   Einsatzmittelaufgebot come from the schedule, and one sheet is printed per vehicle at that
   Lage. A vehicle can stand at the Lage without belonging to it — the one that only brings the
-  mimes gets neither a sheet nor a line on anyone else's. Those fields show in the editor as what will be printed, rather than being editable
+  mimes gets neither a sheet nor a line on anyone else's. Setting up beforehand is a step of its
+  own without a Lage, so arriving early does not become the time of the alarm; and two Lagen one
+  after another at the same place each keep their own time and crew. Those fields show in the editor as what will be printed, rather than being editable
   there. Switched off, the Ablaufplanung changes nothing about the alarm slip.
 
 ## Where the data lives

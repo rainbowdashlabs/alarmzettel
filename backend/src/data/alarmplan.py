@@ -81,7 +81,7 @@ def _beteiligte(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt) -> list[dict]:
 
 
 def _adresse(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt):
-    ort = next((ort for ort in arbeitsmappe.planung.orte if ort.id == punkt.ortId), None)
+    ort = next((ort for ort in arbeitsmappe.kataloge.alle_orte() if ort.id == punkt.ortId), None)
     return ort.adresse if ort else None
 
 

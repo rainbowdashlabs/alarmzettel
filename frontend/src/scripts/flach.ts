@@ -37,7 +37,6 @@ const PLANUNGSLISTEN = ['rollen', 'fahrerlaubnisse'] as const
  */
 const PLANUNGSEINTRAEGE = {
     tage: ['datum', 'name'],
-    orte: ['name'],
     personen: ['name', 'anzahl'],
     programmpunkte: ['name', 'ortId', 'alarmId'],
     laeufe: ['fahrzeugId', 'personId'],
@@ -145,6 +144,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
     })
 
     werte[pfad('kataloge', 'arbeitsgruppe')] = mappe.kataloge.arbeitsgruppe ?? ''
+    werte[pfad('kataloge', 'wacheName')] = mappe.kataloge.wacheName ?? ''
     adresse(pfad('kataloge', 'wache'), werte, mappe.kataloge.wache as never)
     // Status and Trupp are words and nothing else, so the word is its own key. Stichwörter and
     // vehicles are pointed at by the Alarme, so they are keyed by an id that a rename survives.
@@ -158,6 +158,12 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
         const vbasis = pfad('kataloge', 'fahrzeuge', vorlage.id)
         for (const feld of FAHRZEUGFELDER) werte[pfad(vbasis, feld)] = vorlage[feld] ?? ''
     }
+    ;(mappe.kataloge.orte ?? []).forEach((ort, stelle) => {
+        const obasis = pfad('kataloge', 'orte', ort.id)
+        werte[pfad(obasis, 'sortierung')] = ort.sortierung ?? stelle
+        werte[pfad(obasis, 'name')] = ort.name ?? ''
+        adresse(pfad(obasis, 'adresse'), werte, ort.adresse as never)
+    })
     if (mappe.planung) planungsfelder(werte, mappe.planung)
     return werte
 }
@@ -221,13 +227,18 @@ export function rund(werte: Flachbild): unknown {
     const kataloge: Record<string, unknown> = {
         stichwoerter: {} as Record<string, Record<string, unknown>>,
         status: [] as string[], trupp: [] as string[],
-        fahrzeuge: {} as Record<string, Record<string, unknown>>, arbeitsgruppe: '',
-        wache: {} as Record<string, unknown>,
+        fahrzeuge: {} as Record<string, Record<string, unknown>>,
+        orte: {} as Record<string, Record<string, unknown>>,
+        arbeitsgruppe: '', wache: {} as Record<string, unknown>, wacheName: '',
     }
 
     for (const [schluessel, wert] of Object.entries(werte)) {
-        const teile = schluessel.split(TRENNER)
-        if (teile[0] === 'planung') {
+        let teile = schluessel.split(TRENNER)
+        // Orte standen einmal im Plan. Der alte Pfad behält seine Bedeutung, sonst verlöre eine
+        // bestehende Sitzung ihre Orte; geschrieben wird er nicht mehr.
+        if (teile[0] === 'planung' && teile[1] === 'orte') {
+            teile = ['kataloge', ...teile.slice(1)]
+        } else if (teile[0] === 'planung') {
             planungLesen(planung, teile.slice(1), wert)
             continue
         }
@@ -244,6 +255,14 @@ export function rund(werte: Flachbild): unknown {
             } else if ((liste === 'stichwoerter' || liste === 'fahrzeuge') && teile.length === 4) {
                 const eintraege = kataloge[liste] as Record<string, Record<string, unknown>>
                 ;(eintraege[teile[2]!] ??= {id: teile[2]})[teile[3]!] = wert
+            } else if (liste === 'orte' && teile.length >= 4) {
+                const eintraege = kataloge['orte'] as Record<string, Record<string, unknown>>
+                const ort = (eintraege[teile[2]!] ??= {id: teile[2], adresse: {}})
+                if (teile[3] === 'adresse' && teile.length === 5) {
+                    (ort['adresse'] as Record<string, unknown>)[teile[4]!] = wert
+                } else if (teile.length === 4) {
+                    ort[teile[3]!] = wert
+                }
             }
             continue
         }
@@ -304,6 +323,7 @@ export function rund(werte: Flachbild): unknown {
     }
 
     const nachSortierung = (eintraege: Sammlung) => geordnet(eintraege as never as Record<string, Sortierbar>)
+    kataloge['orte'] = nachSortierung(kataloge['orte'] as Sammlung)
     for (const liste of Object.keys(PLANUNGSEINTRAEGE)) {
         planung[liste] = nachSortierung(planung[liste] as Sammlung)
     }

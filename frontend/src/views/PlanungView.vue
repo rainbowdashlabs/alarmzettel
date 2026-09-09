@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import {ref} from 'vue'
-import AdresseFeld from '../components/base/AdresseFeld.vue'
 import TextFeld from '../components/base/TextFeld.vue'
 import {t} from '../i18n'
 import {
-  entfernen, ortAnlegen, personAnlegen, planung, tagAnlegen, umschalten,
+  entfernen, personAnlegen, planung, tagAnlegen, umschalten,
   verfuegbarkeitAnlegen, wortHinzufuegen,
 } from '../store/planung'
 
@@ -52,34 +51,6 @@ function wortAnlegen(schluessel: 'rollen' | 'fahrerlaubnisse', entwurf: {value: 
                   @click="entfernen(planung().tage, tag)">
             <font-awesome-icon icon="fa-solid fa-xmark"/>
           </button>
-        </div>
-      </div>
-    </section>
-
-    <section class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">{{ t('planung.orte') }}</h2>
-        <button type="button" class="knopf knopf-klein" @click="ortAnlegen">
-          <font-awesome-icon icon="fa-solid fa-plus"/>
-          {{ t('planung.ortNeu') }}
-        </button>
-      </div>
-      <p class="text-muted text-[13px] mb-3">{{ t('planung.orteHinweis') }}</p>
-      <p v-if="!planung().orte.length" class="text-muted text-sm">{{ t('planung.keineOrte') }}</p>
-
-      <div class="grid gap-4">
-        <div v-for="ort in planung().orte" :key="ort.id"
-             class="border border-rule rounded p-3 bg-page grid gap-3">
-          <div class="grid md:grid-cols-[1fr_auto] gap-3 items-end">
-            <TextFeld v-model="ort.name" :label="t('planung.ortName')"
-                      :platzhalter="t('planung.ortPlatzhalter')"/>
-            <button type="button" class="knopf knopf-klein knopf-gefahr"
-                    @click="entfernen(planung().orte, ort)">
-              <font-awesome-icon icon="fa-solid fa-trash"/>
-              {{ t('planung.ortEntfernen') }}
-            </button>
-          </div>
-          <AdresseFeld v-model="ort.adresse" :titel="t('planung.ortAdresse')"/>
         </div>
       </div>
     </section>

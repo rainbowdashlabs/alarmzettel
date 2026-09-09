@@ -4,7 +4,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {ortsPunkte, plandaten, punkteLaden} from '../../store/planung'
+import {alleOrte, ortsPunkte, plandaten, punkteLaden} from '../../store/planung'
 import {bewegungstage, ereignisse, standorte} from '../../scripts/bewegungen'
 import type {Standort} from '../../scripts/bewegungen'
 import {mitte, utm33ZuWgs84} from '../../scripts/geo'
@@ -46,7 +46,7 @@ const stand = computed(() => standorte(plandaten(), zeitpunkt.value))
 const naechste = computed(() => ereignisse(plandaten(), zeitpunkt.value, 8))
 
 function ortName(ortId: string): string {
-  return arbeitsmappe.planung.orte.find(ort => ort.id === ortId)?.name ?? ''
+  return alleOrte().find(ort => ort.id === ortId)?.name ?? ''
 }
 
 function marke(ortId: string): Ortsmarke | null {
@@ -90,7 +90,7 @@ function ortePunkte() {
   if (!karte || !ortsschicht) return
   ortsschicht.clearLayers()
   const marken: Ortsmarke[] = []
-  for (const ort of arbeitsmappe.planung.orte) {
+  for (const ort of alleOrte()) {
     const punkt = marke(ort.id)
     if (!punkt) continue
     marken.push(punkt)
@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
   karte?.remove()
 })
 
-watch(() => arbeitsmappe.planung.orte.map(ort => Object.values(ort.adresse).join()).join('|'),
+watch(() => alleOrte().map(ort => Object.values(ort.adresse).join()).join('|'),
     async () => { await punkteLaden(); ortePunkte(); bewegungZeichnen() })
 watch([stand, ortsPunkte], () => bewegungZeichnen())
 watch(tage, liste => { if (!liste.includes(tag.value) && liste.length) tag.value = liste[0]! })

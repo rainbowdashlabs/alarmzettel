@@ -9,15 +9,17 @@ from web.settings import settings
 MAPPE = {
     "version": 1,
     "alarme": [],
-    "kataloge": {"fahrzeuge": [
-        {"id": "f-lhf", "funkrufname": "LHF 6501.3", "plaetze": "6", "fuehrerschein": "C"},
-        {"id": "f-mtf", "funkrufname": "MTF 6502.1", "plaetze": "8", "fuehrerschein": "B"},
-    ]},
+    "kataloge": {
+        "fahrzeuge": [
+            {"id": "f-lhf", "funkrufname": "LHF 6501.3", "plaetze": "6", "fuehrerschein": "C"},
+            {"id": "f-mtf", "funkrufname": "MTF 6502.1", "plaetze": "8", "fuehrerschein": "B"},
+        ],
+        "orte": [{"id": "o-nord", "name": "Wache Nord"},
+                 {"id": "o-kita", "name": "Kindergarten"}],
+    },
     "planung": {
         "aktiv": True,
         "tage": [{"id": "t1", "datum": "2026-09-19", "name": "Übungstag"}],
-        "orte": [{"id": "o-nord", "name": "Wache Nord"},
-                 {"id": "o-kita", "name": "Kindergarten"}],
         "personen": [
             {"id": "p-alex", "name": "Alex", "anzahl": 1, "rollen": ["Ausbilder"]},
             {"id": "p-maria", "name": "Maria", "anzahl": 1},
@@ -128,10 +130,10 @@ def kette(*schritte) -> dict:
     """Eine Arbeitsmappe mit einer einzigen Fahrzeugkette — für die Ränder des Rasters."""
     return {
         "version": 1, "alarme": [],
-        "kataloge": {"fahrzeuge": [{"id": "f-lhf", "funkrufname": "LHF 6501.3"}]},
+        "kataloge": {"fahrzeuge": [{"id": "f-lhf", "funkrufname": "LHF 6501.3"}],
+                     "orte": [{"id": "o-nord", "name": "Wache Nord"},
+                              {"id": "o-kita", "name": "Kindergarten"}]},
         "planung": {"aktiv": True,
-                    "orte": [{"id": "o-nord", "name": "Wache Nord"},
-                             {"id": "o-kita", "name": "Kindergarten"}],
                     "laeufe": [{"id": "l-lhf", "fahrzeugId": "f-lhf", "schritte": [
                         {"id": f"s{nummer}", "sortierung": float(nummer), **schritt}
                         for nummer, schritt in enumerate(schritte)]}]},
@@ -204,9 +206,8 @@ class BlattbreiteTest(unittest.TestCase):
              "von": "2026-09-19T08:00", "bis": "2026-09-19T09:00", "ortId": "o1"}]}
             for nummer in range(SPALTEN_JE_BLATT + 2)]
         mappe = Arbeitsmappe.model_validate({
-            "version": 1, "alarme": [], "kataloge": {},
-            "planung": {"aktiv": True, "orte": [{"id": "o1", "name": "Wache"}],
-                        "laeufe": laeufe}})
+            "version": 1, "alarme": [], "kataloge": {"orte": [{"id": "o1", "name": "Wache"}]},
+            "planung": {"aktiv": True, "laeufe": laeufe}})
         bloecke = plandaten(mappe)["gesamt"]["bloecke"]
         self.assertEqual([SPALTEN_JE_BLATT, 2], [len(block["spalten"]) for block in bloecke])
         self.assertEqual(["2026-09-19", "2026-09-19"], [block["datum"] for block in bloecke])

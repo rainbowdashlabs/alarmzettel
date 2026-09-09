@@ -4,7 +4,8 @@ import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
-  mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
+  alleOrte, mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen,
+  schrittAnhaengen,
 } from '../../store/planung'
 import {pruefen} from '../../scripts/ablauf'
 import type {Befund} from '../../scripts/ablauf'
@@ -127,7 +128,7 @@ function lageAnlegen(schritt: Schritt) {
             {{ schritt.art === 'fahrt' ? t('ablauf.ziel') : t('ablauf.ort') }}
           </label>
           <select v-model="schritt.ortId" class="field" @change="zielGewaehlt(schritt)">
-            <option v-for="ort in arbeitsmappe.planung.orte" :key="ort.id" :value="ort.id">
+            <option v-for="ort in alleOrte()" :key="ort.id" :value="ort.id">
               {{ ort.name || t('ablauf.ohneName') }}
             </option>
           </select>

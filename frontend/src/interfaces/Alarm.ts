@@ -112,10 +112,17 @@ export interface Kataloge {
     fahrzeuge: Fahrzeugvorlage[]
     status: string[]
     trupp: string[]
+    /**
+     * Die angelegten Orte. Ein Ort gehört der Wache und nicht einem einzelnen Übungstag —
+     * deshalb steht er hier neben den Fahrzeugen und nicht im Plan.
+     */
+    orte: Ort[]
     /** One fixed value for the whole working set; every new Alarm starts with it. */
     arbeitsgruppe: string
     /** The station the sheets are written for. The Polar-Koordinaten are measured from it. */
     wache: Adresse
+    /** Wie die Dienststelle im Plan heißt. Sie ist ein Ort, den es immer gibt. */
+    wacheName: string
 }
 
 export interface Arbeitsmappe {
@@ -127,7 +134,7 @@ export interface Arbeitsmappe {
 }
 
 import {aPlatzKennung, festnetznummer, mobilnummer, zufallsname} from '../scripts/generator'
-import {leerePlanung, type Planung} from './Planung'
+import {leerePlanung, type Ort, type Planung} from './Planung'
 
 export const ARBEITSMAPPE_VERSION = 1
 
@@ -216,8 +223,8 @@ export function leereArbeitsmappe(): Arbeitsmappe {
         alarme: [],
         planung: leerePlanung(),
         kataloge: {
-            stichwoerter: stichwortvorlagen(), fahrzeuge: [], status: [], trupp: [],
-            arbeitsgruppe: '', wache: leereAdresse(),
+            stichwoerter: stichwortvorlagen(), fahrzeuge: [], status: [], trupp: [], orte: [],
+            arbeitsgruppe: '', wache: leereAdresse(), wacheName: '',
         },
     }
 }

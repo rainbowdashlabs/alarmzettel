@@ -1,15 +1,12 @@
 import unittest
 
-from data.dokument import flach, rund
+from data.dokument import TRENNER, flach, rund
 
 PLAN = {
     "aktiv": True,
     "rollen": ["Ausbilder", "Mime"],
     "fahrerlaubnisse": ["B", "C"],
     "tage": [{"id": "t1", "sortierung": 0.0, "datum": "2026-09-19", "name": "Übungstag"}],
-    "orte": [{"id": "o1", "sortierung": 0.0, "name": "Wache Nord",
-              "adresse": {"strasse": "Junker-Jörg-Straße", "hnr": "36", "objekt": "",
-                          "plz": "10318", "ort": "Karlshorst"}}],
     "personen": [{"id": "p1", "sortierung": 0.0, "name": "Maria", "anzahl": 1,
                   "rollen": ["Ausbilder"], "fahrerlaubnis": ["B", "C"],
                   "verfuegbar": [{"id": "v1", "sortierung": 0.0,
@@ -30,11 +27,29 @@ PLAN = {
                                     "faehrt": False}]}]}],
 }
 
-MAPPE = {"version": 1, "alarme": [], "kataloge": {}, "planung": PLAN}
+ORTE = [{"id": "o1", "sortierung": 0.0, "name": "Wache Nord",
+         "adresse": {"strasse": "Junker-Jörg-Straße", "hnr": "36", "objekt": "",
+                     "plz": "10318", "ort": "Karlshorst"}}]
+
+MAPPE = {"version": 1, "alarme": [], "kataloge": {"orte": ORTE}, "planung": PLAN}
 
 
 class VorgabeTest(unittest.TestCase):
     """Eine Arbeitsmappe, die ein Feld noch nicht kennt, bekommt seine Vorgabe — nicht ''."""
+
+    def test_orte_aus_dem_plan_landen_im_katalog(self):
+        """
+        Eine Sitzung, die vor dem Umzug angelegt wurde, hat ihre Orte unter `planung`. Der alte
+        Pfad behält seine Bedeutung, sonst verlöre sie sie beim ersten Lesen.
+        """
+        alt = {
+            f"planung{TRENNER}orte{TRENNER}o1{TRENNER}name": "Kindergarten",
+            f"planung{TRENNER}orte{TRENNER}o1{TRENNER}sortierung": 0.0,
+            f"planung{TRENNER}orte{TRENNER}o1{TRENNER}adresse{TRENNER}strasse": "Archenholdstraße",
+        }
+        kataloge = rund(alt)["kataloge"]
+        self.assertEqual(["Kindergarten"], [ort["name"] for ort in kataloge["orte"]])
+        self.assertEqual("Archenholdstraße", kataloge["orte"][0]["adresse"]["strasse"])
 
     def test_ein_leerer_wahrheitswert_wird_zur_vorgabe(self):
         """
@@ -77,7 +92,9 @@ class PlanungRundlaufTest(unittest.TestCase):
         self.assertFalse(schritte[1]["besatzung"][0]["faehrt"])
 
     def test_ein_ort_traegt_eine_ganze_adresse(self):
-        self.assertEqual("Junker-Jörg-Straße", self.rund()["orte"][0]["adresse"]["strasse"])
+        """Orte stehen im Katalog, nicht im Plan — die Schritte zeigen nur auf ihre id."""
+        kataloge = rund(flach(MAPPE))["kataloge"]
+        self.assertEqual(ORTE, kataloge["orte"])
 
     def test_ohne_plan_kommt_ein_leerer_zurueck(self):
         leer = rund(flach({"version": 1, "alarme": [], "kataloge": {}}))["planung"]

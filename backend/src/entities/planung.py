@@ -25,10 +25,16 @@ class Tag(Eintrag):
     name: str = ""
 
 
+DIENSTSTELLE = "wache"
+"""Die Kennung des Orts, der die eigene Wache ist. Er wird nicht angelegt, es gibt ihn."""
+
+
 class Ort(Eintrag):
     """
     Ein eingetragener Ort mit einer Identität — kein Text in einer Zelle. Nur dadurch ist „am
     selben Ort zur selben Zeit“ entscheidbar, woran Fahrerwechsel, Zustieg und Übergabe hängen.
+
+    Orte stehen im Katalog: sie gehören der Wache und überdauern den einzelnen Übungstag.
     """
 
     name: str = ""
@@ -103,7 +109,6 @@ class Planung(Eintrag):
 
     aktiv: bool = False
     tage: list[Tag] = []
-    orte: list[Ort] = []
     personen: list[Person] = []
     rollen: list[str] = []
     fahrerlaubnisse: list[str] = []
