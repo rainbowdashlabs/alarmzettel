@@ -7,7 +7,7 @@ import {
   alleOrte, darfFahren, materialHinzufuegen, materialName, materialSichern, mehrereTage,
   personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
 } from '../../store/planung'
-import {pruefen} from '../../scripts/ablauf'
+import {fahrzeitSchaetzung, pruefen} from '../../scripts/ablauf'
 import type {Befund} from '../../scripts/ablauf'
 import {alsMinuten, dauer, tagVon, uhrzeit, verschieben} from '../../scripts/zeit'
 import type {Lauf, Schritt} from '../../interfaces/Planung'
@@ -29,6 +29,15 @@ const befunde = computed(() => {
   }
   return nachSchritt
 })
+
+/**
+ * Wie lange die Luftlinie zwischen den beiden Orten dauern würde. Sie steht neben der geplanten
+ * Zeit, statt beim Anlegen einmal aufzublitzen und dann zu verschwinden — überschrieben wird sie
+ * weiterhin, sie ist ein Vorschlag und keine Vorschrift.
+ */
+function schaetzung(schritt: Schritt): number | null {
+  return fahrzeitSchaetzung(plandaten(), lauf, schritt)
+}
 
 function meldung(befund: Befund): string {
   return t(`ablauf.befund.${befund.art}`, befund.werte ?? {})
@@ -116,6 +125,13 @@ function lageAnlegen(schritt: Schritt) {
           {{ uhrzeit(schritt.von) }}–{{ uhrzeit(schritt.bis) }}
         </span>
         <span class="text-muted text-[13px]">{{ dauer(schritt.von, schritt.bis) }} min</span>
+        <span v-if="schaetzung(schritt) !== null" class="text-muted text-[13px]"
+              :title="t('ablauf.schaetzungHinweis')">
+          <font-awesome-icon
+            :icon="schritt.mittel === 'fahrzeug' ? 'fa-solid fa-truck' : 'fa-solid fa-person-walking'"
+            class="mr-1"/>
+          {{ t('ablauf.geschaetzt', {n: schaetzung(schritt)}) }}
+        </span>
         <span class="grow"></span>
         <button type="button" class="knopf knopf-klein knopf-gefahr"
                 @click="entfernen(lauf.schritte, schritt)">

@@ -254,6 +254,8 @@ export default {
         personDazu: 'Person dazu …',
         fahrerUmschalten: 'Fährt / fährt nicht',
         besatzungEntfernen: '{wer} aus diesem Schritt nehmen',
+        geschaetzt: 'geschätzt {n} min',
+        schaetzungHinweis: 'Luftlinie mal 3 min je Kilometer im Fahrzeug, 15 min zu Fuß. Ein Vorschlag — die Luftlinie kennt weder Spree noch Baustelle.',
         material: 'Material',
         materialDazu: 'Material dazu …',
         materialEntfernen: '{was} aus diesem Schritt nehmen',
