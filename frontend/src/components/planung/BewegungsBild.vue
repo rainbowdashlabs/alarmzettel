@@ -31,7 +31,7 @@ function umschalten(gewaehlterModus: Modus) {
 
     <section v-for="bild in bilder" :key="`${bild.modus}-${bild.datum}`" class="abschnitt">
       <div class="flex items-baseline gap-3 flex-wrap mb-3">
-        <h2 class="abschnitt-titel mb-0">{{ t('ablauf.bewegung') }}</h2>
+        <h2 class="abschnitt-titel">{{ t('ablauf.bewegung') }}</h2>
         <span class="text-muted text-sm">{{ bild.datum }}</span>
         <span class="grow"></span>
         <button v-if="gewaehlt" type="button" class="knopf knopf-klein" @click="gewaehlt = null">

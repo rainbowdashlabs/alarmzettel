@@ -234,6 +234,15 @@ textarea.field {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--c-ink);
+}
+
+/*
+ * Den Abstand trägt nur die Überschrift, die allein über ihrem Abschnitt steht. Sitzt sie in
+ * einer Kopfzeile neben anderem, wäre er falsch: Flexbox zentriert Kästen, und ein Kasten mit
+ * Abstand darunter schöbe die Schrift nach oben. Eine Utility kann ihn nicht wegnehmen — sie
+ * liegt in einer Schicht und verliert gegen diese Klasse hier.
+ */
+.abschnitt > .abschnitt-titel {
     margin-bottom: 12px;
 }
 
@@ -257,13 +266,13 @@ textarea.field {
     background: var(--c-raised);
 }
 
-/* Ein Knopf, der nicht geht, muss auch danach aussehen: sonst klickt man ins Leere. */
 /* Ein Feld für eine kleine Zahl. `.field` ist unlayered und schlägt sonst jede Breitenangabe. */
 .field-menge {
     width: 4.5rem;
     text-align: right;
 }
 
+/* Ein Knopf, der nicht geht, muss auch danach aussehen: sonst klickt man ins Leere. */
 .knopf:disabled,
 .knopf:disabled:hover {
     opacity: 0.4;

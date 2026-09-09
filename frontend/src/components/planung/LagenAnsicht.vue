@@ -24,7 +24,7 @@ function alarmStichwort(alarmId: string): string {
   <div class="grid gap-5">
     <section v-for="sicht in lagen" :key="sicht.programmpunkt.id" class="abschnitt">
       <div class="flex items-baseline gap-3 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">
+        <h2 class="abschnitt-titel">
           {{ sicht.programmpunkt.name || t('ablauf.ohneName') }}
         </h2>
         <span class="text-muted text-sm">{{ ortName(sicht.programmpunkt.ortId) }}</span>

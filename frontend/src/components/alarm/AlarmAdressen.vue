@@ -42,7 +42,7 @@ async function polarSetzen(ziel: Adresspunkt) {
 <template>
   <section class="abschnitt">
     <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
-      <h2 class="abschnitt-titel mb-0">{{ t('abschnitt.adressen') }}</h2>
+      <h2 class="abschnitt-titel">{{ t('abschnitt.adressen') }}</h2>
       <button v-if="!ausPlan" type="button" class="knopf knopf-klein" @click="uebernehmen">
         {{ t('adresse.uebernehmen') }}
       </button>

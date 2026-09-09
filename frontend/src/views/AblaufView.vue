@@ -126,7 +126,7 @@ async function drucken() {
 
     <section v-for="lauf in arbeitsmappe.planung.laeufe" :key="lauf.id" class="abschnitt">
       <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">
+        <h2 class="abschnitt-titel">
           <font-awesome-icon :icon="lauf.fahrzeugId ? 'fa-solid fa-table' : 'fa-solid fa-users'"
                              class="mr-2 text-muted"/>
           {{ beschriftung(lauf) }}

@@ -76,7 +76,7 @@ function alarmFuerWaehlen(gruppe: number, fahrzeug: number) {
 <template>
   <section class="abschnitt">
     <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-      <h2 class="abschnitt-titel mb-0">{{ t('abschnitt.einsatzmittel') }}</h2>
+      <h2 class="abschnitt-titel">{{ t('abschnitt.einsatzmittel') }}</h2>
       <button v-if="!ausPlan" type="button" class="knopf knopf-klein" @click="gruppeHinzufuegen">
         <font-awesome-icon icon="fa-solid fa-plus"/>
         {{ t('einsatzmittel.gruppeNeu') }}

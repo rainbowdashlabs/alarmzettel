@@ -168,7 +168,7 @@ watch(tage, liste => { if (!liste.includes(tag.value) && liste.length) tag.value
 <template>
   <section class="abschnitt">
     <div class="flex items-baseline gap-3 flex-wrap mb-3">
-      <h2 class="abschnitt-titel mb-0">{{ t('ablauf.karte') }}</h2>
+      <h2 class="abschnitt-titel">{{ t('ablauf.karte') }}</h2>
       <select v-if="tage.length > 1" v-model="tag" class="field w-auto">
         <option v-for="eintrag in tage" :key="eintrag" :value="eintrag">{{ eintrag }}</option>
       </select>

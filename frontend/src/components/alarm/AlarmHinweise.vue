@@ -65,7 +65,7 @@ function antwortEntfernen(hinweis: Hinweis, index: number) {
 <template>
   <section class="abschnitt">
     <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-      <h2 class="abschnitt-titel mb-0">{{ t('abschnitt.hinweise') }}</h2>
+      <h2 class="abschnitt-titel">{{ t('abschnitt.hinweise') }}</h2>
       <div class="flex gap-2">
         <button type="button" class="knopf knopf-klein knopf-primaer" @click="abfrage = true">
           <font-awesome-icon icon="fa-solid fa-list-check"/>
