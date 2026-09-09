@@ -1,9 +1,13 @@
 import shutil
+import tempfile
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from data.sitzung import Sitzungen
 from main import app
+from services import sitzung as sitzungsdienst
 from services.sitzung import COOKIE
 from web.settings import settings
 
@@ -15,14 +19,24 @@ ALARM = {"id": "a1", "stichwort": "BRAND K.", "kurzinfo": "Brand im Freien",
 class ApiTest(unittest.TestCase):
     """Gerendert wird, was die laufende Sitzung hält — hochgeladen wird nichts mehr."""
 
+    @classmethod
+    def setUpClass(cls):
+        """
+        Die Tests bekommen ihren eigenen Sitzungsspeicher. Sonst räumten sie das Verzeichnis der
+        laufenden Installation ab — und wer nebenher im Browser arbeitet, verlöre seine Sitzung.
+        """
+        cls.ablage = tempfile.TemporaryDirectory()
+        cls.vorher = sitzungsdienst.sitzungen
+        sitzungsdienst.sitzungen = Sitzungen(Path(cls.ablage.name), 30)
+        cls.addClassCleanup(cls.zurueckstellen)
+
+    @classmethod
+    def zurueckstellen(cls):
+        sitzungsdienst.sitzungen = cls.vorher
+        cls.ablage.cleanup()
+
     def setUp(self):
         self.client = TestClient(app)
-        self.addCleanup(self.aufraeumen)
-
-    @staticmethod
-    def aufraeumen():
-        shutil.rmtree(settings.sitzung_verzeichnis, ignore_errors=True)
-        settings.sitzung_verzeichnis.mkdir(parents=True, exist_ok=True)
 
     def sitzung(self, alarme=None):
         antwort = self.client.post(

@@ -1,24 +1,36 @@
-import shutil
+import tempfile
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from data.sitzung import Sitzungen
 from main import app
-from services.sitzung import COOKIE, sitzungen
-from web.settings import settings
+from services import sitzung as sitzungsdienst
+from services.sitzung import COOKIE
 
 MAPPE = {"version": 1, "alarme": [{"id": "a1", "stichwort": "BRAND K."}]}
 
 
 class SitzungTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        """
+        Die Tests bekommen ihren eigenen Sitzungsspeicher. Sonst räumten sie das Verzeichnis der
+        laufenden Installation ab — und wer nebenher im Browser arbeitet, verlöre seine Sitzung.
+        """
+        cls.ablage = tempfile.TemporaryDirectory()
+        cls.vorher = sitzungsdienst.sitzungen
+        sitzungsdienst.sitzungen = Sitzungen(Path(cls.ablage.name), 30)
+        cls.addClassCleanup(cls.zurueckstellen)
+
+    @classmethod
+    def zurueckstellen(cls):
+        sitzungsdienst.sitzungen = cls.vorher
+        cls.ablage.cleanup()
+
     def setUp(self):
         self.client = TestClient(app)
-        self.addCleanup(self.aufraeumen)
-
-    @staticmethod
-    def aufraeumen():
-        shutil.rmtree(settings.sitzung_verzeichnis, ignore_errors=True)
-        settings.sitzung_verzeichnis.mkdir(parents=True, exist_ok=True)
 
     def anlegen(self, mappe=None) -> dict:
         antwort = self.client.post("/api/sitzung", json=mappe or MAPPE)
@@ -79,19 +91,18 @@ class CacheTest(unittest.TestCase):
     """Der Speicher ist ein Cache: Verdrängen darf nie Daten kosten."""
 
     def setUp(self):
-        self.addCleanup(SitzungTest.aufraeumen)
+        self.ablage = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ablage.cleanup)
 
     def test_verdraengt_wird_nach_zahl_und_die_sitzung_bleibt_lesbar(self):
-        laden = sitzungen.__class__(settings.sitzung_verzeichnis, 30,
-                                    cache_eintraege=2, cache_minuten=30)
+        laden = Sitzungen(Path(self.ablage.name), 30, cache_eintraege=2, cache_minuten=30)
         tokens = [laden.anlegen({"version": 1, "alarme": [{"id": f"a{i}"}]})[0] for i in range(4)]
         self.assertEqual(2, laden.im_speicher())
         # Die zuerst angelegte ist längst aus dem Speicher — und trotzdem vollständig da.
         self.assertEqual("a0", laden.lesen(tokens[0])[0]["alarme"][0]["id"])
 
     def test_verdraengt_wird_nach_zeit(self):
-        laden = sitzungen.__class__(settings.sitzung_verzeichnis, 30,
-                                    cache_eintraege=64, cache_minuten=0)
+        laden = Sitzungen(Path(self.ablage.name), 30, cache_eintraege=64, cache_minuten=0)
         token, _ = laden.anlegen({"version": 1, "alarme": []})
         laden._verdraengen()
         self.assertEqual(0, laden.im_speicher())
@@ -102,15 +113,14 @@ class UmbenennenTest(unittest.TestCase):
     """Die Tabelle hieß einmal `freigaben`; eine laufende Installation darf nichts verlieren."""
 
     def setUp(self):
-        self.addCleanup(SitzungTest.aufraeumen)
-        SitzungTest.aufraeumen()
+        self.ablage = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ablage.cleanup)
 
     def test_zeilen_der_alten_tabelle_ueberleben(self):
         import json
         import sqlite3
 
-        verzeichnis = settings.sitzung_verzeichnis
-        verzeichnis.mkdir(parents=True, exist_ok=True)
+        verzeichnis = Path(self.ablage.name)
         (verzeichnis / "alt.json").write_text(
             json.dumps({"eintraege": {}, "stand": 0}), encoding="utf-8")
         db = sqlite3.connect(verzeichnis / "freigaben.sqlite")
@@ -123,6 +133,6 @@ class UmbenennenTest(unittest.TestCase):
         db.commit()
         db.close()
 
-        laden = sitzungen.__class__(verzeichnis, 30)
+        laden = Sitzungen(verzeichnis, 30)
         self.assertEqual(1, laden.anzahl())
         self.assertEqual([], laden.lesen("alt")[0]["alarme"])

@@ -3,6 +3,10 @@ Der Alarmzettel als PDF, gerendert aus der laufenden Sitzung.
 
 Die Arbeitsmappe liegt ohnehin auf dem Server, also wird sie nicht noch einmal hochgeladen: der
 Browser sagt nur, was er gedruckt haben will.
+
+Der Sitzungsspeicher wird über das Modul angesprochen und nicht als Name hereingeholt, damit ein
+Test ihn auf ein eigenes Verzeichnis umstellen kann, ohne das der laufenden Installation
+anzurühren.
 """
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -12,8 +16,9 @@ from data.alarmplan import ableitung, mit_plan
 from data.katalog import mit_katalog
 from data.typst import RenderError, render, render_plan
 from entities.alarm import Arbeitsmappe
-from services.sitzung import COOKIE, sitzungen
 from data.sitzung import SitzungFehler
+from services import sitzung as sitzungsdienst
+from services.sitzung import COOKIE
 
 router = APIRouter(prefix="/render", tags=["render"])
 
@@ -23,7 +28,7 @@ def _mappe(request: Request) -> Arbeitsmappe:
     if not token:
         raise HTTPException(status_code=401, detail="Keine laufende Sitzung.")
     try:
-        inhalt, _ = sitzungen.lesen(token)
+        inhalt, _ = sitzungsdienst.sitzungen.lesen(token)
     except SitzungFehler as fehler:
         raise HTTPException(status_code=404, detail=str(fehler)) from fehler
     return Arbeitsmappe.model_validate(inhalt)
