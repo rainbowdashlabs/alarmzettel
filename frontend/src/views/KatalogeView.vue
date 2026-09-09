@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed, reactive, ref, watch} from 'vue'
 import AdresseFeld from '../components/base/AdresseFeld.vue'
+import KlappAbschnitt from '../components/base/KlappAbschnitt.vue'
 import TextFeld from '../components/base/TextFeld.vue'
 import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
@@ -225,8 +226,7 @@ function truppVorschau(staerke: string): string {
       <p class="text-muted text-[13px] mt-2">{{ t('planung.einschaltenHinweis') }}</p>
     </section>
 
-    <section class="abschnitt">
-      <h2 class="abschnitt-titel">{{ t('kataloge.dienststelle') }}</h2>
+    <KlappAbschnitt name="dienststelle" :titel="t('kataloge.dienststelle')">
       <div class="grid md:grid-cols-3 gap-3">
         <TextFeld v-model="arbeitsmappe.kataloge.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>
         <TextFeld v-model="arbeitsmappe.kataloge.wacheName" :label="t('kataloge.wacheName')"
@@ -236,16 +236,16 @@ function truppVorschau(staerke: string): string {
 
       <AdresseFeld v-model="arbeitsmappe.kataloge.wache" :titel="t('kataloge.wache')"/>
       <p class="text-muted text-[13px] mt-3">{{ t('kataloge.wacheHinweis') }}</p>
-    </section>
+    </KlappAbschnitt>
 
-    <section class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">{{ t('kataloge.orte') }}</h2>
+    <KlappAbschnitt name="orte" :titel="t('kataloge.orte')"
+                    :anzahl="arbeitsmappe.kataloge.orte.length + 1">
+      <template #werkzeug>
         <button type="button" class="knopf knopf-klein" @click="ortAnlegen">
           <font-awesome-icon icon="fa-solid fa-plus"/>
           {{ t('kataloge.ortNeu') }}
         </button>
-      </div>
+      </template>
       <p class="text-muted text-[13px] mb-3">{{ t('kataloge.orteHinweis') }}</p>
 
       <div class="grid gap-4">
@@ -268,16 +268,16 @@ function truppVorschau(staerke: string): string {
           <AdresseFeld v-model="ort.adresse" :titel="t('kataloge.ortAdresse')"/>
         </div>
       </div>
-    </section>
+    </KlappAbschnitt>
 
-    <section class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">{{ t('kataloge.fahrzeuge') }}</h2>
+    <KlappAbschnitt name="fahrzeuge" :titel="t('kataloge.fahrzeuge')"
+                    :anzahl="arbeitsmappe.kataloge.fahrzeuge.length">
+      <template #werkzeug>
         <button type="button" class="knopf knopf-klein" @click="fahrzeugHinzufuegen">
           <font-awesome-icon icon="fa-solid fa-plus"/>
           {{ t('kataloge.hinzufuegen') }}
         </button>
-      </div>
+      </template>
       <p class="text-muted text-[13px] mb-3">{{ t('kataloge.fahrzeugeHinweis') }}</p>
 
       <p v-if="!arbeitsmappe.kataloge.fahrzeuge.length" class="text-muted text-sm">
@@ -310,12 +310,10 @@ function truppVorschau(staerke: string): string {
           </p>
         </div>
       </div>
-    </section>
+    </KlappAbschnitt>
 
-    <section class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">{{ t('kataloge.material') }}</h2>
-      </div>
+    <KlappAbschnitt name="material" :titel="t('kataloge.material')"
+                    :anzahl="arbeitsmappe.kataloge.material.length">
       <p class="text-muted text-[13px] mb-3">{{ t('kataloge.materialHinweis') }}</p>
       <form class="flex gap-2 mb-3" @submit.prevent="materialHinzufuegen">
         <input v-model="materialname" type="text" class="field"
@@ -340,12 +338,10 @@ function truppVorschau(staerke: string): string {
           </button>
         </div>
       </div>
-    </section>
+    </KlappAbschnitt>
 
-    <section class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">{{ t('kataloge.stichwoerter') }}</h2>
-      </div>
+    <KlappAbschnitt name="stichwoerter" :titel="t('kataloge.stichwoerter')"
+                    :anzahl="arbeitsmappe.kataloge.stichwoerter.length">
       <p class="text-muted text-[13px] mb-3">{{ t('kataloge.stichwoerterHinweis') }}</p>
 
       <form class="flex gap-2 mb-3" @submit.prevent="stichwortHinzufuegen">
@@ -379,16 +375,16 @@ function truppVorschau(staerke: string): string {
           </button>
         </div>
       </div>
-    </section>
+    </KlappAbschnitt>
 
-    <section class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">{{ t('planung.tage') }}</h2>
+    <KlappAbschnitt name="tage" :titel="t('planung.tage')"
+                    :anzahl="arbeitsmappe.kataloge.tage.length">
+      <template #werkzeug>
         <button type="button" class="knopf knopf-klein" @click="tagAnlegen">
           <font-awesome-icon icon="fa-solid fa-plus"/>
           {{ t('planung.tagNeu') }}
         </button>
-      </div>
+      </template>
       <p v-if="!arbeitsmappe.kataloge.tage.length" class="text-muted text-sm">{{ t('planung.keineTage') }}</p>
 
       <div class="grid gap-2">
@@ -406,16 +402,16 @@ function truppVorschau(staerke: string): string {
           </button>
         </div>
       </div>
-    </section>
+    </KlappAbschnitt>
 
-    <section class="abschnitt">
-      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 class="abschnitt-titel mb-0">{{ t('planung.personen') }}</h2>
+    <KlappAbschnitt name="personen" :titel="t('planung.personen')"
+                    :anzahl="arbeitsmappe.kataloge.personen.length">
+      <template #werkzeug>
         <button type="button" class="knopf knopf-klein" @click="personAnlegen">
           <font-awesome-icon icon="fa-solid fa-plus"/>
           {{ t('planung.personNeu') }}
         </button>
-      </div>
+      </template>
       <p class="text-muted text-[13px] mb-3">{{ t('planung.personenHinweis') }}</p>
       <p v-if="!arbeitsmappe.kataloge.personen.length" class="text-muted text-sm">
         {{ t('planung.keinePersonen') }}
@@ -500,10 +496,10 @@ function truppVorschau(staerke: string): string {
           </div>
         </div>
       </div>
-    </section>
+    </KlappAbschnitt>
     <div class="grid md:grid-cols-2 gap-4">
-      <section v-for="liste in listen" :key="liste.schluessel" class="abschnitt">
-        <h2 class="abschnitt-titel">{{ liste.titel }}</h2>
+      <KlappAbschnitt v-for="liste in listen" :key="liste.schluessel" :name="liste.schluessel"
+                      :titel="liste.titel" :anzahl="arbeitsmappe.kataloge[liste.schluessel].length">
 
         <form class="flex gap-2 mb-3" @submit.prevent="hinzufuegen(liste.schluessel)">
           <input v-model="entwurf[liste.schluessel]" type="text" class="field"/>
@@ -527,7 +523,7 @@ function truppVorschau(staerke: string): string {
             </button>
           </li>
         </ul>
-      </section>
+      </KlappAbschnitt>
     </div>
   </div>
 </template>
