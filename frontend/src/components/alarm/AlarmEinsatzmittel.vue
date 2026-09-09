@@ -127,7 +127,7 @@ function alarmFuerWaehlen(gruppe: number, fahrzeug: number) {
                              :platzhalter="werte(fahrzeug).trupp"/>
                 <TextFeld v-model="fahrzeug.hinweis" :label="t('feld.fahrzeugHinweis')"/>
               </div>
-              <div class="flex gap-2">
+              <div class="flex gap-2 flex-wrap">
                 <button type="button" class="knopf knopf-klein"
                         :class="fahrzeug.alarmFuer ? 'knopf-primaer' : ''"
                         :title="t('einsatzmittel.alarmFuer')"

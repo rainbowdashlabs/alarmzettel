@@ -220,7 +220,10 @@ textarea.field {
     resize: vertical;
 }
 
+/* Als Kind eines Rasters darf ein Abschnitt nicht breiter werden, als das Raster ihm gibt:
+   `min-width: auto` ließe eine breite Tabelle die ganze Seite auseinanderziehen. */
 .abschnitt {
+    min-width: 0;
     background-color: var(--c-surface);
     border: 1px solid var(--c-rule);
     border-radius: var(--radius-card);
@@ -415,6 +418,20 @@ textarea.field {
     min-width: 15rem;
     right: 0;
     left: auto;
+}
+
+/*
+ * Auf einem Telefon ist der Knopf, an dem sie hängt, zu weit links: nach rechts ausgerichtet
+ * ragte die Liste über den linken Rand hinaus. Dort spannt sie sich deshalb über die Breite des
+ * Fensters statt über die ihres Knopfes.
+ */
+@media (max-width: 640px) {
+    .sitzungsliste {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        min-width: 0;
+    }
 }
 
 .sitzungsliste li {

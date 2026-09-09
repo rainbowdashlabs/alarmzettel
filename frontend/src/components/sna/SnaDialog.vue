@@ -262,7 +262,7 @@ watch(amEnde, (erreicht) => {
 
             <p class="text-muted text-[13px]">{{ t('sna.wasPassiert') }}</p>
 
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
               <button type="button" class="knopf knopf-primaer" @click="uebernehmen">
                 <font-awesome-icon icon="fa-solid fa-check"/>
                 {{ t('sna.uebernehmen') }}

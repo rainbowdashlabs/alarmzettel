@@ -14,20 +14,18 @@ defineProps<{ abgeleitet: Alarmableitung }>()
       {{ abgeleitet.einsatzadresse.strasse }} {{ abgeleitet.einsatzadresse.hnr }},
       {{ abgeleitet.einsatzadresse.plz }} {{ abgeleitet.einsatzadresse.ort }}
     </p>
-    <table v-if="abgeleitet.blaetter.length" class="w-full text-sm mt-2">
-      <tbody>
-        <tr v-for="(blatt, nummer) in abgeleitet.blaetter" :key="nummer"
-            class="border-t border-rule">
-          <td class="py-1 pr-3 font-bold">{{ blatt.funkrufname }}</td>
-          <td class="tabular py-1 pr-3">{{ blatt.einsatzDatum }} {{ blatt.einsatzZeit }}</td>
-          <td class="tabular py-1 pr-3 text-muted">{{ blatt.einsatzNr }}</td>
-          <td v-if="blatt.ezp" class="tabular py-1 pr-3 text-muted">
-            {{ t('ausPlan.ezp', {n: blatt.ezp}) }}
-          </td>
-          <td class="py-1 text-muted">{{ t('ausPlan.staerke', {n: blatt.staerke}) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="abgeleitet.blaetter.length" class="text-sm mt-2">
+      <div v-for="(blatt, nummer) in abgeleitet.blaetter" :key="nummer"
+           class="border-t border-rule py-1 flex flex-wrap items-baseline gap-x-3">
+        <span class="font-bold">{{ blatt.funkrufname }}</span>
+        <span class="tabular">{{ blatt.einsatzDatum }} {{ blatt.einsatzZeit }}</span>
+        <span class="tabular text-muted">{{ blatt.einsatzNr }}</span>
+        <span v-if="blatt.ezp" class="tabular text-muted">
+          {{ t('ausPlan.ezp', {n: blatt.ezp}) }}
+        </span>
+        <span class="text-muted">{{ t('ausPlan.staerke', {n: blatt.staerke}) }}</span>
+      </div>
+    </div>
     <p v-else class="text-signal-ink text-[13px] mt-2">{{ t('ausPlan.ohneFahrzeug') }}</p>
   </section>
 </template>

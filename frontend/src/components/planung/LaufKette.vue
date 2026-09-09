@@ -44,7 +44,7 @@ const {lauf} = defineProps<{ lauf: Lauf }>()
       <SchrittFelder :lauf="lauf" :schritt="schritt"/>
     </div>
 
-    <div class="flex gap-2">
+    <div class="flex gap-2 flex-wrap">
       <button type="button" class="knopf knopf-klein"
               @click="schrittAnhaengen(lauf, 'aufenthalt')">
         <font-awesome-icon icon="fa-solid fa-plus"/>

@@ -73,7 +73,8 @@ const fahrzeuge = computed(() =>
 
     <div v-if="fahrzeuge.length" class="border-t border-rule pt-3">
       <span class="label block mb-2">{{ t('abschnitt.einsatzmittel') }}</span>
-      <table class="w-full text-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
         <tbody>
           <tr v-for="fahrzeug in fahrzeuge" :key="fahrzeug.id" class="border-t border-hairline">
             <td class="py-1 pr-3 font-bold whitespace-nowrap">
@@ -87,8 +88,9 @@ const fahrzeuge = computed(() =>
             <td class="py-1 pr-3 text-muted">{{ fahrzeug.trupp || fahrzeug.staerke }}</td>
             <td class="py-1 text-muted">{{ fahrzeug.hinweis }}</td>
           </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div v-if="alarm.hinweise.length" class="border-t border-rule pt-3">

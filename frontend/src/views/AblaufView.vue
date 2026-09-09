@@ -97,11 +97,11 @@ async function drucken(holen: () => Promise<Blob>, name: string) {
 <template>
   <div class="grid gap-5">
     <div class="flex items-start justify-between gap-3 flex-wrap">
-      <div>
+      <div class="min-w-0">
         <h1 class="headline text-2xl">{{ t('ablauf.titel') }}</h1>
         <p class="text-muted text-sm mt-1">{{ t('ablauf.beschreibung') }}</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
         <button type="button" class="knopf knopf-klein"
                 @click="drucken(renderAblaufplan, 'ablaufplan.pdf')">
           <font-awesome-icon icon="fa-solid fa-file-pdf"/>

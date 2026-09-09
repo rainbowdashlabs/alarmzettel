@@ -96,8 +96,7 @@ async function tun(was: () => Promise<void>) {
               <span class="hidden md:inline">{{ t('freigabe.teilen') }}</span>
             </button>
 
-            <div v-if="teiler" class="auswahl-liste sitzungsliste grid gap-3 p-3"
-                 style="min-width: 22rem">
+            <div v-if="teiler" class="auswahl-liste sitzungsliste grid gap-3 p-3 sm:min-w-88">
               <div v-if="!sitzung.nurLesen">
                 <div class="label mb-1">{{ t('freigabe.zumMitarbeiten') }}</div>
                 <div class="flex items-center gap-2">

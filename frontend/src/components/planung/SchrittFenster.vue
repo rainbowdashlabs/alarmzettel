@@ -27,7 +27,7 @@ function wegwerfen() {
             {{ uhrzeit(schritt.von) }}–{{ uhrzeit(schritt.bis) }}
           </p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
           <button type="button" class="knopf knopf-klein knopf-gefahr" @click="wegwerfen">
             <font-awesome-icon icon="fa-solid fa-trash"/>
             {{ t('ablauf.schrittEntfernen') }}

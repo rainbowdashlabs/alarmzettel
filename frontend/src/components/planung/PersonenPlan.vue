@@ -110,7 +110,8 @@ function lage(eintrag: Personenschritt): string {
         <span v-if="plan.person.anzahl > 1" class="text-muted">({{ plan.person.anzahl }})</span>
       </h2>
       <p v-if="!plan.zeilen.length" class="text-muted text-sm">{{ t('ablauf.ohnePlan') }}</p>
-      <table v-else class="w-full text-sm">
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-sm">
         <tbody>
           <tr v-for="(zeile, nummer) in plan.zeilen" :key="zeile.schluessel"
               class="border-t border-rule">
@@ -124,8 +125,9 @@ function lage(eintrag: Personenschritt): string {
             <td class="py-1 pr-3 text-muted">{{ zeile.lage }}</td>
             <td class="py-1 text-muted whitespace-nowrap">{{ zeile.womit }}</td>
           </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
       <p v-for="(befund, nummer) in befunde.get(plan.person.id)" :key="nummer"
          class="text-signal-ink text-[13px] mt-1">
         {{ t(`ablauf.befund.${befund.art}`, befund.werte ?? {}) }}

@@ -80,23 +80,18 @@ function zeit(wann: string): string {
         {{ alarmStichwort(einsatz.programmpunkt.alarmId) || t('ablauf.ohneName') }}
       </p>
 
-      <table class="w-full text-sm mt-3">
-        <tbody>
-          <tr v-for="eintrag in einsatz.beteiligte" :key="eintrag.schritt.id"
-              class="border-t border-rule">
-            <td class="py-1 pr-3 font-bold whitespace-nowrap">{{ wer(eintrag) }}</td>
-            <td class="tabular py-1 pr-3 whitespace-nowrap">
-              {{ uhrzeit(eintrag.aufbruch) }}–{{ uhrzeit(eintrag.bis) }}
-            </td>
-            <td class="py-1 pr-3 text-muted">{{ besatzung(eintrag) }}</td>
-            <td class="py-1 text-muted text-[13px] whitespace-nowrap">
-              <span v-if="eintrag.lauf.fahrzeugId && !eintrag.aufgebot">
-                {{ t('ablauf.nurVorOrt') }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="mt-3 text-sm">
+        <div v-for="eintrag in einsatz.beteiligte" :key="eintrag.schritt.id"
+             class="border-t border-rule py-1 flex flex-wrap items-baseline gap-x-3">
+          <span class="font-bold">{{ wer(eintrag) }}</span>
+          <span class="tabular whitespace-nowrap">
+            {{ uhrzeit(eintrag.aufbruch) }}–{{ uhrzeit(eintrag.bis) }}
+          </span>
+          <span class="text-muted grow min-w-0">{{ besatzung(eintrag) }}</span>
+          <span v-if="eintrag.lauf.fahrzeugId && !eintrag.aufgebot"
+                class="text-muted text-[13px]">{{ t('ablauf.nurVorOrt') }}</span>
+        </div>
+      </div>
 
       <p v-for="(befund, nummer) in befunde.get(einsatz.programmpunkt.id)" :key="nummer"
          class="text-signal-ink text-[13px] mt-2">

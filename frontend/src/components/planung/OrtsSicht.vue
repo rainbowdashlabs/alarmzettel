@@ -39,8 +39,9 @@ function lage(belegung: Ortsbelegung): string {
           {{ sicht.ort.adresse.hnr }}</span>
       </h2>
       <p v-if="!sicht.belegungen.length" class="text-muted text-sm">{{ t('ablauf.ortLeer') }}</p>
-      <table v-else class="w-full text-sm">
-        <tbody>
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <tbody>
           <tr v-for="(belegung, zeile) in sicht.belegungen" :key="belegung.schritt.id"
               class="border-t border-rule">
             <td v-if="mehrereTage()" class="tabular py-1 pr-3 text-muted whitespace-nowrap">
@@ -51,9 +52,10 @@ function lage(belegung: Ortsbelegung): string {
             </td>
             <td class="py-1 pr-3">{{ wer(belegung) }}</td>
             <td class="py-1 text-muted">{{ lage(belegung) }}</td>
-          </tr>
-        </tbody>
-      </table>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
     <p v-if="!sichten.length" class="text-muted text-sm">{{ t('ablauf.ersteOrte') }}</p>
   </div>

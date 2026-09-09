@@ -73,7 +73,7 @@ watch(modus, () => alleZeigen())
       <div class="flex items-baseline gap-3 flex-wrap mb-3">
         <h2 class="abschnitt-titel">{{ t('ablauf.bewegung') }}</h2>
         <span class="grow"></span>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
           <button v-for="name in MODI" :key="name" type="button" class="knopf knopf-klein"
                   :class="modus === name ? 'knopf-primaer' : ''" @click="umschalten(name)">
             {{ t(`ablauf.modus.${name}`) }}
