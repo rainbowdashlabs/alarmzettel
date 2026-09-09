@@ -43,6 +43,11 @@ export interface Verfuegbarkeit extends Eintrag {
 
 export interface Person extends Eintrag {
     name: string
+    /**
+     * Ob diese Person ein eigenes Blatt bekommt. Wer nur mitfährt — die vier Mimen etwa — steht
+     * im Plan und in jeder Besatzung, braucht aber keinen Zettel in die Hand.
+     */
+    blatt: boolean
     rollen: string[]
     /** Führerscheinklassen, gegen `Fahrzeugvorlage.fuehrerschein` geprüft. */
     fahrerlaubnis: string[]

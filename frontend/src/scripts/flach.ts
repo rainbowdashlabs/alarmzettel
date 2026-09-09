@@ -46,7 +46,7 @@ const PLANUNGSEINTRAEGE = {
 /** Die Tage und das Personal stehen im Katalog; die Verfügbarkeiten hängen unter der Person. */
 const KATALOGEINTRAEGE = {
     tage: ['datum', 'name'],
-    personen: ['name', 'anzahl'],
+    personen: ['name', 'anzahl', 'blatt'],
 } as const
 
 const SCHRITTFELDER = ['art', 'mittel', 'fahrzeit', 'von', 'bis', 'ortId', 'programmpunktId',
@@ -59,7 +59,8 @@ type Eintragsdaten = Record<string, unknown> & { id: string, sortierung?: number
  * leere String; ein Wahrheitswert und eine Anzahl brauchen ihre eigene Vorgabe, sonst käme ein
  * leerer String zurück, den das Modell weder als Ja oder Nein noch als Zahl lesen kann.
  */
-const VORGABEN: Record<string, unknown> = {aufgebot: true, faehrt: false, anzahl: 1, fahrzeit: 0}
+const VORGABEN: Record<string, unknown> =
+    {aufgebot: true, faehrt: false, anzahl: 1, fahrzeit: 0, blatt: true}
 
 function eintragsfelder(basis: string, werte: Flachbild, eintrag: Eintragsdaten,
                         felder: readonly string[], stelle: number) {

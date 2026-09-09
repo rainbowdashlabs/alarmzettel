@@ -426,12 +426,17 @@ function truppVorschau(staerke: string): string {
       <div class="grid gap-4">
         <div v-for="person in arbeitsmappe.kataloge.personen" :key="person.id"
              class="border border-rule rounded p-3 bg-page grid gap-3">
-          <div class="grid md:grid-cols-[1fr_6rem_auto] gap-3 items-end">
+          <div class="grid md:grid-cols-[1fr_6rem_auto_auto] gap-3 items-end">
             <TextFeld v-model="person.name" :label="t('planung.personName')"/>
             <div>
               <label class="feld-label">{{ t('planung.anzahl') }}</label>
               <input v-model.number="person.anzahl" type="number" min="1" class="field"/>
             </div>
+            <label class="flex items-center gap-2 text-sm h-9.5"
+                   :title="t('planung.blattHinweis')">
+              <input v-model="person.blatt" type="checkbox"/>
+              {{ t('planung.blatt') }}
+            </label>
             <button type="button" class="knopf knopf-klein knopf-gefahr"
                     @click="ausListe(arbeitsmappe.kataloge.personen, person)">
               <font-awesome-icon icon="fa-solid fa-trash"/>

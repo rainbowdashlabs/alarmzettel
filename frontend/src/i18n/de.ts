@@ -380,6 +380,8 @@ export default {
         personenHinweis: 'Eine Zeile kann für mehrere Köpfe stehen — vier Mimen belegen vier Plätze.',
         personNeu: 'Person hinzufügen',
         keinePersonen: 'Noch keine Person angelegt.',
+        blatt: 'Eigenes Blatt',
+        blattHinweis: 'Aus: steht weiter im Plan und in jeder Besatzung, bekommt aber keinen eigenen Zettel — etwa, wenn der Tag ohnehin der des Fahrzeugs ist.',
         personName: 'Name',
         anzahl: 'Köpfe',
         fahrerlaubnis: 'Fahrerlaubnis',

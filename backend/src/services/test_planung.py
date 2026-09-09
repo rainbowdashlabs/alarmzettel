@@ -7,7 +7,7 @@ STAMM = {
     "fahrerlaubnisse": ["B", "C"],
     "tage": [{"id": "t1", "sortierung": 0.0, "datum": "2026-09-19", "name": "Übungstag"}],
     "personen": [{"id": "p1", "sortierung": 0.0, "name": "Maria", "anzahl": 1,
-                  "rollen": ["Ausbilder"], "fahrerlaubnis": ["B", "C"],
+                  "blatt": True, "rollen": ["Ausbilder"], "fahrerlaubnis": ["B", "C"],
                   "verfuegbar": [{"id": "v1", "sortierung": 0.0,
                                   "von": "2026-09-19T10:00", "bis": "2026-09-19T15:00"}]}],
 }

@@ -10,7 +10,9 @@ import {reactive} from 'vue'
 import {arbeitsmappe} from './arbeitsmappe'
 import {naechste, leereAdresse} from '../interfaces/Alarm'
 import {zuPunkt} from '../api/adressen'
-import {darfFahren as darfFahrenLaut, lagenName, lagenOrt, MINUTEN_JE_KM} from '../scripts/ablauf'
+import {
+    darfFahren as darfFahrenLaut, lagenName, lagenOrt, MINUTEN_JE_KM, personenplan,
+} from '../scripts/ablauf'
 import {entfernungKm} from '../scripts/polar'
 import type {Plandaten} from '../scripts/ablauf'
 import type {Punkt} from '../scripts/polar'
@@ -91,10 +93,10 @@ export function ortAnlegen(): Ort {
 export function personAnlegen(): Person {
     const person: Person = {
         id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.kataloge.personen),
-        name: '', rollen: [], fahrerlaubnis: [], anzahl: 1, verfuegbar: [],
+        name: '', blatt: true, rollen: [], fahrerlaubnis: [], anzahl: 1, verfuegbar: [],
     }
     arbeitsmappe.kataloge.personen.push(person)
-    return person
+    return ausDerListe(arbeitsmappe.kataloge.personen, person)
 }
 
 /**
@@ -253,9 +255,23 @@ export function schrittMitZeit(lauf: Lauf, von: string, bis: string): Schritt {
         .filter(eintrag => (alsMinuten(eintrag.von) ?? 0) <= beginn)
         .pop()
     const schritt = neuerSchritt(lauf, 'aufenthalt', vorbild, von, bis, naechste(lauf.schritte))
+    schritt.ortId = wohl(lauf, beginn) || schritt.ortId
     lauf.schritte.push(schritt)
     einordnen(lauf, schritt)
     return ausDerListe(lauf.schritte, schritt)
+}
+
+/**
+ * Wo diese Kette zu dieser Zeit vermutlich steht. Bei einer Person zählt ihr ganzer Plan und
+ * nicht nur die eigene Kette: wer mit einem Fahrzeug an die Lage gefahren ist, steht dort — und
+ * ein Schritt, den man ihr danach aufzieht, fängt ebendort an und nicht an der Wache.
+ */
+function wohl(lauf: Lauf, beginn: number): string {
+    if (lauf.fahrzeugId) return ''
+    const vorher = personenplan(plandaten(), lauf.personId)
+        .filter(eintrag => (alsMinuten(eintrag.schritt.von) ?? 0) <= beginn)
+        .pop()
+    return vorher?.nachOrtId ?? ''
 }
 
 function standardBeginn(): string {

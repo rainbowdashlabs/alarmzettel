@@ -308,7 +308,7 @@ def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
     """
     plan = Plan(arbeitsmappe, punkte)
     return {
-        "personen": [_personenblatt(plan, person) for person in plan.personen],
+        "personen": [_personenblatt(plan, person) for person in plan.personen if person.blatt],
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe
                       if lauf.fahrzeugId and lauf.schritte],
         "gesamt": _gesamtplan(plan),

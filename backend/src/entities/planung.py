@@ -50,6 +50,11 @@ class Verfuegbarkeit(Eintrag):
 
 class Person(Eintrag):
     name: str = ""
+    """
+    Ob diese Person ein eigenes Blatt bekommt. Wer nur mitfährt — die vier Mimen etwa — steht im
+    Plan und in jeder Besatzung, braucht aber keinen Zettel in die Hand.
+    """
+    blatt: bool = True
     rollen: list[str] = []
     """Führerscheinklassen, gegen `Fahrzeugvorlage.fuehrerschein` geprüft."""
     fahrerlaubnis: list[str] = []

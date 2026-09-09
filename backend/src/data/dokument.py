@@ -58,13 +58,14 @@ PLANUNGSEINTRAEGE = {
 # Die Tage und das Personal stehen im Katalog; die Verfügbarkeiten hängen unter der Person.
 KATALOGEINTRAEGE = {
     "tage": ("datum", "name"),
-    "personen": ("name", "anzahl"),
+    "personen": ("name", "anzahl", "blatt"),
 }
 
 SCHRITTFELDER = ("art", "mittel", "fahrzeit", "von", "bis", "ortId", "programmpunktId",
                  "aufgebot", "notiz")
 
-VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False, "anzahl": 1, "fahrzeit": 0}
+VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False, "anzahl": 1, "fahrzeit": 0,
+                            "blatt": True}
 """
 Was ein Feld bedeutet, das eine ältere Arbeitsmappe noch gar nicht kannte. Für Text ist das der
 leere String; ein Wahrheitswert und eine Anzahl brauchen ihre eigene Vorgabe, sonst käme ein

@@ -297,6 +297,36 @@ class FahrzeitTest(unittest.TestCase):
                                         {"ostwert": 0, "nordwert": 7500}, "fahrzeug"))
 
 
+class OhneBlattTest(unittest.TestCase):
+    """
+    Wer den Tag ohnehin im Fahrzeug verbringt, braucht keinen zweiten Zettel mit demselben
+    Inhalt. Er steht weiter in jeder Besatzung und im Bewegungsbild — nur sein Blatt entfällt.
+    """
+
+    def blaetter(self, **person) -> list[str]:
+        personen = [eintrag | person if eintrag["id"] == "p-mimen" else eintrag
+                    for eintrag in MAPPE["kataloge"]["personen"]]
+        mappe = Arbeitsmappe.model_validate(
+            MAPPE | {"kataloge": MAPPE["kataloge"] | {"personen": personen}})
+        return [blatt["name"] for blatt in plandaten(mappe)["personen"]]
+
+    def test_ohne_eigenes_blatt_faellt_es_weg(self):
+        self.assertEqual(["Alex", "Maria"], self.blaetter(blatt=False))
+
+    def test_vorgabe_ist_ein_blatt_fuer_jeden(self):
+        self.assertEqual(["Alex", "Maria", "Mimen"], self.blaetter())
+
+    def test_die_besatzung_bleibt_vollstaendig(self):
+        personen = [eintrag | {"blatt": False} if eintrag["id"] == "p-mimen" else eintrag
+                    for eintrag in MAPPE["kataloge"]["personen"]]
+        mappe = Arbeitsmappe.model_validate(
+            MAPPE | {"kataloge": MAPPE["kataloge"] | {"personen": personen}})
+        daten = plandaten(mappe)
+        namen = {platz["name"] for blatt in daten["fahrzeuge"] for zeile in blatt["zeilen"]
+                 for platz in zeile["besatzung"]}
+        self.assertIn("Maria", namen)
+
+
 class AnfahrtTest(unittest.TestCase):
     """
     Folgt ein Aufenthalt direkt auf einen anderen an einem anderen Ort, entsteht die Fahrt
