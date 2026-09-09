@@ -5,11 +5,13 @@ export default {
     },
     nav: {
         alarme: 'Alarme',
+        ansicht: 'Ansicht',
         kataloge: 'Kataloge',
         planung: 'Ablauf',
     },
     routes: {
         alarme: 'Alarme',
+        ansicht: 'Ansicht',
         alarm: 'Alarm',
         kataloge: 'Kataloge',
         freigabe: 'Freigabe',
@@ -249,6 +251,17 @@ export default {
         keine: 'Noch keine andere Sitzung.',
         entfernen: 'Aus dieser Liste nehmen',
         laeuftAb: 'Läuft am {datum} ab, wenn sie bis dahin niemand öffnet.',
+    },
+    ansicht: {
+        titel: 'Übersicht',
+        beschreibung: 'Alles, was in dieser Sitzung steht — zum Lesen, nicht zum Ändern.',
+        fuerDich: 'Alarm für',
+        reiter: {
+            alarme: 'Alarme',
+            einsaetze: 'Einsätze',
+            personen: 'Personen',
+            orte: 'Orte',
+        },
     },
     ausPlan: {
         titel: 'Aus dem Ablaufplan',

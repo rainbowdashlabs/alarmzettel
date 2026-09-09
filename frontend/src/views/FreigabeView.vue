@@ -56,7 +56,7 @@ async function mitarbeiten() {
   try {
     nameSetzen(name.value)
     await sitzungWechseln(String(route.params.token))
-    router.push('/')
+    router.push(freigabe.value.nurLesen ? '/ansicht' : '/')
   } catch (error) {
     fehler.value = await fehlertext(error)
   }

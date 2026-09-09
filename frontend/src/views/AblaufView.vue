@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {defineAsyncComponent, ref, watch} from 'vue'
+import {computed, defineAsyncComponent, ref, watch} from 'vue'
 import {RouterLink} from 'vue-router'
 import LagenAnsicht from '../components/planung/LagenAnsicht.vue'
 import KlappAbschnitt from '../components/base/KlappAbschnitt.vue'
@@ -12,6 +12,7 @@ import {fehlertext, renderAblaufplan, renderAblaufplanZip, renderAlle} from '../
 import {arbeitsmappe} from '../store/arbeitsmappe'
 import {alleOrte, entfernen, laufAnlegen, laufVon, personName, punkteLaden} from '../store/planung'
 import {jetztAbgleichen} from '../store/sync'
+import {sitzung} from '../store/sitzung'
 
 watch(() => alleOrte().map(ort => Object.values(ort.adresse).join()).join('|'),
     () => punkteLaden(), {immediate: true})
@@ -57,6 +58,14 @@ function gemerkteAnsicht(): Ansicht {
 }
 
 const ansicht = ref<Ansicht>(gemerkteAnsicht())
+
+/** Wer nur zusieht, bekommt die Ketten nicht — dort wird gearbeitet, nicht gelesen. */
+const reiter = computed<readonly Ansicht[]>(() =>
+    sitzung.nurLesen ? ANSICHTEN.filter(name => name !== 'ketten') : ANSICHTEN)
+
+watch(reiter, liste => {
+  if (!liste.includes(ansicht.value)) ansicht.value = liste[0] ?? 'tag'
+}, {immediate: true})
 
 watch(ansicht, gewaehlt => {
   try {
@@ -116,7 +125,7 @@ async function drucken(holen: () => Promise<Blob>, name: string) {
     <p v-if="fehler" class="text-signal-ink text-sm">{{ fehler }}</p>
 
     <div class="flex flex-wrap gap-2">
-      <button v-for="name in ANSICHTEN" :key="name" type="button" class="knopf knopf-klein"
+      <button v-for="name in reiter" :key="name" type="button" class="knopf knopf-klein"
               :class="ansicht === name ? 'knopf-primaer' : ''" @click="ansicht = name">
         {{ t(`ablauf.ansicht.${name}`) }}
       </button>

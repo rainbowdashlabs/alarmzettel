@@ -8,6 +8,7 @@ import {
   schrittMitZeit,
 } from '../../store/planung'
 import {anfahrt, personenplan} from '../../scripts/ablauf'
+import {sitzung} from '../../store/sitzung'
 import {alsMinuten, tagVon, verschieben, zeitpunkt} from '../../scripts/zeit'
 import type {Lauf, Schritt} from '../../interfaces/Planung'
 
@@ -171,9 +172,13 @@ const vorschau = computed(() => zug.value?.art === 'neu' ? zug.value : null)
 /**
  * Gezogen wird am Fenster und nicht am Element: die Unterkante ist ein eigener Griff, und wer
  * über die Spalte hinausfährt, soll den Block trotzdem weiterschieben.
+ *
+ * Wer nur zusieht, fasst nichts an — was auf der Kachel steht, ist ohnehin alles, was er ändern
+ * könnte.
  */
 function fassen(ereignis: PointerEvent, art: Griff, spalte: Spalte, kachel?: Kachel) {
   if (ereignis.button !== 0) return
+  if (sitzung.nurLesen) return
   const jetzt = minuteAus(ereignis)
   zug.value = {
     art, spalte, schritt: kachel?.schritt, lauf: kachel?.lauf,
@@ -234,9 +239,11 @@ function loslassen() {
 
 /**
  * Der Schritt gehört der Kette, in der er steht — auch wenn er in der Spalte einer Person liegt,
- * die in ihr mitfährt. Das Fenster nennt deshalb die Kette und nicht die Spalte.
+ * die in ihr mitfährt. Das Fenster nennt deshalb die Kette und nicht die Spalte. Wer nur zusieht,
+ * bekommt keins: was auf der Kachel steht, ist alles, was er darin ändern könnte.
  */
 function oeffnen(kachel: Kachel) {
+  if (sitzung.nurLesen) return
   auswahl.value = {lauf: kachel.lauf, schritt: kachel.schritt, name: kettenName(kachel.lauf)}
 }
 

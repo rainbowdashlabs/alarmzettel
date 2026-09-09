@@ -70,8 +70,13 @@ async function tun(was: () => Promise<void>) {
         </RouterLink>
 
         <nav class="flex flex-wrap gap-x-5 gap-y-1 grow">
-          <RouterLink to="/" class="nav-link">{{ t('nav.alarme') }}</RouterLink>
-          <RouterLink to="/kataloge" class="nav-link">{{ t('nav.kataloge') }}</RouterLink>
+          <template v-if="sitzung.nurLesen">
+            <RouterLink to="/ansicht" class="nav-link">{{ t('nav.ansicht') }}</RouterLink>
+          </template>
+          <template v-else>
+            <RouterLink to="/" class="nav-link">{{ t('nav.alarme') }}</RouterLink>
+            <RouterLink to="/kataloge" class="nav-link">{{ t('nav.kataloge') }}</RouterLink>
+          </template>
           <RouterLink v-if="arbeitsmappe.planung.aktiv" to="/ablauf" class="nav-link">
             {{ t('nav.planung') }}
           </RouterLink>
