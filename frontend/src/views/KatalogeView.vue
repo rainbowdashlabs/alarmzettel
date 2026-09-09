@@ -9,6 +9,7 @@ import {
   verfuegbarkeitAnlegen, wortHinzufuegen,
 } from '../store/planung'
 import {truppText} from '../scripts/staerke'
+import {STICHWOERTER} from '../interfaces/Alarm'
 import type {
   Fahrzeugvorlage, Kataloge, Materialvorlage, Stichwortvorlage,
 } from '../interfaces/Alarm'
@@ -67,6 +68,15 @@ const stichwoerter = geordnet(() => arbeitsmappe.kataloge.stichwoerter, eintrag 
 const materialliste = geordnet(() => arbeitsmappe.kataloge.material, eintrag => eintrag.name)
 
 const stichwort = ref('')
+
+/**
+ * Was die Wache üblicherweise führt und in diesem Katalog noch fehlt. Wer eine Liste geleert
+ * oder aus einer Tabelle geladen hat, muss die Standardstichwörter nicht abtippen.
+ */
+const stichwortvorschlaege = computed(() => {
+  const vorhanden = new Set(arbeitsmappe.kataloge.stichwoerter.map(e => e.text.trim()))
+  return STICHWOERTER.filter(text => !vorhanden.has(text))
+})
 const materialname = ref('')
 
 function materialHinzufuegen() {
@@ -110,6 +120,11 @@ function stichwortHinzufuegen() {
  * Removing a Stichwort leaves the Alarme that pointed at it holding the text they last printed,
  * so a sheet already written does not go blank because the catalogue was tidied up.
  */
+/** Ein Vorschlag mit einem Klick: das Standardstichwort steht danach im Katalog. */
+function stichwortUebernehmen(text: string) {
+  arbeitsmappe.kataloge.stichwoerter.push({id: crypto.randomUUID(), text})
+}
+
 function stichwortEntfernen(index: number) {
   const eintrag = arbeitsmappe.kataloge.stichwoerter[index]
   if (!eintrag) return
@@ -192,6 +207,9 @@ function truppVorschau(staerke: string): string {
     </datalist>
     <datalist id="klassenliste">
       <option v-for="wert in arbeitsmappe.kataloge.fahrerlaubnisse" :key="wert" :value="wert"/>
+    </datalist>
+    <datalist id="stichwortliste">
+      <option v-for="text in stichwortvorschlaege" :key="text" :value="text"/>
     </datalist>
     <div>
       <h1 class="headline text-2xl">{{ t('kataloge.titel') }}</h1>
@@ -331,11 +349,19 @@ function truppVorschau(staerke: string): string {
       <p class="text-muted text-[13px] mb-3">{{ t('kataloge.stichwoerterHinweis') }}</p>
 
       <form class="flex gap-2 mb-3" @submit.prevent="stichwortHinzufuegen">
-        <input v-model="stichwort" type="text" class="field"/>
+        <input v-model="stichwort" type="text" class="field" list="stichwortliste"
+               :placeholder="t('kataloge.stichwortPlatzhalter')"/>
         <button type="submit" class="knopf shrink-0">
           <font-awesome-icon icon="fa-solid fa-plus"/>
         </button>
       </form>
+      <p v-if="stichwortvorschlaege.length" class="text-muted text-[13px] mb-3">
+        {{ t('kataloge.stichwortFehlen') }}
+        <button v-for="text in stichwortvorschlaege" :key="text" type="button"
+                class="knopf knopf-klein ml-2 mb-1" @click="stichwortUebernehmen(text)">
+          {{ text }}
+        </button>
+      </p>
 
       <p v-if="!arbeitsmappe.kataloge.stichwoerter.length" class="text-muted text-sm">
         {{ t('kataloge.leer') }}
