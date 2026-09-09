@@ -45,7 +45,24 @@ process.on('exit', () => {
 })
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => process.exit(1))
 
+/**
+ * Der Probe bringt seinen eigenen Server mit. Antwortet der Port schon, gehört er jemand
+ * anderem — dann liefe die Prüfung gegen fremde Daten und meldete Fehler, die keine sind.
+ */
+async function portFrei() {
+    try {
+        await fetch(`${basis}/api/health`, {signal: AbortSignal.timeout(1000)})
+    } catch {
+        return true
+    }
+    return false
+}
+
 async function serverStarten() {
+    if (!await portFrei()) {
+        throw new Error(`Auf Port ${HAFEN} antwortet schon etwas. Erst beenden, dann prüfen — ` +
+                        'sonst prüft der Probe gegen fremde Daten.')
+    }
     dienst = spawn('uvicorn',
         ['--app-dir', 'backend/src', 'main:app', '--host', '127.0.0.1',
          '--port', String(HAFEN), '--log-level', 'warning'],
