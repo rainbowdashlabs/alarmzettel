@@ -128,19 +128,33 @@ export function wortHinzufuegen(liste: string[], wert: string) {
     if (sauber && !liste.includes(sauber)) liste.push(sauber)
 }
 
+/**
+ * Der Eintrag, wie der Store ihn hält. Ein eben gebautes Objekt ist noch keines, das Vue
+ * beobachtet — erst was aus der Liste gelesen wird, meldet seine Änderungen weiter. Wer einen
+ * neuen Eintrag zum Bearbeiten zurückbekommt, muss diesen bekommen und nicht die Vorlage.
+ */
+function ausDerListe<T extends {id: string}>(liste: T[], eintrag: T): T {
+    return liste.find(vorhanden => vorhanden.id === eintrag.id) ?? eintrag
+}
+
 export function laufAnlegen(fuer: {fahrzeugId?: string, personId?: string}): Lauf {
     const lauf: Lauf = {
         id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.planung.laeufe),
         fahrzeugId: fuer.fahrzeugId ?? '', personId: fuer.personId ?? '', schritte: [],
     }
     arbeitsmappe.planung.laeufe.push(lauf)
-    return lauf
+    return ausDerListe(arbeitsmappe.planung.laeufe, lauf)
 }
 
 export function laufVon(fuer: {fahrzeugId?: string, personId?: string}): Lauf | undefined {
     return arbeitsmappe.planung.laeufe.find(lauf =>
         (fuer.fahrzeugId ? lauf.fahrzeugId === fuer.fahrzeugId : !lauf.fahrzeugId) &&
         (fuer.personId ? lauf.personId === fuer.personId : !lauf.personId))
+}
+
+/** Die Kette dieses Fahrzeugs oder dieser Person; es gibt sie, sobald jemand hineinplant. */
+export function laufSichern(fuer: {fahrzeugId?: string, personId?: string}): Lauf {
+    return laufVon(fuer) ?? laufAnlegen(fuer)
 }
 
 export function letzterSchritt(lauf: Lauf): Schritt | undefined {
@@ -180,7 +194,7 @@ export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30):
     const schritt = neuerSchritt(lauf, art, vorher, beginn, verschieben(beginn, minuten),
         naechste(lauf.schritte))
     lauf.schritte.push(schritt)
-    return schritt
+    return ausDerListe(lauf.schritte, schritt)
 }
 
 /**
@@ -205,7 +219,43 @@ export function schrittEinfuegen(lauf: Lauf, stelle: number, art: Schritt['art']
         : (nachher?.sortierung ?? 0) - 1
     const schritt = neuerSchritt(lauf, art, vorher ?? nachher, beginn, ende, sortierung)
     lauf.schritte.splice(stelle, 0, schritt)
-    return schritt
+    return ausDerListe(lauf.schritte, schritt)
+}
+
+/**
+ * Rückt einen Schritt an die Stelle, an die seine Zeit ihn setzt.
+ *
+ * Eine Kette ist eine Folge: verschiebt der Tagesplan einen Block, muss er auch in der Kette
+ * wandern, sonst zeigte die erzeugte Anfahrt auf den falschen Vorgänger. Die Sortierung kommt
+ * zwischen die neuen Nachbarn, damit sich nur dieser Schritt ändert.
+ */
+export function einordnen(lauf: Lauf, schritt: Schritt) {
+    const andere = lauf.schritte.filter(eintrag => eintrag.id !== schritt.id)
+    const beginn = alsMinuten(schritt.von) ?? 0
+    const gefunden = andere.findIndex(eintrag => (alsMinuten(eintrag.von) ?? 0) > beginn)
+    const ziel = gefunden < 0 ? andere.length : gefunden
+    const vorher = andere[ziel - 1]
+    const nachher = andere[ziel]
+    if (vorher && nachher) schritt.sortierung = (vorher.sortierung + nachher.sortierung) / 2
+    else if (vorher) schritt.sortierung = vorher.sortierung + 1
+    else if (nachher) schritt.sortierung = nachher.sortierung - 1
+    andere.splice(ziel, 0, schritt)
+    lauf.schritte.splice(0, lauf.schritte.length, ...andere)
+}
+
+/**
+ * Ein Aufenthalt über einen aufgezogenen Zeitraum. Ort, Besatzung und Material kommen von dem
+ * Schritt, der davor liegt — im Tagesplan zieht man die Zeit auf und wählt den Rest danach.
+ */
+export function schrittMitZeit(lauf: Lauf, von: string, bis: string): Schritt {
+    const beginn = alsMinuten(von) ?? 0
+    const vorbild = [...lauf.schritte]
+        .filter(eintrag => (alsMinuten(eintrag.von) ?? 0) <= beginn)
+        .pop()
+    const schritt = neuerSchritt(lauf, 'aufenthalt', vorbild, von, bis, naechste(lauf.schritte))
+    lauf.schritte.push(schritt)
+    einordnen(lauf, schritt)
+    return ausDerListe(lauf.schritte, schritt)
 }
 
 function standardBeginn(): string {
@@ -231,7 +281,7 @@ export function besatzungHinzufuegen(schritt: Schritt, personId: string): Besatz
         personId, faehrt: false,
     }
     schritt.besatzung.push(sitzt)
-    return sitzt
+    return ausDerListe(schritt.besatzung, sitzt)
 }
 
 /**
@@ -275,7 +325,7 @@ export function materialHinzufuegen(schritt: Schritt, materialId: string): Mater
         id: crypto.randomUUID(), sortierung: naechste(schritt.material), materialId, anzahl: 1,
     }
     schritt.material.push(posten)
-    return posten
+    return ausDerListe(schritt.material, posten)
 }
 
 export function materialName(materialId: string): string {
@@ -288,7 +338,7 @@ export function programmpunktAnlegen(): Programmpunkt {
         name: '', alarmId: '',
     }
     arbeitsmappe.planung.programmpunkte.push(punkt)
-    return punkt
+    return ausDerListe(arbeitsmappe.planung.programmpunkte, punkt)
 }
 
 /** Wo eine Lage stattfindet: dort, wo die Schritte stehen, die auf sie zeigen. */

@@ -4,6 +4,7 @@ import {RouterLink} from 'vue-router'
 import LagenAnsicht from '../components/planung/LagenAnsicht.vue'
 import KlappAbschnitt from '../components/base/KlappAbschnitt.vue'
 import LaufKette from '../components/planung/LaufKette.vue'
+import TagesPlan from '../components/planung/TagesPlan.vue'
 import OrtsSicht from '../components/planung/OrtsSicht.vue'
 import PersonenPlan from '../components/planung/PersonenPlan.vue'
 import {t} from '../i18n'
@@ -41,8 +42,8 @@ const BewegungsBild = defineAsyncComponent(
     () => import('../components/planung/BewegungsBild.vue'))
 const LageKarte = defineAsyncComponent(() => import('../components/planung/LageKarte.vue'))
 
-const ANSICHTEN = ['ketten', 'bewegung', 'karte', 'personen', 'orte', 'lagen'] as const
-const ansicht = ref<typeof ANSICHTEN[number]>('ketten')
+const ANSICHTEN = ['tag', 'ketten', 'bewegung', 'karte', 'personen', 'orte', 'lagen'] as const
+const ansicht = ref<typeof ANSICHTEN[number]>('tag')
 const fehler = ref<string | null>(null)
 
 /**
@@ -102,7 +103,8 @@ async function drucken(holen: () => Promise<Blob>, name: string) {
       </button>
     </div>
 
-    <BewegungsBild v-if="ansicht === 'bewegung'"/>
+    <TagesPlan v-if="ansicht === 'tag'"/>
+    <BewegungsBild v-else-if="ansicht === 'bewegung'"/>
     <LageKarte v-else-if="ansicht === 'karte'"/>
     <PersonenPlan v-else-if="ansicht === 'personen'"/>
     <OrtsSicht v-else-if="ansicht === 'orte'"/>

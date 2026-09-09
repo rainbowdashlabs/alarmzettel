@@ -224,6 +224,7 @@ export default {
         speichern: 'Speichern',
         abbrechen: 'Abbrechen',
         weiter: 'Fortfahren',
+        schliessen: 'Schließen',
     },
     sitzung: {
         neu: 'Neue Sitzung',
@@ -250,6 +251,10 @@ export default {
         einplanenHinweis: 'Fahrzeuge kommen aus dem Katalog, Personen aus den Stammdaten. Wer in keinem Fahrzeug sitzt, braucht eine eigene Kette, damit ihn jemand abholen kann.',
         keineKetten: 'Noch nichts eingeplant.',
         ketteEntfernen: 'Kette entfernen',
+        tagesplan: 'Tagesplan',
+        tagesplanHinweis: 'Ziehen legt einen Aufenthalt an, Ziehen am Block verschiebt ihn, an der Unterkante wird er länger. Ein Klick öffnet ihn.',
+        keineSpalten: 'Noch keine Fahrzeuge und keine Personen im Katalog.',
+        schrittEntfernen: 'Schritt entfernen',
         aufenthaltDavor: 'Aufenthalt davor einfügen',
         fahrtDavor: 'Fahrt davor einfügen',
         aufenthalt: 'Aufenthalt',
@@ -300,6 +305,7 @@ export default {
         keineLagen: 'Noch keine Lage angelegt.',
         ortLeer: 'Hier steht niemand.',
         ansicht: {
+            tag: 'Tagesplan',
             ketten: 'Ketten',
             bewegung: 'Bewegung',
             karte: 'Karte',
