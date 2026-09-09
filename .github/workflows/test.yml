@@ -82,9 +82,12 @@ jobs:
       # exactly: a path only one side knows reads to the other as an entry that was never there.
       - name: Compare the flatteners
         run: |
-          python tools/pfade_vergleichen.py backend/src/render/sample/sample.json > server.txt
-          node tools/pfade_vergleichen.mjs backend/src/render/sample/sample.json > browser.txt
-          diff -u server.txt browser.txt && echo "$(wc -l < server.txt) Pfade, beide Seiten gleich"
+          for mappe in backend/src/render/sample/sample.json tools/beispiel/ablauf.json; do
+            python tools/pfade_vergleichen.py "$mappe" > server.txt
+            node tools/pfade_vergleichen.mjs "$mappe" > browser.txt
+            diff -u server.txt browser.txt
+            echo "$mappe: $(wc -l < server.txt) Pfade, beide Seiten gleich"
+          done
 
   zusammenarbeit:
     runs-on: ubuntu-latest

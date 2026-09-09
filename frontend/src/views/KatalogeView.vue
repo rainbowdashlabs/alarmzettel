@@ -6,7 +6,7 @@ import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
 import {
   entfernen as ausListe, ortAnlegen, personAnlegen, tagAnlegen, umschalten,
-  verfuegbarkeitAnlegen,
+  verfuegbarkeitAnlegen, wortHinzufuegen,
 } from '../store/planung'
 import {truppText} from '../scripts/staerke'
 import type {
@@ -79,6 +79,19 @@ function materialHinzufuegen() {
 function materialEntfernen(stueck: Materialvorlage) {
   const stelle = arbeitsmappe.kataloge.material.indexOf(stueck)
   if (stelle >= 0) arbeitsmappe.kataloge.material.splice(stelle, 1)
+}
+
+/**
+ * Ein Wort an einer Person: was der Katalog noch nicht kennt, kommt dort dazu — so wie ein neu
+ * geschriebenes Stichwort oder ein neues Materialstück. Die Knöpfe daneben bleiben der schnelle
+ * Weg für alles, was schon geführt wird.
+ */
+function wortGeben(liste: 'rollen' | 'fahrerlaubnisse', an: string[], feld: HTMLInputElement) {
+  const wert = feld.value.trim()
+  feld.value = ''
+  if (!wert) return
+  wortHinzufuegen(arbeitsmappe.kataloge[liste], wert)
+  if (!an.includes(wert)) an.push(wert)
 }
 
 function ortEntfernen(ort: Ort) {
@@ -174,6 +187,12 @@ function truppVorschau(staerke: string): string {
 
 <template>
   <div class="grid gap-5">
+    <datalist id="rollenliste">
+      <option v-for="wert in arbeitsmappe.kataloge.rollen" :key="wert" :value="wert"/>
+    </datalist>
+    <datalist id="klassenliste">
+      <option v-for="wert in arbeitsmappe.kataloge.fahrerlaubnisse" :key="wert" :value="wert"/>
+    </datalist>
     <div>
       <h1 class="headline text-2xl">{{ t('kataloge.titel') }}</h1>
       <p class="text-muted text-sm mt-1">{{ t('kataloge.beschreibung') }}</p>
@@ -394,24 +413,31 @@ function truppVorschau(staerke: string): string {
           <div class="grid md:grid-cols-2 gap-3">
             <div>
               <span class="feld-label">{{ t('planung.rollen') }}</span>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-2 items-center">
                 <button v-for="wert in arbeitsmappe.kataloge.rollen" :key="wert" type="button"
                         class="knopf knopf-klein"
                         :class="person.rollen.includes(wert) ? 'knopf-primaer' : ''"
                         @click="umschalten(person.rollen, wert)">
                   {{ wert }}
                 </button>
+                <input type="text" class="field w-auto" list="rollenliste"
+                       :placeholder="t('planung.rolleDazu')"
+                       @change="wortGeben('rollen', person.rollen, $event.target as HTMLInputElement)"/>
               </div>
             </div>
             <div>
               <span class="feld-label">{{ t('planung.fahrerlaubnis') }}</span>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-2 items-center">
                 <button v-for="wert in arbeitsmappe.kataloge.fahrerlaubnisse" :key="wert" type="button"
                         class="knopf knopf-klein"
                         :class="person.fahrerlaubnis.includes(wert) ? 'knopf-primaer' : ''"
                         @click="umschalten(person.fahrerlaubnis, wert)">
                   {{ wert }}
                 </button>
+                <input type="text" class="field w-auto" list="klassenliste"
+                       :placeholder="t('planung.klasseDazu')"
+                       @change="wortGeben('fahrerlaubnisse', person.fahrerlaubnis,
+                                          $event.target as HTMLInputElement)"/>
               </div>
             </div>
           </div>

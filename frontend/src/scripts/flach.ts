@@ -138,7 +138,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
             werte[pfad(basis, 'karte', feld)] = wert
         }
 
-        alarm.hinweise.forEach((hinweis, stelle) => {
+        ;(alarm.hinweise ?? []).forEach((hinweis, stelle) => {
             const hbasis = pfad(basis, 'hinweise', hinweis.id)
             werte[pfad(hbasis, 'sortierung')] = hinweis.sortierung ?? stelle
             for (const [feld, wert] of Object.entries(hinweis)) {
@@ -146,11 +146,11 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
             }
         })
 
-        alarm.einsatzmittel.forEach((gruppe, stelle) => {
+        ;(alarm.einsatzmittel ?? []).forEach((gruppe, stelle) => {
             const gbasis = pfad(basis, 'einsatzmittel', gruppe.id)
             werte[pfad(gbasis, 'sortierung')] = gruppe.sortierung ?? stelle
             werte[pfad(gbasis, 'gruppe')] = gruppe.gruppe ?? ''
-            gruppe.fahrzeuge.forEach((fahrzeug, platz) => {
+            ;(gruppe.fahrzeuge ?? []).forEach((fahrzeug, platz) => {
                 const fbasis = pfad(gbasis, 'fahrzeuge', fahrzeug.id)
                 werte[pfad(fbasis, 'sortierung')] = fahrzeug.sortierung ?? platz
                 for (const [feld, wert] of Object.entries(fahrzeug)) {
@@ -165,17 +165,17 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
     adresse(pfad('kataloge', 'wache'), werte, mappe.kataloge.wache as never)
     // Status and Trupp are words and nothing else, so the word is its own key. Stichwörter and
     // vehicles are pointed at by the Alarme, so they are keyed by an id that a rename survives.
-    for (const liste of ['status', 'trupp'] as const) {
-        for (const wert of mappe.kataloge[liste]) werte[pfad('kataloge', liste, wert)] = true
+    for (const liste of KATALOGWORTLISTEN) {
+        for (const wert of mappe.kataloge[liste] ?? []) werte[pfad('kataloge', liste, wert)] = true
     }
-    for (const eintrag of mappe.kataloge.stichwoerter) {
+    for (const eintrag of mappe.kataloge.stichwoerter ?? []) {
         werte[pfad('kataloge', 'stichwoerter', eintrag.id, 'text')] = eintrag.text ?? ''
     }
     for (const stueck of mappe.kataloge.material ?? []) {
         werte[pfad('kataloge', 'material', stueck.id, 'name')] = stueck.name ?? ''
         werte[pfad('kataloge', 'material', stueck.id, 'bestand')] = stueck.bestand ?? 0
     }
-    for (const vorlage of mappe.kataloge.fahrzeuge) {
+    for (const vorlage of mappe.kataloge.fahrzeuge ?? []) {
         const vbasis = pfad('kataloge', 'fahrzeuge', vorlage.id)
         for (const feld of FAHRZEUGFELDER) werte[pfad(vbasis, feld)] = vorlage[feld] ?? ''
     }

@@ -359,6 +359,8 @@ export default {
         personName: 'Name',
         anzahl: 'Köpfe',
         fahrerlaubnis: 'Fahrerlaubnis',
+        rolleDazu: 'Rolle dazu …',
+        klasseDazu: 'Klasse dazu …',
         verfuegbar: 'Verfügbar',
         fensterNeu: 'Zeitfenster',
         immerDa: 'Kein Fenster eingetragen — also den ganzen Tag da.',

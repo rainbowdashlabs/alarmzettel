@@ -275,6 +275,9 @@ print(Adressen(settings.adressen_datei, settings.adressen_tage).bestand())" ;;
         "$ROOT/toolchain.sh" fe-build
         "$ROOT/toolchain.sh" sna-check
         "$ROOT/toolchain.sh" sync-pfade
+        # Ein zweites Mal mit dem Ablaufbeispiel: der Alarmzettel-Beispieldatensatz kennt weder
+        # Personal noch Rollen, und ein Feld, das in keiner Mappe steht, vergleicht sich nicht.
+        "$ROOT/toolchain.sh" sync-pfade tools/beispiel/ablauf.json
         "$ROOT/toolchain.sh" sync-probe
         "$ROOT/toolchain.sh" adressen-polar
         "$ROOT/toolchain.sh" ablauf-pruefen
