@@ -323,6 +323,7 @@ export default {
         keinePersonen: 'Noch keine Personen in den Stammdaten.',
         keineLagen: 'Noch kein Einsatz — auf keine Lage zeigt ein Schritt.',
         derWievielte: '{n}. Einsatz',
+        amOrt: 'am Ort: {was}',
         einsatzZeiten: 'vor Ort {da}–{bis} · {n} min',
         nurVorOrt: 'nur vor Ort, nicht alarmiert',
         ortLeer: 'Hier steht niemand.',

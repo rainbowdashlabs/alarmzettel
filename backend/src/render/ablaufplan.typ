@@ -117,7 +117,9 @@
       mit_tagen(person.zeilen).map(((zeile, tag)) => (
         text(size: 9pt, fill: luma(110))[#tag],
         text(weight: "bold")[#zeitspanne(zeile)#geschaetzt(zeile)],
-        [#zeile.was],
+        if zeile.art == "einsatz" {
+          text(style: "italic")[am Ort: #zeile.was]
+        } else [#zeile.was],
         text(fill: luma(70))[#zeile.lage],
         [#zeile.fahrzeug#if zeile.faehrt [ #text(weight: "bold")[· fährt]]],
         beiwerk(zeile),

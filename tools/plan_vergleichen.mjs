@@ -33,7 +33,7 @@ async function laden(pfad) {
         Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 }
 
-const {anfahrt, einsaetze, fahrzeitSchaetzung, lagenName, personenplan} =
+const {anfahrt, einsaetze, einsaetzeAmOrt, fahrzeitSchaetzung, lagenName, personenplan} =
     await laden('frontend/src/scripts/ablauf.ts')
 const {bewegungsbild, bewegungstage} = await laden('frontend/src/scripts/bewegungen.ts')
 
@@ -60,22 +60,24 @@ const name = lauf => lauf.fahrzeugId
     ? fahrzeug(lauf.fahrzeugId)
     : namen(mappe.kataloge?.personen, lauf.personId, 'name')
 
-const zeile = (name, felder) => console.log(['PLAN', name, ...felder].join(' | '))
+const alleEinsaetze = einsaetze(daten)
 
 for (const person of mappe.kataloge?.personen ?? []) {
+    const zeilen = []
+    const gesehen = new Set()
     for (const eintrag of personenplan(daten, person.id)) {
         const schritt = eintrag.schritt
         const weg = eintrag.vonOrtId === schritt.ortId ? null : anfahrt(daten, eintrag.lauf, schritt)
         if (weg && schritt.art === 'aufenthalt') {
-            zeile(person.name, [
+            zeilen.push([
                 weg.von.slice(0, 10), weg.von.slice(11, 16), weg.bis.slice(11, 16), 'fahrt',
                 ort(weg.vonOrtId), ort(weg.nachOrtId), '',
                 eintrag.faehrt ? 'faehrt' : '-', fahrzeug(eintrag.lauf.fahrzeugId),
                 fahrzeitSchaetzung(daten, eintrag.lauf, schritt) ?? '-',
             ])
         }
-        zeile(person.name, [
-            schritt.von.slice(0, 10), eintrag.ankunft.slice(11, 16), schritt.bis.slice(11, 16),
+        zeilen.push([
+            schritt.von.slice(0, 10), eintrag.ankunft.slice(11, 16), eintrag.bis.slice(11, 16),
             schritt.art, ort(schritt.art === 'fahrt' ? eintrag.vonOrtId : schritt.ortId),
             ort(eintrag.nachOrtId),
             lage(schritt.programmpunktId),
@@ -83,7 +85,24 @@ for (const person of mappe.kataloge?.personen ?? []) {
             schritt.art === 'aufenthalt'
                 ? '-' : fahrzeitSchaetzung(daten, eintrag.lauf, schritt) ?? '-',
         ])
+        for (const einsatz of einsaetzeAmOrt(eintrag, alleEinsaetze)) {
+            const schluessel = `${einsatz.programmpunkt.id}-${einsatz.nummer}`
+            if (gesehen.has(schluessel)) continue
+            gesehen.add(schluessel)
+            zeilen.push([
+                einsatz.da.slice(0, 10), einsatz.da.slice(11, 16), einsatz.bis.slice(11, 16),
+                'einsatz', ort(einsatz.ortId), ort(einsatz.ortId), '', '-',
+                [...new Set(einsatz.beteiligte
+                    .filter(teil => teil.aufgebot)
+                    .map(teil => fahrzeug(teil.lauf.fahrzeugId))
+                    .filter(Boolean))].join(', '),
+                '-',
+            ])
+        }
     }
+    zeilen.sort((a, b) => a[0] === b[0] ? (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)
+                                        : (a[0] < b[0] ? -1 : 1))
+    for (const felder of zeilen) console.log(['PLAN', person.name, ...felder].join(' | '))
 }
 
 for (const einsatz of einsaetze(daten)) {

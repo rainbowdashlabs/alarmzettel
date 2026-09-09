@@ -3,8 +3,8 @@ import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {lageName, mehrereTage, ortName, plandaten} from '../../store/planung'
-import {anfahrt, personenplan, pruefen} from '../../scripts/ablauf'
-import type {Befund, Personenschritt} from '../../scripts/ablauf'
+import {anfahrt, einsaetze, einsaetzeAmOrt, personenplan, pruefen} from '../../scripts/ablauf'
+import type {Befund, Einsatz, Personenschritt} from '../../scripts/ablauf'
 import {tagwechsel, uhrzeit} from '../../scripts/zeit'
 
 /** Eine Zeile des Plans: ein Schritt, oder die Fahrt, die zu ihm hinführt. */
@@ -22,16 +22,23 @@ interface Planzeile {
  * sie steht, plus ihre eigenen. Personenplan und Fahrzeugplan können sich deshalb nicht
  * widersprechen.
  */
-const plaene = computed(() => arbeitsmappe.kataloge.personen.map(person => {
-  const zeilen = personenplan(plandaten(), person.id).flatMap(zeilenVon)
-  return {person, zeilen, tage: tagwechsel(zeilen.map(zeile => zeile.von))}
-}))
+const plaene = computed(() => {
+  const alle = einsaetze(plandaten())
+  return arbeitsmappe.kataloge.personen.map(person => {
+    const gesehen = new Set<string>()
+    const zeilen = personenplan(plandaten(), person.id)
+        .flatMap(eintrag => zeilenVon(eintrag, alle, gesehen))
+        .sort((a, b) => a.von < b.von ? -1 : a.von > b.von ? 1 : 0)
+    return {person, zeilen, tage: tagwechsel(zeilen.map(zeile => zeile.von))}
+  })
+})
 
 /**
  * Die Zeilen zu einem Schritt. Fährt jemand die erzeugte Anfahrt mit, bekommt sie eine eigene —
- * sonst stünde da, er sei um 7:50 schon dort, wo er erst hinfährt.
+ * sonst stünde da, er sei um 7:50 schon dort, wo er erst hinfährt. Dazu, was am Ort läuft,
+ * während er dort steht, ohne dass er selbst dazugehört.
  */
-function zeilenVon(eintrag: Personenschritt): Planzeile[] {
+function zeilenVon(eintrag: Personenschritt, alle: Einsatz[], gesehen: Set<string>): Planzeile[] {
   const zeilen: Planzeile[] = []
   const weg = eintrag.vonOrtId === eintrag.schritt.ortId
       ? null : anfahrt(plandaten(), eintrag.lauf, eintrag.schritt)
@@ -43,9 +50,22 @@ function zeilenVon(eintrag: Personenschritt): Planzeile[] {
     })
   }
   zeilen.push({
-    schluessel: eintrag.schritt.id, von: eintrag.ankunft, bis: eintrag.schritt.bis,
+    schluessel: eintrag.schritt.id, von: eintrag.ankunft, bis: eintrag.bis,
     was: was(eintrag), lage: lage(eintrag), womit: womit(eintrag, eintrag.schritt.art),
   })
+  for (const einsatz of einsaetzeAmOrt(eintrag, alle)) {
+    const schluessel = `${einsatz.programmpunkt.id}-${einsatz.nummer}`
+    if (gesehen.has(schluessel)) continue
+    gesehen.add(schluessel)
+    zeilen.push({
+      schluessel, von: einsatz.da, bis: einsatz.bis,
+      was: t('ablauf.amOrt', {was: lageName(einsatz.programmpunkt.id) || t('ablauf.ohneName')}),
+      lage: '',
+      womit: [...new Set(einsatz.beteiligte
+          .filter(teil => teil.aufgebot && teil.lauf.fahrzeugId)
+          .map(teil => fahrzeugName(teil.lauf.fahrzeugId)))].join(', '),
+    })
+  }
   return zeilen
 }
 

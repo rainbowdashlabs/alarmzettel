@@ -438,3 +438,42 @@ class RenderTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EinsatzAmOrtTest(unittest.TestCase):
+    """
+    Wer mit einem Fahrzeug an einen Ort gefahren wird, das mit dem Szenario nichts zu tun hat,
+    soll auf seinem Zettel trotzdem lesen, was dort läuft.
+    """
+
+    def blatt(self, **schrittfelder) -> list[dict]:
+        bringer = {"id": "l-mtf", "fahrzeugId": "f-mtf", "schritte": [
+            {"id": "b1", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T08:00", "bis": "2026-09-19T11:00", "ortId": "o-kita",
+             "aufgebot": False,
+             "besatzung": [{"id": "c1", "personId": "p-mimen"}], **schrittfelder}]}
+        einsatz = {"id": "l-lhf", "fahrzeugId": "f-lhf", "schritte": [
+            {"id": "e1", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T09:00", "bis": "2026-09-19T10:00", "ortId": "o-kita",
+             "programmpunktId": "g-brand",
+             "besatzung": [{"id": "c2", "personId": "p-alex", "faehrt": True}]}]}
+        mappe = Arbeitsmappe.model_validate(
+            MAPPE | {"planung": MAPPE["planung"] | {"laeufe": [bringer, einsatz]}})
+        blatt = next(blatt for blatt in plandaten(mappe)["personen"]
+                     if blatt["name"] == "Mimen")
+        return blatt["zeilen"]
+
+    def test_der_einsatz_steht_als_eigene_zeile(self):
+        zeilen = self.blatt()
+        self.assertEqual(["aufenthalt", "einsatz"], [zeile["art"] for zeile in zeilen])
+        einsatz = zeilen[1]
+        self.assertEqual(("09:00", "10:00"), (einsatz["von"], einsatz["bis"]))
+        self.assertEqual("Brand im Kindergarten", einsatz["was"])
+        self.assertEqual("LHF 6501.3", einsatz["fahrzeug"])
+
+    def test_wer_selbst_dazugehoert_liest_es_nicht_zweimal(self):
+        self.assertEqual(["aufenthalt"],
+                         [zeile["art"] for zeile in self.blatt(programmpunktId="g-brand")])
+
+    def test_woanders_zaehlt_nicht(self):
+        self.assertEqual(["aufenthalt"], [zeile["art"] for zeile in self.blatt(ortId="o-nord")])

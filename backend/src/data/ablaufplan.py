@@ -7,6 +7,7 @@ sie einmal, damit das Blatt in der Hand und die Ansicht am Schirm nicht auseinan
 können, und das Typst-Template legt nur noch aus, was hier steht.
 """
 
+from data.alarmplan import einsaetze
 from data.karten import adresstext, karten
 from data.kette import (
     anfahrt, fahrzeit as _fahrzeit, mittel_von, mitfahrer, personenplan, von_ort as _von_ort)
@@ -42,6 +43,7 @@ class Plan:
         self._material = {stueck.id: stueck.name for stueck in arbeitsmappe.kataloge.material}
         self._adressen = {ort.id: ort for ort in arbeitsmappe.kataloge.alle_orte()}
         self._punkte = punkte or {}
+        self.einsaetze = einsaetze(arbeitsmappe, self._punkte)
 
     def ort(self, ort_id: str) -> str:
         return self._orte.get(ort_id, "")
@@ -137,12 +139,61 @@ def _ankunft(plan: Plan, lauf: Lauf, schritt: Schritt) -> str:
     return weg.bis if weg else schritt.von
 
 
+def _einsatzzeilen(plan: Plan, eintrag) -> list[dict]:
+    """
+    Was am Ort läuft, während die Person dort steht, ohne dass sie selbst dazugehört.
+
+    Wer mit einem Fahrzeug an einen Ort gefahren wird, das mit dem Szenario nichts zu tun hat,
+    soll trotzdem auf seinem Zettel lesen, was dort geschieht — sonst steht er da und weiß nur,
+    dass er da ist.
+    """
+    schritt = eintrag.schritt
+    if schritt.art != "aufenthalt":
+        return []
+    zeilen = []
+    for einsatz in plan.einsaetze:
+        if einsatz["ortId"] != schritt.ortId:
+            continue
+        if einsatz["programmpunktId"] == schritt.programmpunktId:
+            continue
+        if not _ueberschneidet(einsatz["da"], einsatz["bis"], eintrag.ankunft, eintrag.bis):
+            continue
+        zeilen.append({
+            "datum": _datum(einsatz["da"]),
+            "von": _uhrzeit(einsatz["da"]), "bis": _uhrzeit(einsatz["bis"]),
+            "art": "einsatz", "mittel": "",
+            "was": einsatz["lage"], "ort": plan.ort(einsatz["ortId"]), "lage": "",
+            "vonOrt": plan.ort(einsatz["ortId"]),
+            "material": [], "notiz": "", "geschaetzt": None,
+            "fahrzeug": ", ".join(dict.fromkeys(
+                teil["name"] for teil in einsatz["beteiligte"]
+                if teil["aufgebot"] and teil["name"])),
+            "faehrt": False,
+            "_orte": [einsatz["ortId"]],
+            "_schluessel": (einsatz["programmpunktId"], einsatz["nummer"]),
+        })
+    return zeilen
+
+
+def _ueberschneidet(von_a: str, bis_a: str, von_b: str, bis_b: str) -> bool:
+    """Zwei Zeiträume überschneiden sich, wenn keiner ganz vor dem anderen liegt."""
+    a1, a2 = _minuten(von_a), _minuten(bis_a)
+    b1, b2 = _minuten(von_b), _minuten(bis_b)
+    if None in (a1, a2, b1, b2):
+        return False
+    return a1 < b2 and b1 < a2
+
+
 def _personenblatt(plan: Plan, person: Person) -> dict:
     """
     Alle Schritte, in deren Besatzung die Person steht, plus die ihrer eigenen Kette, nach Zeit
     sortiert. Das ist der Zettel, den man morgens in die Hand drückt.
+
+    Dazu, was am Ort läuft, während sie dort steht: der Einsatz gehört auf ihren Zettel, auch
+    wenn ihr Fahrzeug nicht dazugehört.
     """
     zeilen = []
+    gesehen: set = set()
     for eintrag in personenplan(plan.planung, person.id, plan.punkte):
         lauf, schritt = eintrag.lauf, eintrag.schritt
         faehrt_mit = eintrag.von_ort_id != schritt.ortId and schritt.art == "aufenthalt"
@@ -153,6 +204,12 @@ def _personenblatt(plan: Plan, person: Person) -> dict:
         zeilen.append({**_zeile(plan, lauf, schritt, eintrag.ankunft, eintrag.bis),
                        "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
                        "faehrt": eintrag.faehrt})
+        for zeile in _einsatzzeilen(plan, eintrag):
+            if zeile["_schluessel"] in gesehen:
+                continue
+            gesehen.add(zeile.pop("_schluessel"))
+            zeilen.append(zeile)
+    zeilen.sort(key=lambda zeile: (zeile["datum"], zeile["von"]))
     return {"name": person.name, "anzahl": person.anzahl, "rollen": person.rollen,
             "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
 

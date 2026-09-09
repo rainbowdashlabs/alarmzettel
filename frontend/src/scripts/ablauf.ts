@@ -385,6 +385,20 @@ export function einsaetze(daten: Plandaten): Einsatz[] {
 }
 
 /**
+ * Was am Ort läuft, während diese Person dort steht, ohne dass sie selbst dazugehört.
+ *
+ * Wer mit einem Fahrzeug an einen Ort gefahren wird, das mit dem Szenario nichts zu tun hat,
+ * soll trotzdem wissen, was dort geschieht — sonst steht er da und weiß nur, dass er da ist.
+ */
+export function einsaetzeAmOrt(eintrag: Personenschritt, alle: Einsatz[]): Einsatz[] {
+    if (eintrag.schritt.art !== 'aufenthalt') return []
+    return alle.filter(einsatz =>
+        einsatz.ortId === eintrag.schritt.ortId
+        && einsatz.programmpunkt.id !== eintrag.schritt.programmpunktId
+        && ueberschneidet(einsatz.da, einsatz.bis, eintrag.ankunft, eintrag.bis))
+}
+
+/**
  * Die Prüfungen, die an einem einzelnen Schritt hängen: Plätze, Fahrerlaubnis, Fahrer und die
  * Fahrzeit. Die Oberfläche zeigt sie am Schritt, `pruefen` sammelt sie über den ganzen Plan.
  *
