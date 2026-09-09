@@ -43,7 +43,26 @@ const BewegungsBild = defineAsyncComponent(
 const LageKarte = defineAsyncComponent(() => import('../components/planung/LageKarte.vue'))
 
 const ANSICHTEN = ['tag', 'ketten', 'bewegung', 'karte', 'personen', 'orte', 'lagen'] as const
-const ansicht = ref<typeof ANSICHTEN[number]>('tag')
+type Ansicht = typeof ANSICHTEN[number]
+
+const SPEICHER = 'alarmplaner_ablaufansicht'
+
+/**
+ * Dieselben Daten von sieben Seiten; keine ist die richtige. Womit jemand arbeitet, merkt sich
+ * der Browser — es gehört zu ihm und nicht zur Arbeitsmappe, so wie das Farbthema.
+ */
+function gemerkteAnsicht(): Ansicht {
+  const gemerkt = localStorage.getItem(SPEICHER) as Ansicht | null
+  return gemerkt && ANSICHTEN.includes(gemerkt) ? gemerkt : 'tag'
+}
+
+const ansicht = ref<Ansicht>(gemerkteAnsicht())
+
+watch(ansicht, gewaehlt => {
+  try {
+    localStorage.setItem(SPEICHER, gewaehlt)
+  } catch { /* ein Browser ohne Speicher fängt eben jedes Mal beim Tagesplan an */ }
+})
 const fehler = ref<string | null>(null)
 
 /**
