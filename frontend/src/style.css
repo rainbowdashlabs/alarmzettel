@@ -257,6 +257,14 @@ textarea.field {
     background: var(--c-raised);
 }
 
+/* Ein Knopf, der nicht geht, muss auch danach aussehen: sonst klickt man ins Leere. */
+.knopf:disabled,
+.knopf:disabled:hover {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--c-surface);
+}
+
 .knopf-primaer {
     background: var(--c-action);
     border-color: var(--c-action);

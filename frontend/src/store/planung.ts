@@ -10,7 +10,7 @@ import {reactive} from 'vue'
 import {arbeitsmappe} from './arbeitsmappe'
 import {naechste, leereAdresse} from '../interfaces/Alarm'
 import {zuPunkt} from '../api/adressen'
-import {MINUTEN_JE_KM} from '../scripts/ablauf'
+import {darfFahren as darfFahrenLaut, MINUTEN_JE_KM} from '../scripts/ablauf'
 import {entfernungKm} from '../scripts/polar'
 import type {Plandaten} from '../scripts/ablauf'
 import type {Punkt} from '../scripts/polar'
@@ -191,12 +191,22 @@ export function besatzungHinzufuegen(schritt: Schritt, personId: string): Besatz
     return sitzt
 }
 
-/** Es fährt immer höchstens einer; wer das Lenkrad nimmt, nimmt es dem anderen ab. */
-export function fahrerSetzen(schritt: Schritt, personId: string) {
-    const vorher = schritt.besatzung.find(sitzt => sitzt.personId === personId)?.faehrt
-    for (const sitzt of schritt.besatzung) sitzt.faehrt = false
+/**
+ * Es fährt immer höchstens einer; wer das Lenkrad nimmt, nimmt es dem anderen ab. Ans Lenkrad
+ * kommt nur, wer die Klasse des Fahrzeugs hat — abgeben darf dagegen jeder, sonst bliebe ein
+ * Fahrer aus einer älteren Fassung für immer stehen.
+ */
+export function darfFahren(fahrzeugId: string, personId: string): boolean {
+    return darfFahrenLaut(plandaten(), fahrzeugId, personId)
+}
+
+export function fahrerSetzen(lauf: Lauf, schritt: Schritt, personId: string) {
     const gewaehlt = schritt.besatzung.find(sitzt => sitzt.personId === personId)
-    if (gewaehlt) gewaehlt.faehrt = !vorher
+    if (!gewaehlt) return
+    if (!gewaehlt.faehrt && !darfFahren(lauf.fahrzeugId, personId)) return
+    const vorher = gewaehlt.faehrt
+    for (const sitzt of schritt.besatzung) sitzt.faehrt = false
+    gewaehlt.faehrt = !vorher
 }
 
 export function programmpunktAnlegen(ortId: string): Programmpunkt {

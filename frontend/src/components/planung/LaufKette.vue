@@ -4,7 +4,7 @@ import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
-  alleOrte, mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen,
+  alleOrte, darfFahren, mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen,
   schrittAnhaengen,
 } from '../../store/planung'
 import {pruefen} from '../../scripts/ablauf'
@@ -183,13 +183,23 @@ function lageAnlegen(schritt: Schritt) {
       <div v-if="lauf.fahrzeugId">
         <span class="feld-label">{{ t('ablauf.besatzung') }} ({{ koepfe(schritt) }})</span>
         <div class="flex flex-wrap gap-2">
-          <button v-for="sitzt in schritt.besatzung" :key="sitzt.id" type="button"
-                  class="knopf knopf-klein" :class="sitzt.faehrt ? 'knopf-primaer' : ''"
-                  :title="t('ablauf.fahrerUmschalten')"
-                  @click="fahrerSetzen(schritt, sitzt.personId)">
-            <font-awesome-icon v-if="sitzt.faehrt" icon="fa-solid fa-check"/>
-            {{ personName(sitzt.personId) }}
-          </button>
+          <span v-for="sitzt in schritt.besatzung" :key="sitzt.id" class="flex">
+            <button type="button" class="knopf knopf-klein rounded-r-none"
+                    :class="sitzt.faehrt ? 'knopf-primaer' : ''"
+                    :disabled="!sitzt.faehrt && !darfFahren(lauf.fahrzeugId, sitzt.personId)"
+                    :title="darfFahren(lauf.fahrzeugId, sitzt.personId)
+                      ? t('ablauf.fahrerUmschalten')
+                      : t('ablauf.darfNichtFahren', {wer: personName(sitzt.personId)})"
+                    @click="fahrerSetzen(lauf, schritt, sitzt.personId)">
+              <font-awesome-icon v-if="sitzt.faehrt" icon="fa-solid fa-check"/>
+              {{ personName(sitzt.personId) }}
+            </button>
+            <button type="button" class="knopf knopf-klein rounded-l-none border-l-0 px-2"
+                    :title="t('ablauf.besatzungEntfernen', {wer: personName(sitzt.personId)})"
+                    @click="entfernen(schritt.besatzung, sitzt)">
+              <font-awesome-icon icon="fa-solid fa-xmark"/>
+            </button>
+          </span>
           <select class="field w-auto" @change="besatzungHinzufuegen(schritt, ($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).value = ''">
             <option value="">{{ t('ablauf.personDazu') }}</option>
             <option v-for="person in arbeitsmappe.planung.personen" :key="person.id"

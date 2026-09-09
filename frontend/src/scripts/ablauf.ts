@@ -101,6 +101,16 @@ function koepfe(daten: Plandaten, personId: string): number {
     return person(daten, personId)?.anzahl || 1
 }
 
+/**
+ * Wer dieses Fahrzeug fahren darf: die verlangte Klasse steht am Fahrzeug, die vorhandenen an
+ * der Person. Verlangt das Fahrzeug keine, darf jeder.
+ */
+export function darfFahren(daten: Plandaten, fahrzeugId: string, personId: string): boolean {
+    const klasse = fahrzeug(daten, fahrzeugId)?.fuehrerschein?.trim()
+    if (!klasse) return true
+    return Boolean(person(daten, personId)?.fahrerlaubnis.includes(klasse))
+}
+
 /** Wo eine Fahrt losgeht, sagt der vorige Schritt; ein Aufenthalt fängt an, wo er ist. */
 export function vonOrt(lauf: Lauf, schritt: Schritt): string {
     if (schritt.art !== 'fahrt') return schritt.ortId
@@ -204,7 +214,7 @@ export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): 
     if (klasse && schritt.art === 'fahrt') {
         for (const platz of fahrer) {
             const wer = person(daten, platz.personId)
-            if (wer && !wer.fahrerlaubnis.includes(klasse)) {
+            if (wer && !darfFahren(daten, lauf.fahrzeugId, wer.id)) {
                 befunde.push({
                     art: 'ohneErlaubnis', ...stelle, personId: wer.id,
                     werte: {wer: wer.name, klasse},

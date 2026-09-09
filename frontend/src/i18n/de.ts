@@ -249,6 +249,8 @@ export default {
         besatzung: 'Besatzung',
         personDazu: 'Person dazu …',
         fahrerUmschalten: 'Fährt / fährt nicht',
+        besatzungEntfernen: '{wer} aus diesem Schritt nehmen',
+        darfNichtFahren: '{wer} hat die Klasse dieses Fahrzeugs nicht und kann es nicht fahren.',
         ohneName: 'ohne Namen',
         drucken: 'Plan als PDF',
         faehrt: 'fährt',

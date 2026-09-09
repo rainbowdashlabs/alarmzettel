@@ -46,10 +46,13 @@ screen are the ones printed on the slip.
   what makes a driver change a step like any other. Journey times are proposed from the straight
   line between two places — 3 minutes per kilometre by vehicle, 15 on foot — and can be
   overwritten.
-- **What the plan checks** — seats against heads, drivers against licence classes, journeys
+- **What the plan checks** — seats against heads, journeys
   without a driver, someone boarding where they are not, one person in two chains at once,
   people scheduled outside their availability, journeys planned far shorter than the estimate,
-  and a Lage nothing points at. None of it blocks entry; a plan may be unfinished.
+  and a Lage nothing points at. None of it blocks entry; a plan may be unfinished. The wheel is
+  the exception: only someone holding the vehicle's licence class can take it. Handing it over
+  is always allowed, so a driver from an older plan is never stuck — and the check still reports
+  one.
 - **Plan output** — the person plan, the view of a place and the view of a Lage on screen, and a
   PDF with one sheet per person, one per vehicle and a landscape overall plan.
 - **The movement picture** — the whole plan in one image: every place is a horizontal band, time

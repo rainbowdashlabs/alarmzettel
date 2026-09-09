@@ -20,7 +20,7 @@ const gebaut = await build({
     entryPoints: [resolve(WURZEL, 'frontend/src/scripts/ablauf.ts')],
     bundle: true, format: 'esm', write: false, platform: 'node',
 })
-const {lagensicht, ortssicht, personenplan, pruefen} = await import(
+const {darfFahren, lagensicht, ortssicht, personenplan, pruefen} = await import(
     'data:text/javascript;base64,' + Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 
 const TAG = '2026-09-19'
@@ -346,6 +346,21 @@ fall('Zwei ganztägige Ketten melden je Schritt einmal, nicht je Paar', () => {
     }))
     return [['zwei Meldungen für zwei überschnittene Schritte',
         befunde.filter(b => b.art === 'zweiOrte').length, 2]]
+})
+
+fall('Wer fahren darf, entscheidet die Klasse am Fahrzeug', () => {
+    const gesetzt = daten({
+        personen: [person('p-alex', 'Alex', {fahrerlaubnis: ['B', 'C']}),
+                   person('p-maria', 'Maria', {fahrerlaubnis: ['B']})],
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF', {fuehrerschein: 'C'}), fahrzeug('f-mtf', 'MTF')],
+    })
+    return [
+        ['Alex darf das LHF fahren', darfFahren(gesetzt, 'f-lhf', 'p-alex'), true],
+        ['Maria nicht', darfFahren(gesetzt, 'f-lhf', 'p-maria'), false],
+        ['ohne verlangte Klasse darf jeder', darfFahren(gesetzt, 'f-mtf', 'p-maria'), true],
+        ['wer gar nicht eingetragen ist, auch nicht',
+            darfFahren(gesetzt, 'f-lhf', 'p-niemand'), false],
+    ]
 })
 
 fall('Die Fahrerlaubnis zählt beim Fahren, nicht beim Dastehen', () => {
