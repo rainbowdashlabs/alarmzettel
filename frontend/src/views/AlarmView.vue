@@ -9,7 +9,7 @@ import AlarmHinweise from '../components/alarm/AlarmHinweise.vue'
 import AlarmEinsatzmittel from '../components/alarm/AlarmEinsatzmittel.vue'
 import PdfVorschau from '../components/PdfVorschau.vue'
 import {t} from '../i18n'
-import {alarmFinden} from '../store/arbeitsmappe'
+import {alarmFinden, arbeitsmappe} from '../store/arbeitsmappe'
 import {fehlertext, renderEinen} from '../api/render'
 import {alarmableitung, type Alarmableitung} from '../api/plan'
 import {jetztAbgleichen} from '../store/sync'
@@ -21,10 +21,24 @@ const abgeleitet = ref<Alarmableitung | null>(null)
 
 /**
  * Zeigt eine Lage auf diesen Alarm, kommen Zeiten, Einsatzadresse und Aufgebot aus dem Plan.
- * Gerechnet wird das auf dem Server, damit hier nichts anderes steht als auf dem Blatt.
+ * Gerechnet wird das auf dem Server, damit hier nichts anderes steht als auf dem Blatt — und
+ * neu gerechnet, sobald sich am Plan etwas ändert, das diesen Alarm angeht.
  */
-watch(() => String(route.params.id),
-    async id => { abgeleitet.value = await alarmableitung(id) }, {immediate: true})
+const planstand = computed(() => JSON.stringify([
+  route.params.id,
+  arbeitsmappe.planung.programmpunkte.map(punkt => [punkt.id, punkt.alarmId, punkt.ortId]),
+  arbeitsmappe.planung.laeufe.map(lauf => lauf.schritte.map(
+      schritt => [schritt.programmpunktId, schritt.von, schritt.besatzung.length])),
+]))
+
+watch(planstand, async () => {
+  try {
+    abgeleitet.value = await alarmableitung(String(route.params.id))
+    fehler.value = null
+  } catch (error) {
+    fehler.value = await fehlertext(error)
+  }
+}, {immediate: true})
 
 /** Der Kopf zeigt die Zeiten des ersten Blattes; die der übrigen stehen im Plan-Abschnitt. */
 const planzeiten = computed(() => {
@@ -87,10 +101,11 @@ async function pdf() {
       <div class="grid gap-4 min-w-0">
         <AlarmAusPlan v-if="abgeleitet" :abgeleitet="abgeleitet"/>
         <AlarmKopf v-model="alarm" :zeiten="planzeiten"/>
-        <AlarmAdressen v-model="alarm" :aus-plan="Boolean(abgeleitet)"/>
+        <AlarmAdressen v-model="alarm" :aus-plan="Boolean(abgeleitet?.einsatzadresse)"/>
         <AlarmBeteiligte v-model="alarm"/>
         <AlarmHinweise v-model="alarm"/>
-        <AlarmEinsatzmittel v-model="alarm" :aus-plan="Boolean(abgeleitet)"/>
+        <AlarmEinsatzmittel v-model="alarm"
+                            :aus-plan="Boolean(abgeleitet?.blaetter.length)"/>
       </div>
 
       <div class="xl:sticky xl:top-5 h-[75vh] min-h-100">

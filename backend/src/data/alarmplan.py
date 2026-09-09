@@ -101,17 +101,16 @@ def ableitung(arbeitsmappe: Arbeitsmappe, alarm: Alarm) -> dict | None:
     }
 
 
-def _blatt(alarm: Alarm, punkt: Programmpunkt, beteiligte: list[dict], fuer: dict | None,
+def _blatt(alarm: Alarm, punkt: Programmpunkt, beteiligte: list[dict], fuer: dict,
            adresse) -> Alarm:
     """Ein Zettel, gerichtet an ein Fahrzeug. Das Aufgebot listet trotzdem alle."""
-    beginn = fuer["beginn"] if fuer else min(
-        (eintrag["beginn"] for eintrag in beteiligte), default="")
+    beginn = fuer["beginn"]
     gruppe = alarm.einsatzmittel[0].gruppe if alarm.einsatzmittel else ""
     fahrzeuge = [
         Fahrzeug(id=f"plan-{punkt.id}-{eintrag['vorlageId']}", sortierung=float(nummer),
                  vorlageId=eintrag["vorlageId"], funkrufname=eintrag["funkrufname"],
                  staerke=eintrag["staerke"],
-                 alarmFuer=fuer is not None and eintrag["vorlageId"] == fuer["vorlageId"])
+                 alarmFuer=eintrag["vorlageId"] == fuer["vorlageId"])
         for nummer, eintrag in enumerate(beteiligte)
     ]
     aenderung: dict = {
@@ -130,6 +129,11 @@ def mit_plan(arbeitsmappe: Arbeitsmappe) -> Arbeitsmappe:
     """
     Die Arbeitsmappe, wie sie zu drucken ist: aus jedem Alarm, auf den eine Lage zeigt, wird ein
     Zettel je beteiligtem Fahrzeug.
+
+    Hängt an der Lage noch kein Fahrzeug, bleibt der Zettel der getippte — bis auf die Adresse,
+    die der Ort der Lage ohnehin weiß. Ein leeres Aufgebot zu drucken hieße, den Zettel an
+    niemanden zu adressieren, und der Zwischenzustand „Lage angelegt, Ketten noch nicht“ ist
+    beim Planen der Normalfall.
     """
     alarme: list[Alarm] = []
     for alarm in arbeitsmappe.alarme:
@@ -140,7 +144,8 @@ def mit_plan(arbeitsmappe: Arbeitsmappe) -> Arbeitsmappe:
         beteiligte = _beteiligte(arbeitsmappe, punkt)
         adresse = _adresse(arbeitsmappe, punkt)
         if not beteiligte:
-            alarme.append(_blatt(alarm, punkt, beteiligte, None, adresse))
+            alarme.append(alarm.model_copy(
+                update={"einsatzadresse": adresse} if adresse is not None else {}))
             continue
         alarme += [_blatt(alarm, punkt, beteiligte, fuer, adresse) for fuer in beteiligte]
     return arbeitsmappe.model_copy(update={"alarme": alarme})

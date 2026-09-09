@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "alarme": [
+    {"id": "a-brand", "stichwort": "Brand im Kindergarten", "einsatzNr": "1"},
+    {"id": "a-rea", "stichwort": "Rea", "einsatzNr": "2"}
+  ],
+  "kataloge": {
+    "fahrzeuge": [
+      {"id": "f-lhf", "funkrufname": "LHF 6501.3", "plaetze": "6", "fuehrerschein": "C"},
+      {"id": "f-mtf", "funkrufname": "MTF 6502.1", "plaetze": "8", "fuehrerschein": "B"}
+    ]
+  },
+  "planung": {
+    "aktiv": true,
+    "tage": [
+      {"id": "t1", "datum": "2026-09-19", "name": "Übungstag"},
+      {"id": "t2", "datum": "2026-09-20", "name": "Zweiter Tag"}
+    ],
+    "orte": [
+      {"id": "o-nord", "name": "Wache Nord",
+       "adresse": {"strasse": "Junker-Jörg-Straße", "hnr": "36", "plz": "10318", "ort": "Karlshorst"}},
+      {"id": "o-kita", "name": "Kindergarten",
+       "adresse": {"strasse": "Archenholdstraße", "hnr": "21", "plz": "10315", "ort": "Berlin"}}
+    ],
+    "personen": [
+      {"id": "p-alex", "name": "Alex", "anzahl": 1, "rollen": ["Ausbilder"],
+       "fahrerlaubnis": ["B", "C"]},
+      {"id": "p-maria", "name": "Maria", "anzahl": 1, "fahrerlaubnis": ["B"]},
+      {"id": "p-mimen", "name": "Mimen", "anzahl": 4, "rollen": ["Mime"]},
+      {"id": "p-ohne", "name": "Noch nicht eingeteilt", "anzahl": 1}
+    ],
+    "programmpunkte": [
+      {"id": "g-brand", "name": "Brand im Kindergarten", "ortId": "o-kita", "alarmId": "a-brand"},
+      {"id": "g-rea", "name": "Rea", "ortId": "o-nord", "alarmId": "a-rea"}
+    ],
+    "laeufe": [
+      {"id": "l-lhf", "fahrzeugId": "f-lhf", "schritte": [
+        {"id": "s1", "sortierung": 0, "art": "aufenthalt", "mittel": "fahrzeug",
+         "von": "2026-09-19T08:00", "bis": "2026-09-19T08:30", "ortId": "o-nord",
+         "programmpunktId": "",
+         "besatzung": [{"id": "b1", "sortierung": 0, "personId": "p-alex", "faehrt": true},
+                       {"id": "b2", "sortierung": 1, "personId": "p-maria", "faehrt": false}]},
+        {"id": "s2", "sortierung": 1, "art": "fahrt", "mittel": "fahrzeug",
+         "von": "2026-09-19T08:30", "bis": "2026-09-19T08:39", "ortId": "o-kita",
+         "programmpunktId": "",
+         "besatzung": [{"id": "b3", "sortierung": 0, "personId": "p-alex", "faehrt": true},
+                       {"id": "b4", "sortierung": 1, "personId": "p-maria", "faehrt": false}]},
+        {"id": "s3", "sortierung": 2, "art": "aufenthalt", "mittel": "fahrzeug",
+         "von": "2026-09-19T08:39", "bis": "2026-09-19T10:00", "ortId": "o-kita",
+         "programmpunktId": "g-brand",
+         "besatzung": [{"id": "b5", "sortierung": 0, "personId": "p-alex", "faehrt": true},
+                       {"id": "b6", "sortierung": 1, "personId": "p-mimen", "faehrt": false}]},
+        {"id": "s4", "sortierung": 3, "art": "aufenthalt", "mittel": "fahrzeug",
+         "von": "2026-09-20T09:00", "bis": "2026-09-20T11:00", "ortId": "o-nord",
+         "programmpunktId": "g-rea",
+         "besatzung": [{"id": "b7", "sortierung": 0, "personId": "p-maria", "faehrt": true}]}
+      ]},
+      {"id": "l-mtf", "fahrzeugId": "f-mtf", "schritte": [
+        {"id": "s5", "sortierung": 0, "art": "aufenthalt", "mittel": "fahrzeug",
+         "von": "2026-09-19T09:00", "bis": "2026-09-19T10:00", "ortId": "o-kita",
+         "programmpunktId": "g-brand",
+         "besatzung": [{"id": "b8", "sortierung": 0, "personId": "p-maria", "faehrt": true}]}
+      ]},
+      {"id": "l-mimen", "personId": "p-mimen", "schritte": [
+        {"id": "s6", "sortierung": 0, "art": "aufenthalt", "mittel": "fuss",
+         "von": "2026-09-19T07:30", "bis": "2026-09-19T08:39", "ortId": "o-kita",
+         "programmpunktId": "", "besatzung": []},
+        {"id": "s7", "sortierung": 1, "art": "fahrt", "mittel": "fuss",
+         "von": "2026-09-19T10:00", "bis": "2026-09-19T10:45", "ortId": "o-nord",
+         "programmpunktId": "", "besatzung": []}
+      ]}
+    ]
+  }
+}

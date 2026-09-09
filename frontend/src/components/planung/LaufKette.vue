@@ -4,11 +4,11 @@ import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
-  personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
+  mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
 } from '../../store/planung'
 import {pruefen} from '../../scripts/ablauf'
 import type {Befund} from '../../scripts/ablauf'
-import {dauer, uhrzeit} from '../../scripts/zeit'
+import {alsMinuten, dauer, tagVon, uhrzeit, verschieben} from '../../scripts/zeit'
 import type {Lauf, Schritt} from '../../interfaces/Planung'
 
 const {lauf} = defineProps<{ lauf: Lauf }>()
@@ -41,22 +41,50 @@ function koepfe(schritt: Schritt): number {
   }, 0)
 }
 
+/**
+ * Was zuletzt als Fahrzeit vorgeschlagen wurde. Eine Dauer, die noch genau so dasteht, darf ein
+ * neuer Vorschlag ersetzen; eine von Hand gesetzte bleibt stehen, auch wenn sich das Ziel noch
+ * einmal ändert — die Schätzung wird vorgeschlagen und nicht gesetzt.
+ */
+const vorgeschlagen = new Map<string, number>()
+
 async function anhaengen(art: Schritt['art']) {
   const vorher = letzterSchritt(lauf)
   const schritt = schrittAnhaengen(lauf, art)
-  if (art === 'fahrt' && vorher) schritt.ortId = vorher.ortId
+  if (art === 'fahrt' && vorher) {
+    schritt.ortId = vorher.ortId
+    vorgeschlagen.set(schritt.id, dauer(schritt.von, schritt.bis) ?? 0)
+  }
 }
 
-/** Beim Wechsel des Ziels die geschätzte Fahrzeit vorschlagen — überschreiben bleibt möglich. */
+/** Beim Wechsel des Ziels die geschätzte Fahrzeit vorschlagen, solange keine eigene dasteht. */
 async function zielGewaehlt(schritt: Schritt) {
   if (schritt.art !== 'fahrt') return
   const stelle = lauf.schritte.indexOf(schritt)
   const vorher = lauf.schritte[stelle - 1]
   if (!vorher) return
+  const eigene = dauer(schritt.von, schritt.bis)
+  if (eigene !== null && eigene !== vorgeschlagen.get(schritt.id)) return
   const minuten = await fahrzeitSchaetzen(vorher.ortId, schritt.ortId, schritt.mittel)
   if (minuten === null) return
-  schritt.bis = new Date(Date.parse(`${schritt.von}:00Z`) + minuten * 60000)
-      .toISOString().slice(0, 16)
+  vorgeschlagen.set(schritt.id, minuten)
+  schritt.bis = verschieben(schritt.von, minuten)
+  nachziehen(lauf, schritt)
+}
+
+/**
+ * Ein Schritt fängt an, wo der vorige aufhört. Wird der Beginn vorgezogen, endet der vorige
+ * eben früher; wird er nach hinten geschoben, bleibt eine Lücke — die ist erlaubt und heißt,
+ * dass hier gewartet wird. Was nicht entstehen darf, ist eine Überschneidung.
+ */
+function beginnGesetzt(schritt: Schritt) {
+  const stelle = lauf.schritte.indexOf(schritt)
+  const vorher = lauf.schritte[stelle - 1]
+  const beginn = alsMinuten(schritt.von)
+  if (vorher && beginn !== null && beginn < (alsMinuten(vorher.bis) ?? 0)) vorher.bis = schritt.von
+  if (beginn !== null && beginn >= (alsMinuten(schritt.bis) ?? 0)) {
+    schritt.bis = verschieben(schritt.von, 5)
+  }
   nachziehen(lauf, schritt)
 }
 
@@ -71,7 +99,10 @@ function lageAnlegen(schritt: Schritt) {
          class="border border-rule rounded p-3 bg-page grid gap-2">
       <div class="flex items-center gap-2 flex-wrap">
         <span class="label">{{ stelle + 1 }}.</span>
-        <span class="tabular text-sm">{{ uhrzeit(schritt.von) }}–{{ uhrzeit(schritt.bis) }}</span>
+        <span class="tabular text-sm">
+          <span v-if="mehrereTage()" class="text-muted">{{ tagVon(schritt.von) }}</span>
+          {{ uhrzeit(schritt.von) }}–{{ uhrzeit(schritt.bis) }}
+        </span>
         <span class="text-muted text-[13px]">{{ dauer(schritt.von, schritt.bis) }} min</span>
         <span class="grow"></span>
         <button type="button" class="knopf knopf-klein knopf-gefahr"
@@ -84,7 +115,7 @@ function lageAnlegen(schritt: Schritt) {
         <div>
           <label class="feld-label">{{ t('ablauf.beginn') }}</label>
           <input v-model="schritt.von" type="datetime-local" step="300" class="field"
-                 @change="nachziehen(lauf, schritt)"/>
+                 @change="beginnGesetzt(schritt)"/>
         </div>
         <div>
           <label class="feld-label">{{ t('ablauf.ende') }}</label>

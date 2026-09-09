@@ -101,11 +101,51 @@ class BlaetterTest(unittest.TestCase):
         self.assertEqual("12:00", frei.einsatzZeit)
         self.assertEqual([], frei.einsatzmittel)
 
+    def test_ohne_fahrzeug_bleibt_das_getippte_aufgebot(self):
+        """Sonst druckt der Zwischenstand „Lage da, Ketten noch nicht“ an niemanden adressiert."""
+        ohne = {**MAPPE["planung"], "laeufe": []}
+        alarme = self.alarme(planung=ohne)
+        self.assertEqual(["a-brand", "a-frei"], [alarm.id for alarm in alarme])
+        self.assertEqual("1. Alarm", alarme[0].einsatzmittel[0].gruppe)
+        self.assertEqual("07:00", alarme[0].einsatzZeit)
+        self.assertEqual("Archenholdstraße", alarme[0].einsatzadresse.strasse)
+
     def test_ausgeschaltete_planung_aendert_nichts(self):
         alarme = self.alarme(planung=MAPPE["planung"] | {"aktiv": False})
         self.assertEqual(["a-brand", "a-frei"], [alarm.id for alarm in alarme])
         self.assertEqual("07:00", alarme[0].einsatzZeit)
         self.assertEqual("Von Hand", alarme[0].einsatzadresse.strasse)
+
+
+class AnfahrtTest(unittest.TestCase):
+    """Die Einsatzzeit ist der Beginn der Anfahrt — sofern es eine gibt."""
+
+    def zeit(self, planung: dict) -> str:
+        return mit_plan(mappe(planung=planung)).alarme[0].einsatzZeit
+
+    def test_eine_fahrt_darf_die_lage_selbst_tragen(self):
+        """Zeigt schon die Anfahrt auf die Lage, ist ihr Beginn die Einsatzzeit."""
+        laeufe = [{"id": "l", "fahrzeugId": "f-lhf", "schritte": [
+            {"id": "s1", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T08:00", "bis": "2026-09-19T08:30", "ortId": "o-nord"},
+            {"id": "s2", "sortierung": 1.0, "art": "fahrt", "programmpunktId": "g-brand",
+             "von": "2026-09-19T08:30", "bis": "2026-09-19T08:45", "ortId": "o-kita"}]}]
+        self.assertEqual("08:30", self.zeit(MAPPE["planung"] | {"laeufe": laeufe}))
+
+    def test_eine_fahrt_woanders_hin_ist_keine_anfahrt(self):
+        """Der vorige Schritt zählt nur, wenn er zu diesem Ort führt."""
+        laeufe = [{"id": "l", "fahrzeugId": "f-lhf", "schritte": [
+            {"id": "s1", "sortierung": 0.0, "art": "fahrt",
+             "von": "2026-09-19T07:00", "bis": "2026-09-19T08:00", "ortId": "o-nord"},
+            {"id": "s2", "sortierung": 1.0, "art": "aufenthalt", "programmpunktId": "g-brand",
+             "von": "2026-09-19T08:00", "bis": "2026-09-19T09:00", "ortId": "o-kita"}]}]
+        self.assertEqual("08:00", self.zeit(MAPPE["planung"] | {"laeufe": laeufe}))
+
+    def test_zwei_lagen_auf_denselben_alarm_nimmt_die_erste(self):
+        punkte = MAPPE["planung"]["programmpunkte"] + [
+            {"id": "g-zweite", "name": "Noch eine", "ortId": "o-nord", "alarmId": "a-brand"}]
+        alarme = mit_plan(mappe(planung=MAPPE["planung"] | {"programmpunkte": punkte})).alarme
+        self.assertEqual("Archenholdstraße", alarme[0].einsatzadresse.strasse)
 
 
 class KatalogZusammenspielTest(unittest.TestCase):

@@ -52,6 +52,20 @@ export function zeitpunkt(tag: string, uhr: string): string {
     return `${tag}T${uhr}`
 }
 
+/**
+ * Zu jedem Zeitpunkt der Tag, aber nur dort, wo er wechselt — sonst steht dasselbe Datum in
+ * jeder Zeile und verdeckt die eine, in der es sich ändert.
+ */
+export function tagwechsel(zeitpunkte: string[]): string[] {
+    let bisher = ''
+    return zeitpunkte.map(zeitpunkt => {
+        const tag = tagVon(zeitpunkt)
+        if (tag === bisher) return ''
+        bisher = tag
+        return tag
+    })
+}
+
 /** Zwei Zeiträume überschneiden sich, wenn keiner ganz vor dem anderen liegt. */
 export function ueberschneidet(vonA: string, bisA: string, vonB: string, bisB: string): boolean {
     const a1 = alsMinuten(vonA), a2 = alsMinuten(bisA)

@@ -207,8 +207,8 @@ export default {
         erklaerung: 'Die Lage „{lage}“ zeigt auf diesen Alarm. Zeiten, Einsatzadresse und Aufgebot kommen von dort; gedruckt wird ein Blatt je Fahrzeug, jedes ab dessen eigener Anfahrt.',
         staerke: 'Stärke {n}',
         adresse: 'Die Adresse des Orts, an dem die Lage stattfindet.',
-        ohneFahrzeug: 'An dieser Lage hängt noch kein Fahrzeug.',
-        aufgebot: 'Beim Drucken steht hier das Aufgebot aus dem Plan; was hier eingetragen ist, kommt nicht aufs Blatt.',
+        ohneFahrzeug: 'An dieser Lage hängt noch kein Fahrzeug — gedruckt wird das Aufgebot, das unten steht.',
+        aufgebot: 'Das Aufgebot kommt aus dem Ablaufplan: die Fahrzeuge, die an dieser Lage sind, mit der Stärke ihrer Besatzung.',
     },
     ablauf: {
         titel: 'Ablauf',
@@ -262,6 +262,7 @@ export default {
             ausserhalb: '{wer} ist laut Verfügbarkeit nicht da.',
             zuKnapp: 'Knapp: {geplant} min für geschätzte {geschaetzt} min.',
             lageLeer: 'Auf „{was}“ zeigt kein Schritt.',
+            ueberschneidung: 'Überschneidet den vorigen Schritt.',
         },
     },
     planung: {

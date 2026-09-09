@@ -85,7 +85,8 @@ Adressen
   adressen-polar        Check the Polar-Koordinaten against the values a real slip carries
 
 Ablaufplan
-  ablauf-pruefen        Personenplan, Ortssicht und die acht Pruefungen, ausserhalb des Browsers
+  ablauf-pruefen        Personenplan, Ortssicht und die Pruefungen, ausserhalb des Browsers
+  ablauf-vergleichen    Personenplan aus beiden Sprachen, Zeile fuer Zeile verglichen
 
 Abfragebaum
   sna-build             Regenerate frontend/public/sna-tree.json. Downloads the open data
@@ -241,6 +242,18 @@ print(f'{laden.laden()} Adressen in {laden.datei}')" ;;
     adressen-polar) cd "$ROOT"; run node tools/polar_pruefen.mjs ;;
 
     ablauf-pruefen) cd "$ROOT"; run node tools/ablauf_pruefen.mjs "$@" ;;
+    ablauf-vergleichen)
+        # Der Personenplan wird zweimal gerechnet - im Browser für die Ansicht, auf dem Server
+        # für das PDF. Was der Diff zeigt, wäre ein Widerspruch zwischen Schirm und Blatt.
+        cd "$ROOT"
+        daten="${1:-tools/beispiel/ablauf.json}"
+        server="$(mktemp)"; browser="$(mktemp)"
+        trap "rm -f '$server' '$browser'" EXIT
+        run python tools/personenplan_vergleichen.py "$daten" > "$server"
+        run node tools/personenplan_vergleichen.mjs "$daten" > "$browser"
+        diff -u "$server" "$browser" &&
+            echo "$(wc -l < "$server") Zeilen Personenplan, Browser und Server gleich"
+        ;;
     adressen-stand) be; run python -c "
 from data.adressen import Adressen
 from web.settings import settings
@@ -262,6 +275,7 @@ print(Adressen(settings.adressen_datei, settings.adressen_tage).bestand())" ;;
         "$ROOT/toolchain.sh" sync-probe
         "$ROOT/toolchain.sh" adressen-polar
         "$ROOT/toolchain.sh" ablauf-pruefen
+        "$ROOT/toolchain.sh" ablauf-vergleichen
         ;;
 
     help|-h|--help) usage ;;

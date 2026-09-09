@@ -2,20 +2,20 @@
 import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {personName, plandaten} from '../../store/planung'
+import {mehrereTage, personName, plandaten} from '../../store/planung'
 import {ortssicht} from '../../scripts/ablauf'
 import type {Ortsbelegung} from '../../scripts/ablauf'
-import {uhrzeit} from '../../scripts/zeit'
+import {tagwechsel, uhrzeit} from '../../scripts/zeit'
 
 /**
  * Wer und was zu welcher Zeit an einem Ort steht. Das beantwortet „stehen die beiden Fahrzeuge
  * samt Leuten gerade zusammen?“ und macht Fahrerwechsel, Abholung und Übergabe sichtbar, statt
  * sie nur zu melden.
  */
-const sichten = computed(() => arbeitsmappe.planung.orte.map(ort => ({
-  ort,
-  belegungen: ortssicht(plandaten(), ort.id),
-})))
+const sichten = computed(() => arbeitsmappe.planung.orte.map(ort => {
+  const belegungen = ortssicht(plandaten(), ort.id)
+  return {ort, belegungen, tage: tagwechsel(belegungen.map(belegung => belegung.von))}
+}))
 
 function wer(belegung: Ortsbelegung): string {
   const namen = belegung.personIds.map(id => personName(id) || t('ablauf.ohneName'))
@@ -42,8 +42,11 @@ function lage(belegung: Ortsbelegung): string {
       <p v-if="!sicht.belegungen.length" class="text-muted text-sm">{{ t('ablauf.ortLeer') }}</p>
       <table v-else class="w-full text-sm">
         <tbody>
-          <tr v-for="belegung in sicht.belegungen" :key="belegung.schritt.id"
+          <tr v-for="(belegung, zeile) in sicht.belegungen" :key="belegung.schritt.id"
               class="border-t border-rule">
+            <td v-if="mehrereTage()" class="tabular py-1 pr-3 text-muted whitespace-nowrap">
+              {{ sicht.tage[zeile] }}
+            </td>
             <td class="tabular py-1 pr-3 whitespace-nowrap">
               {{ uhrzeit(belegung.von) }}–{{ uhrzeit(belegung.bis) }}
             </td>

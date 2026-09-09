@@ -16,7 +16,7 @@ defineProps<{ abgeleitet: Alarmableitung }>()
     </p>
     <table v-if="abgeleitet.blaetter.length" class="w-full text-sm mt-2">
       <tbody>
-        <tr v-for="blatt in abgeleitet.blaetter" :key="blatt.funkrufname"
+        <tr v-for="(blatt, nummer) in abgeleitet.blaetter" :key="nummer"
             class="border-t border-rule">
           <td class="py-1 pr-3 font-bold">{{ blatt.funkrufname }}</td>
           <td class="tabular py-1 pr-3">{{ blatt.einsatzDatum }} {{ blatt.einsatzZeit }}</td>

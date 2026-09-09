@@ -2,20 +2,23 @@
 import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {ortName, plandaten} from '../../store/planung'
+import {mehrereTage, ortName, plandaten} from '../../store/planung'
 import {personenplan, pruefen} from '../../scripts/ablauf'
 import type {Befund, Personenschritt} from '../../scripts/ablauf'
-import {uhrzeit} from '../../scripts/zeit'
+import {tagwechsel, uhrzeit} from '../../scripts/zeit'
 
 /**
  * Der Plan einer Person wird nirgends gepflegt: er ist die Summe der Schritte, in deren Besatzung
  * sie steht, plus ihre eigenen. Personenplan und Fahrzeugplan können sich deshalb nicht
  * widersprechen.
  */
-const plaene = computed(() => arbeitsmappe.planung.personen.map(person => ({
-  person,
-  eintraege: personenplan(plandaten(), person.id),
-})))
+const plaene = computed(() => arbeitsmappe.planung.personen.map(person => {
+  const eintraege = personenplan(plandaten(), person.id)
+  return {
+    person, eintraege,
+    tage: tagwechsel(eintraege.map(eintrag => eintrag.schritt.von)),
+  }
+}))
 
 const befunde = computed(() => {
   const nachPerson = new Map<string, Befund[]>()
@@ -61,8 +64,11 @@ function lage(eintrag: Personenschritt): string {
       <p v-if="!plan.eintraege.length" class="text-muted text-sm">{{ t('ablauf.ohnePlan') }}</p>
       <table v-else class="w-full text-sm">
         <tbody>
-          <tr v-for="eintrag in plan.eintraege" :key="eintrag.schritt.id"
+          <tr v-for="(eintrag, zeile) in plan.eintraege" :key="eintrag.schritt.id"
               class="border-t border-rule">
+            <td v-if="mehrereTage()" class="tabular py-1 pr-3 text-muted whitespace-nowrap">
+              {{ plan.tage[zeile] }}
+            </td>
             <td class="tabular py-1 pr-3 whitespace-nowrap">
               {{ uhrzeit(eintrag.schritt.von) }}–{{ uhrzeit(eintrag.schritt.bis) }}
             </td>

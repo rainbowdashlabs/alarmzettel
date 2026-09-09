@@ -1,7 +1,7 @@
 import shutil
 import unittest
 
-from data.ablaufplan import plandaten
+from data.ablaufplan import SPALTEN_JE_BLATT, plandaten
 from data.typst import RenderError, render_plan
 from entities.alarm import Arbeitsmappe
 from web.settings import settings
@@ -122,6 +122,94 @@ class GesamtplanTest(unittest.TestCase):
         self.assertEqual(["→ Kindergarten", "Brand im Kindergarten"], zeilen["08:30"])
         self.assertEqual(["Brand im Kindergarten", "→ Wache Nord (zu Fuß)"], zeilen["09:15"])
         self.assertEqual(["Brand im Kindergarten", ""], zeilen["09:45"])
+
+
+def kette(*schritte) -> dict:
+    """Eine Arbeitsmappe mit einer einzigen Fahrzeugkette — für die Ränder des Rasters."""
+    return {
+        "version": 1, "alarme": [],
+        "kataloge": {"fahrzeuge": [{"id": "f-lhf", "funkrufname": "LHF 6501.3"}]},
+        "planung": {"aktiv": True,
+                    "orte": [{"id": "o-nord", "name": "Wache Nord"},
+                             {"id": "o-kita", "name": "Kindergarten"}],
+                    "laeufe": [{"id": "l-lhf", "fahrzeugId": "f-lhf", "schritte": [
+                        {"id": f"s{nummer}", "sortierung": float(nummer), **schritt}
+                        for nummer, schritt in enumerate(schritte)]}]},
+    }
+
+
+class RasterTest(unittest.TestCase):
+    """Der Bogen rastert auf Viertelstunden, geplant wird minutengenau."""
+
+    def bloecke(self, *schritte) -> list[dict]:
+        mappe = Arbeitsmappe.model_validate(kette(*schritte))
+        return plandaten(mappe)["gesamt"]["bloecke"]
+
+    def test_eine_kurze_fahrt_faellt_nicht_durchs_raster(self):
+        """Neun Minuten zwischen zwei Rasterpunkten sind trotzdem eine Fahrt."""
+        zeilen = self.bloecke(
+            {"art": "aufenthalt", "von": "2026-09-19T08:00", "bis": "2026-09-19T08:05",
+             "ortId": "o-nord"},
+            {"art": "fahrt", "von": "2026-09-19T08:05", "bis": "2026-09-19T08:14",
+             "ortId": "o-kita"},
+            {"art": "aufenthalt", "von": "2026-09-19T08:14", "bis": "2026-09-19T08:45",
+             "ortId": "o-kita"},
+        )[0]["zeilen"]
+        self.assertEqual(["→ Kindergarten"], zeilen[0]["zellen"])
+
+    def test_der_laengste_anteil_gewinnt_das_fenster(self):
+        zeilen = self.bloecke(
+            {"art": "aufenthalt", "von": "2026-09-19T08:00", "bis": "2026-09-19T08:11",
+             "ortId": "o-nord"},
+            {"art": "fahrt", "von": "2026-09-19T08:11", "bis": "2026-09-19T08:30",
+             "ortId": "o-kita"},
+        )[0]["zeilen"]
+        self.assertEqual(["Wache Nord"], zeilen[0]["zellen"])
+        self.assertEqual(["→ Kindergarten"], zeilen[1]["zellen"])
+
+    def test_ueber_die_monatsgrenze_bleibt_es_eine_nacht(self):
+        zeilen = self.bloecke(
+            {"art": "aufenthalt", "von": "2026-09-30T23:00", "bis": "2026-10-01T01:00",
+             "ortId": "o-nord"},
+        )[0]["zeilen"]
+        self.assertEqual(8, len(zeilen))
+        self.assertEqual(["23:00", "00:45"], [zeilen[0]["zeit"], zeilen[-1]["zeit"]])
+
+    def test_mehrere_tage_werden_zu_mehreren_bloecken(self):
+        bloecke = self.bloecke(
+            {"art": "aufenthalt", "von": "2026-09-19T08:00", "bis": "2026-09-19T09:00",
+             "ortId": "o-nord"},
+            {"art": "aufenthalt", "von": "2026-09-20T08:00", "bis": "2026-09-20T09:00",
+             "ortId": "o-kita"},
+        )
+        self.assertEqual(["2026-09-19", "2026-09-20"], [block["datum"] for block in bloecke])
+        self.assertEqual(["Wache Nord"], bloecke[0]["zeilen"][0]["zellen"])
+        self.assertEqual(["Kindergarten"], bloecke[1]["zeilen"][0]["zellen"])
+
+    def test_eine_kette_die_mit_einer_fahrt_beginnt(self):
+        """Ohne vorigen Schritt gibt es kein Woher; die Fahrt fängt an, wo sie hinführt."""
+        fahrt = Arbeitsmappe.model_validate(kette(
+            {"art": "fahrt", "von": "2026-09-19T08:00", "bis": "2026-09-19T08:30",
+             "ortId": "o-kita"}))
+        zeile = plandaten(fahrt)["fahrzeuge"][0]["zeilen"][0]
+        self.assertEqual("Kindergarten", zeile["vonOrt"])
+
+
+class BlattbreiteTest(unittest.TestCase):
+    """Mehr Ketten als Spalten aufs Blatt passen: der Rest kommt auf das nächste."""
+
+    def test_der_bogen_wird_gestueckelt(self):
+        laeufe = [{"id": f"l{nummer}", "fahrzeugId": f"f{nummer}", "schritte": [
+            {"id": f"s{nummer}", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T08:00", "bis": "2026-09-19T09:00", "ortId": "o1"}]}
+            for nummer in range(SPALTEN_JE_BLATT + 2)]
+        mappe = Arbeitsmappe.model_validate({
+            "version": 1, "alarme": [], "kataloge": {},
+            "planung": {"aktiv": True, "orte": [{"id": "o1", "name": "Wache"}],
+                        "laeufe": laeufe}})
+        bloecke = plandaten(mappe)["gesamt"]["bloecke"]
+        self.assertEqual([SPALTEN_JE_BLATT, 2], [len(block["spalten"]) for block in bloecke])
+        self.assertEqual(["2026-09-19", "2026-09-19"], [block["datum"] for block in bloecke])
 
 
 class RenderTest(unittest.TestCase):

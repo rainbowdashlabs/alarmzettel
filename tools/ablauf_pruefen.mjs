@@ -307,6 +307,68 @@ fall('Zu Fuß dauert dieselbe Strecke länger', () => {
     ]
 })
 
+fall('Zwei Schritte einer Kette, die sich überschneiden', () => {
+    const kaputt = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('fahrt', '08:30', '09:15', 'o-sued', {besatzung: [sitzt('p-alex', true)]}),
+    ])
+    const befunde = pruefen(daten({
+        personen: [person('p-alex', 'Alex')], fahrzeuge: [fahrzeug('f-lhf', 'LHF')],
+        laeufe: [kaputt],
+    }))
+    return [
+        ['gemeldet', befunde.filter(b => b.art === 'ueberschneidung').length, 1],
+        ['am zweiten Schritt', befunde[0].schrittId, kaputt.schritte[1].id],
+    ]
+})
+
+fall('Eine Lücke in der Kette ist keine Überschneidung', () => {
+    const wartend = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('fahrt', '10:00', '10:30', 'o-sued', {besatzung: [sitzt('p-alex', true)]}),
+    ])
+    const befunde = pruefen(daten({
+        personen: [person('p-alex', 'Alex')], fahrzeuge: [fahrzeug('f-lhf', 'LHF')],
+        laeufe: [wartend],
+    }))
+    return [['nichts gemeldet', arten(befunde).join(','), '']]
+})
+
+fall('Zwei ganztägige Ketten melden je Schritt einmal, nicht je Paar', () => {
+    const tag = (fahrzeugId) => lauf({fahrzeugId}, [
+        schritt('aufenthalt', '08:00', '10:00', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('aufenthalt', '10:00', '12:00', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+    ])
+    const befunde = pruefen(daten({
+        personen: [person('p-alex', 'Alex')],
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')],
+        laeufe: [tag('f-lhf'), tag('f-mtf')],
+    }))
+    return [['zwei Meldungen für zwei überschnittene Schritte',
+        befunde.filter(b => b.art === 'zweiOrte').length, 2]]
+})
+
+fall('Die Fahrerlaubnis zählt beim Fahren, nicht beim Dastehen', () => {
+    const stehend = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-nord', {besatzung: [sitzt('p-maria', true)]}),
+    ])
+    const befunde = pruefen(daten({
+        personen: [person('p-maria', 'Maria', {fahrerlaubnis: ['B']})],
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF', {fuehrerschein: 'C'})],
+        laeufe: [stehend],
+    }))
+    return [['nichts gemeldet', arten(befunde).join(','), '']]
+})
+
+fall('Über die eigene Anreise wird nichts geschätzt', () => {
+    const eigen = lauf({personId: 'p-maria'}, [
+        schritt('aufenthalt', '08:00', '08:30', 'o-nord'),
+        schritt('fahrt', '08:30', '08:35', 'o-sued', {mittel: 'eigen'}),
+    ])
+    const befunde = pruefen(daten({personen: [person('p-maria', 'Maria')], laeufe: [eigen]}))
+    return [['keine Warnung über zu knapp', arten(befunde).join(','), '']]
+})
+
 fall('Eine Lage sammelt ein, was auf sie zeigt', () => {
     const punkt = {id: 'pp-brand', sortierung: 0, name: 'Brand', ortId: 'o-sued', alarmId: ''}
     const lhf = lauf({fahrzeugId: 'f-lhf'}, [

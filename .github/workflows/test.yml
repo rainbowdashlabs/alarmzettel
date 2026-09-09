@@ -107,6 +107,15 @@ jobs:
       - name: Two clients on one workspace
         run: node tools/sync_probe.mjs
 
+      # Der Personenplan entsteht zweimal: im Browser für die Ansicht, auf dem Server für das
+      # PDF. Weichen sie ab, widersprechen sich Bildschirm und Ausdruck — und genau das soll die
+      # Ableitung ja unmöglich machen.
+      - name: Compare the person plans
+        run: |
+          python tools/personenplan_vergleichen.py tools/beispiel/ablauf.json > server.txt
+          node tools/personenplan_vergleichen.mjs tools/beispiel/ablauf.json > browser.txt
+          diff -u server.txt browser.txt && echo "$(wc -l < server.txt) Zeilen, beide Seiten gleich"
+
   abfragebaum:
     runs-on: ubuntu-latest
     steps:

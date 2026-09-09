@@ -7,6 +7,8 @@ sie einmal, damit das Blatt in der Hand und die Ansicht am Schirm nicht auseinan
 können, und das Typst-Template legt nur noch aus, was hier steht.
 """
 
+from datetime import date
+
 from entities.alarm import Arbeitsmappe
 from entities.planung import Lauf, Person, Planung, Schritt
 
@@ -18,15 +20,19 @@ SPALTEN_JE_BLATT = 7
 
 
 def _minuten(zeitpunkt: str) -> int | None:
-    """Minuten seit dem Beginn des Tages, den der Zeitpunkt nennt — Datum mitgezählt."""
+    """
+    Minuten auf einer durchgehenden Achse, damit sich zwei Zeitpunkte über Tages- und
+    Monatsgrenzen hinweg vergleichen und voneinander abziehen lassen.
+    """
     if len(zeitpunkt) < 16 or zeitpunkt[10] != "T":
         return None
     try:
         jahr, monat, tag = (int(teil) for teil in zeitpunkt[:10].split("-"))
         stunde, minute = int(zeitpunkt[11:13]), int(zeitpunkt[14:16])
+        tage = date(jahr, monat, tag).toordinal()
     except ValueError:
         return None
-    return ((jahr * 12 + monat) * 31 + tag) * 24 * 60 + stunde * 60 + minute
+    return tage * 24 * 60 + stunde * 60 + minute
 
 
 def _uhrzeit(zeitpunkt: str) -> str:
@@ -188,22 +194,29 @@ def _als_uhrzeit(minute: int) -> str:
 
 
 def _zelle_zur_zeit(plan: Plan, lauf: Lauf, datum: str, minute: int) -> str:
-    """Was in dieser Viertelstunde in dieser Spalte steht — leer, wenn gerade nichts läuft."""
+    """
+    Was in dieser Viertelstunde in dieser Spalte steht. Es zählt, was in das Fenster hineinragt,
+    nicht nur was seinen Anfang überdeckt — sonst verschwände eine Fahrt von zehn Minuten, die
+    zwischen zwei Rasterpunkten liegt, spurlos vom Bogen. Überlappen mehrere, gewinnt der
+    längste Anteil.
+    """
+    beste, laengster = "", 0
     for schritt in lauf.schritte:
         if _datum(schritt.von) != datum:
             continue
         von, bis = _minuten(schritt.von), _minuten(schritt.bis)
-        if von is None or bis is None or not von <= minute < bis:
+        if von is None or bis is None:
             continue
-        return _zelle(plan, lauf, schritt)
-    return ""
+        anteil = min(bis, minute + RASTER) - max(von, minute)
+        if anteil > laengster:
+            beste, laengster = _zelle(plan, lauf, schritt), anteil
+    return beste
 
 
 def plandaten(arbeitsmappe: Arbeitsmappe) -> dict:
     """Personenblätter, Fahrzeugblätter und der Gesamtplan, fertig zum Auslegen."""
     plan = Plan(arbeitsmappe)
     return {
-        "tage": [{"datum": tag.datum, "name": tag.name} for tag in plan.planung.tage],
         "personen": [_personenblatt(plan, person) for person in plan.planung.personen],
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe
                       if lauf.fahrzeugId and lauf.schritte],

@@ -2,9 +2,9 @@
 import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {ortName, personName, plandaten} from '../../store/planung'
+import {mehrereTage, ortName, personName, plandaten} from '../../store/planung'
 import {lagensicht} from '../../scripts/ablauf'
-import {uhrzeit} from '../../scripts/zeit'
+import {tagVon, uhrzeit} from '../../scripts/zeit'
 
 /** Dieselbe Sache von der anderen Seite: die Lage, und was an ihr hängt. */
 const lagen = computed(() => arbeitsmappe.planung.programmpunkte
@@ -29,6 +29,9 @@ function alarmStichwort(alarmId: string): string {
         </h2>
         <span class="text-muted text-sm">{{ ortName(sicht.programmpunkt.ortId) }}</span>
         <span v-if="sicht.von" class="tabular text-sm">
+          <span v-if="mehrereTage() || tagVon(sicht.von) !== tagVon(sicht.bis)" class="text-muted">
+            {{ tagVon(sicht.von) }}
+          </span>
           {{ uhrzeit(sicht.von) }}–{{ uhrzeit(sicht.bis) }}
         </span>
       </div>

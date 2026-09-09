@@ -14,7 +14,7 @@ import {MINUTEN_JE_KM} from '../scripts/ablauf'
 import {entfernungKm} from '../scripts/polar'
 import type {Plandaten} from '../scripts/ablauf'
 import type {Punkt} from '../scripts/polar'
-import {verschieben} from '../scripts/zeit'
+import {tagVon, verschieben} from '../scripts/zeit'
 import type {
     Besatzung, Lauf, Mittel, Ort, Person, Programmpunkt, Schritt, Tag, Verfuegbarkeit,
 } from '../interfaces/Planung'
@@ -210,6 +210,14 @@ export async function fahrzeitSchaetzen(vonOrtId: string, nachOrtId: string,
     const [a, b] = await Promise.all([zuPunkt(von.adresse), zuPunkt(nach.adresse)])
     if (!a || !b) return null
     return Math.max(5, Math.round(entfernungKm(a, b) * MINUTEN_JE_KM[mittel] / 5) * 5)
+}
+
+/** Geht der Plan über mehr als einen Tag, reicht die Uhrzeit auf dem Schirm nicht mehr. */
+export function mehrereTage(): boolean {
+    const tage = new Set(arbeitsmappe.planung.laeufe
+        .flatMap(lauf => lauf.schritte.map(schritt => tagVon(schritt.von))))
+    tage.delete('')
+    return tage.size > 1
 }
 
 export function ortName(ortId: string): string {

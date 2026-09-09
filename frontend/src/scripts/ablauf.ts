@@ -14,8 +14,11 @@ import type {Punkt} from './polar'
 import {entfernungKm} from './polar'
 import {alsMinuten, dauer, ueberschneidet} from './zeit'
 
-/** Minuten je Kilometer Luftlinie. Grobe Schätzung, jederzeit überschreibbar. */
-export const MINUTEN_JE_KM: Record<Schritt['mittel'], number> = {fuss: 15, fahrzeug: 3, eigen: 3}
+/**
+ * Minuten je Kilometer Luftlinie. Grobe Schätzung, jederzeit überschreibbar. Über die eigene
+ * Anreise wissen wir nichts, also wird sie nicht geschätzt.
+ */
+export const MINUTEN_JE_KM: Record<Schritt['mittel'], number> = {fuss: 15, fahrzeug: 3, eigen: 0}
 
 /** Unter diesem Anteil der Schätzung gilt eine Fahrt als zu knapp geplant. */
 const KNAPP = 0.6
@@ -63,7 +66,7 @@ export interface Lagensicht {
 
 export type Befundart =
     'zuVoll' | 'ohneErlaubnis' | 'ohneFahrer' | 'zweiFahrer' | 'zustiegInsNichts'
-    | 'zweiOrte' | 'ausserhalb' | 'zuKnapp' | 'lageLeer'
+    | 'zweiOrte' | 'ausserhalb' | 'zuKnapp' | 'lageLeer' | 'ueberschneidung'
 
 /**
  * Ein Fund. Nichts davon blockiert die Eingabe: ein Plan darf zwischendurch unfertig sein, und
@@ -196,7 +199,7 @@ export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): 
     }
 
     const klasse = wagen?.fuehrerschein?.trim()
-    if (klasse) {
+    if (klasse && schritt.art === 'fahrt') {
         for (const platz of fahrer) {
             const wer = person(daten, platz.personId)
             if (wer && !wer.fahrerlaubnis.includes(klasse)) {
@@ -222,11 +225,28 @@ export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): 
  * — die Luftlinie kennt ohnehin weder Spree noch Baustelle.
  */
 export function fahrzeitSchaetzung(daten: Plandaten, lauf: Lauf, schritt: Schritt): number | null {
-    if (schritt.art !== 'fahrt') return null
+    if (schritt.art !== 'fahrt' || schritt.mittel === 'eigen') return null
     const von = daten.punkte?.[vonOrt(lauf, schritt)]
     const nach = daten.punkte?.[schritt.ortId]
     if (!von || !nach || vonOrt(lauf, schritt) === schritt.ortId) return null
     return Math.max(5, Math.round(entfernungKm(von, nach) * MINUTEN_JE_KM[schritt.mittel] / 5) * 5)
+}
+
+/**
+ * Zwei Schritte einer Kette, die sich zeitlich überlappen. Eine Kette ist eine Folge, und die
+ * Oberfläche hält sie lückenlos — aber eine geänderte Zeit, ein anderer Browser oder eine von
+ * Hand geladene Datei können sie brechen, und dann steht ein Fahrzeug an zwei Orten zugleich,
+ * ohne dass eine der anderen Prüfungen anschlüge.
+ */
+function ueberschneidungBefunde(lauf: Lauf): Befund[] {
+    const befunde: Befund[] = []
+    for (let stelle = 1; stelle < lauf.schritte.length; stelle++) {
+        const vorher = lauf.schritte[stelle - 1]!
+        const jetzt = lauf.schritte[stelle]!
+        if (!ueberschneidet(vorher.von, vorher.bis, jetzt.von, jetzt.bis)) continue
+        befunde.push({art: 'ueberschneidung', laufId: lauf.id, schrittId: jetzt.id})
+    }
+    return befunde
 }
 
 /**
@@ -250,23 +270,28 @@ function zustiegBefunde(daten: Plandaten, personId: string, plan: Personenschrit
     return befunde
 }
 
-/** Dieselbe Person zur selben Zeit in zwei Ketten. */
+/**
+ * Dieselbe Person zur selben Zeit in zwei Ketten. Gemeldet wird je Schritt einmal und nicht je
+ * Paar — zwei ganztägige Ketten ergäben sonst eine Wand aus derselben Meldung.
+ */
 function doppelBefunde(daten: Plandaten, personId: string, plan: Personenschritt[]): Befund[] {
-    const befunde: Befund[] = []
+    const betroffen = new Set<string>()
     for (let a = 0; a < plan.length; a++) {
         for (let b = a + 1; b < plan.length; b++) {
             const eins = plan[a]!, zwei = plan[b]!
             if (eins.lauf.id === zwei.lauf.id) continue
             if (!ueberschneidet(eins.schritt.von, eins.schritt.bis,
                                 zwei.schritt.von, zwei.schritt.bis)) continue
-            befunde.push({
-                art: 'zweiOrte', personId,
-                laufId: zwei.lauf.id, schrittId: zwei.schritt.id,
-                werte: {wer: name(daten, personId)},
-            })
+            betroffen.add(zwei.schritt.id)
         }
     }
-    return befunde
+    return plan
+        .filter(eintrag => betroffen.has(eintrag.schritt.id))
+        .map(eintrag => ({
+            art: 'zweiOrte' as const, personId,
+            laufId: eintrag.lauf.id, schrittId: eintrag.schritt.id,
+            werte: {wer: name(daten, personId)},
+        }))
 }
 
 /** Nichts eingetragen heißt immer da; sonst muss der Schritt in ein Fenster passen. */
@@ -288,6 +313,7 @@ export function pruefen(daten: Plandaten): Befund[] {
     const befunde: Befund[] = []
     for (const lauf of daten.planung.laeufe) {
         for (const schritt of lauf.schritte) befunde.push(...schrittBefunde(daten, lauf, schritt))
+        befunde.push(...ueberschneidungBefunde(lauf))
     }
     for (const wer of daten.planung.personen) {
         const plan = personenplan(daten, wer.id)
