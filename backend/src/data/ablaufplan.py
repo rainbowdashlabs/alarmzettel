@@ -7,8 +7,8 @@ sie einmal, damit das Blatt in der Hand und die Ansicht am Schirm nicht auseinan
 können, und das Typst-Template legt nur noch aus, was hier steht.
 """
 
-from datetime import date
-
+from data.bewegungen import bewegungsbilder
+from data.planzeit import minuten as _minuten, tag as _datum, uhrzeit as _uhrzeit
 from entities.alarm import Arbeitsmappe
 from entities.planung import Lauf, Person, Planung, Schritt
 
@@ -17,30 +17,6 @@ RASTER = 15
 
 SPALTEN_JE_BLATT = 7
 """So viele Spalten passen quer auf ein Blatt; der Rest kommt auf das nächste."""
-
-
-def _minuten(zeitpunkt: str) -> int | None:
-    """
-    Minuten auf einer durchgehenden Achse, damit sich zwei Zeitpunkte über Tages- und
-    Monatsgrenzen hinweg vergleichen und voneinander abziehen lassen.
-    """
-    if len(zeitpunkt) < 16 or zeitpunkt[10] != "T":
-        return None
-    try:
-        jahr, monat, tag = (int(teil) for teil in zeitpunkt[:10].split("-"))
-        stunde, minute = int(zeitpunkt[11:13]), int(zeitpunkt[14:16])
-        tage = date(jahr, monat, tag).toordinal()
-    except ValueError:
-        return None
-    return tage * 24 * 60 + stunde * 60 + minute
-
-
-def _uhrzeit(zeitpunkt: str) -> str:
-    return zeitpunkt[11:16] if len(zeitpunkt) >= 16 else ""
-
-
-def _datum(zeitpunkt: str) -> str:
-    return zeitpunkt[:10] if len(zeitpunkt) >= 10 else ""
 
 
 def _von_ort(lauf: Lauf, schritt: Schritt) -> str:
@@ -221,4 +197,5 @@ def plandaten(arbeitsmappe: Arbeitsmappe) -> dict:
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe
                       if lauf.fahrzeugId and lauf.schritte],
         "gesamt": _gesamtplan(plan),
+        "bewegung": bewegungsbilder(arbeitsmappe),
     }

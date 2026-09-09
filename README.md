@@ -47,6 +47,15 @@ screen are the ones printed on the slip.
   and a Lage nothing points at. None of it blocks entry; a plan may be unfinished.
 - **Plan output** — the person plan, the view of a place and the view of a Lage on screen, and a
   PDF with one sheet per person, one per vehicle and a landscape overall plan.
+- **The movement picture** — the whole plan in one image: every place is a horizontal band, time
+  runs to the right, a stay is a bar in its band and a journey a line crossing from one band to
+  the next. On screen and in the PDF, from the same computed layout.
+- **The situation map** — the places on OpenStreetMap, with a slider that moves the shown moment
+  and a strip of what happens next. Whoever is travelling stands proportionally along the
+  straight line between the two places, so a day can be driven through before it runs and
+  followed while it does. `Jetzt` pins it to the clock. This is the view for the day itself.
+  Map tiles come from openstreetmap.org; the coordinates behind them are the city's own, turned
+  from ETRS89 / UTM 33N into WGS 84 in the browser.
 - **Slips from the plan** — where a Lage points at an alarm, its times, Einsatzadresse and
   Einsatzmittelaufgebot come from the schedule, and one sheet is printed per vehicle at that
   Lage. Those fields show in the editor as what will be printed, rather than being editable

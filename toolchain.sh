@@ -87,7 +87,7 @@ Adressen
 Ablaufplan
   ablauf-pruefen        Personenplan, Ortssicht und die Pruefungen, ausserhalb des Browsers
   ablauf-bewegungen     Bewegungsbild, Stand zu einem Zeitpunkt und die Koordinaten der Karte
-  ablauf-vergleichen    Personenplan aus beiden Sprachen, Zeile fuer Zeile verglichen
+  ablauf-vergleichen    Personenplan und Bewegungsbild aus beiden Sprachen, Zeile fuer Zeile
 
 Abfragebaum
   sna-build             Regenerate frontend/public/sna-tree.json. Downloads the open data
@@ -245,16 +245,17 @@ print(f'{laden.laden()} Adressen in {laden.datei}')" ;;
     ablauf-pruefen) cd "$ROOT"; run node tools/ablauf_pruefen.mjs "$@" ;;
     ablauf-bewegungen) cd "$ROOT"; run node tools/bewegungen_pruefen.mjs "$@" ;;
     ablauf-vergleichen)
-        # Der Personenplan wird zweimal gerechnet - im Browser für die Ansicht, auf dem Server
-        # für das PDF. Was der Diff zeigt, wäre ein Widerspruch zwischen Schirm und Blatt.
+        # Personenplan und Bewegungsbild werden zweimal gerechnet - im Browser für die Ansicht,
+        # auf dem Server für das PDF. Was der Diff zeigt, wäre ein Widerspruch zwischen Schirm
+        # und Blatt.
         cd "$ROOT"
         daten="${1:-tools/beispiel/ablauf.json}"
         server="$(mktemp)"; browser="$(mktemp)"
         trap "rm -f '$server' '$browser'" EXIT
-        run python tools/personenplan_vergleichen.py "$daten" > "$server"
-        run node tools/personenplan_vergleichen.mjs "$daten" > "$browser"
+        run python tools/plan_vergleichen.py "$daten" > "$server"
+        run node tools/plan_vergleichen.mjs "$daten" > "$browser"
         diff -u "$server" "$browser" &&
-            echo "$(wc -l < "$server") Zeilen Personenplan, Browser und Server gleich"
+            echo "$(wc -l < "$server") Zeilen Plan und Bewegungsbild, beide Seiten gleich"
         ;;
     adressen-stand) be; run python -c "
 from data.adressen import Adressen

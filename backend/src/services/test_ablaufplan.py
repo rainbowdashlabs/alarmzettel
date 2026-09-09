@@ -212,6 +212,60 @@ class BlattbreiteTest(unittest.TestCase):
         self.assertEqual(["2026-09-19", "2026-09-19"], [block["datum"] for block in bloecke])
 
 
+class BewegungTest(unittest.TestCase):
+    """Das Bild, das der Bildschirm auch zeichnet: Bänder, Reihen darin, Zeitfenster."""
+
+    def bild(self, mappe: dict, datum: str = "2026-09-19") -> dict:
+        return plandaten(Arbeitsmappe.model_validate(mappe))["bewegung"]
+
+    def test_jeder_ort_ein_band_in_der_reihenfolge_der_stammdaten(self):
+        bilder = self.bild(MAPPE)
+        self.assertEqual(1, len(bilder))
+        self.assertEqual(["Wache Nord", "Kindergarten"],
+                         [band["name"] for band in bilder[0]["baender"]])
+
+    def test_das_fenster_liegt_auf_vollen_stunden(self):
+        bild = self.bild(MAPPE)[0]
+        self.assertEqual((480, 600), (bild["von"], bild["bis"]))
+
+    def test_was_gleichzeitig_dasteht_bekommt_eigene_reihen(self):
+        """Die Mimen stehen ab acht am Kindergarten, das LHF kommt dazu — also zwei Reihen."""
+        bild = self.bild(MAPPE)[0]
+        kita = next(band for band in bild["baender"] if band["name"] == "Kindergarten")
+        self.assertEqual(2, kita["reihen"])
+        self.assertEqual([0, 1], sorted(balken["reihe"] for balken in bild["balken"]
+                                        if balken["ortId"] == "o-kita"))
+
+    def test_eine_fahrt_verbindet_die_reihen(self):
+        linie = next(eintrag for eintrag in self.bild(MAPPE)[0]["linien"]
+                     if eintrag["name"] == "LHF 6501.3")
+        self.assertEqual(("o-nord", "o-kita"), (linie["vonOrtId"], linie["nachOrtId"]))
+        self.assertEqual((0, 1), (linie["vonReihe"], linie["nachReihe"]))
+
+    def test_ein_ort_ohne_geschehen_bekommt_kein_band(self):
+        ohne = kette({"art": "aufenthalt", "von": "2026-09-19T08:00",
+                      "bis": "2026-09-19T09:00", "ortId": "o-nord"})
+        self.assertEqual(["Wache Nord"],
+                         [band["name"] for band in self.bild(ohne)[0]["baender"]])
+
+    def test_jeder_tag_bekommt_sein_bild(self):
+        zwei = kette(
+            {"art": "aufenthalt", "von": "2026-09-19T08:00", "bis": "2026-09-19T09:00",
+             "ortId": "o-nord"},
+            {"art": "aufenthalt", "von": "2026-09-20T08:00", "bis": "2026-09-20T09:00",
+             "ortId": "o-kita"})
+        bilder = self.bild(zwei)
+        self.assertEqual(["2026-09-19", "2026-09-20"], [bild["datum"] for bild in bilder])
+        self.assertEqual(["Kindergarten"], [band["name"] for band in bilder[1]["baender"]])
+
+    def test_die_minuten_zaehlen_vom_tag_des_bildes(self):
+        """Über Mitternacht hinaus wird die Achse länger, nicht kürzer."""
+        nacht = kette({"art": "aufenthalt", "von": "2026-09-19T23:00",
+                       "bis": "2026-09-20T01:00", "ortId": "o-nord"})
+        bild = self.bild(nacht)[0]
+        self.assertEqual((1380, 1500), (bild["von"], bild["bis"]))
+
+
 class RenderTest(unittest.TestCase):
     def test_ein_leerer_plan_wird_abgelehnt(self):
         leer = Arbeitsmappe.model_validate({"version": 1, "alarme": [], "kataloge": {}})
