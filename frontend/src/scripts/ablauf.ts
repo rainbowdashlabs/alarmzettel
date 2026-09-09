@@ -9,10 +9,10 @@
  * `tools/ablauf_pruefen.mjs` außerhalb eines Browsers geprüft werden kann.
  */
 import type {Fahrzeugvorlage, Materialvorlage} from '../interfaces/Alarm'
-import type {Lauf, Ort, Person, Planung, Programmpunkt, Schritt} from '../interfaces/Planung'
+import type {Lauf, Mittel, Ort, Person, Planung, Programmpunkt, Schritt} from '../interfaces/Planung'
 import type {Punkt} from './polar'
 import {entfernungKm} from './polar'
-import {alsMinuten, dauer, ueberschneidet} from './zeit'
+import {alsMinuten, dauer, ueberschneidet, verschieben} from './zeit'
 
 /**
  * Minuten je Kilometer Luftlinie. Grobe Schätzung, jederzeit überschreibbar. Über die eigene
@@ -47,10 +47,32 @@ export interface Personenschritt {
     schritt: Schritt
     /** Sie fährt in diesem Schritt selbst. */
     faehrt: boolean
-    /** Wo der Schritt anfängt; bei einer Fahrt der Ort des vorigen Schritts. */
+    /**
+     * Wo der Schritt anfängt: bei einer Fahrt der Ort des vorigen Schritts, bei einem Aufenthalt
+     * mit erzeugter Anfahrt der Ort, von dem diese Person kommt — stand sie schon am Ziel, ist
+     * es das Ziel selbst.
+     */
     vonOrtId: string
     /** Wo er endet. */
     nachOrtId: string
+    /**
+     * Wann sie da ist. Wer die erzeugte Anfahrt mitfährt, ist an deren Ende da; wer schon am Ziel
+     * stand, mit dem Beginn des Schritts.
+     */
+    ankunft: string
+}
+
+/**
+ * Die Fahrt, die zwischen zwei Aufenthalten von selbst entsteht. Sie wird nirgends gespeichert:
+ * woher, sagt der vorige Schritt, wohin dieser, und wie lange es dauert, die Schätzung.
+ */
+export interface Anfahrt {
+    vonOrtId: string
+    nachOrtId: string
+    von: string
+    bis: string
+    minuten: number
+    mittel: Mittel
 }
 
 /** Wer und was zu welcher Zeit an einem Ort ist. Fahrten zählen nicht — sie sind dazwischen. */
@@ -65,7 +87,9 @@ export interface Ortsbelegung {
 /** Eine Lage, wie sie aus den Schritten entsteht, die auf sie zeigen. */
 export interface Lagensicht {
     programmpunkt: Programmpunkt
-    /** Früherster Beginn und spätestes Ende der beteiligten Schritte. Leer, wenn keiner zeigt. */
+    /** Wo sie stattfindet — der Ort ihrer Schritte. Leer, wenn keiner zeigt. */
+    ortId: string
+    /** Früheste Ankunft und spätestes Ende der beteiligten Schritte. Leer, wenn keiner zeigt. */
     von: string
     bis: string
     laeufe: Lauf[]
@@ -75,6 +99,7 @@ export interface Lagensicht {
 export type Befundart =
     'zuVoll' | 'ohneErlaubnis' | 'ohneFahrer' | 'zweiFahrer' | 'zustiegInsNichts'
     | 'zweiOrte' | 'ausserhalb' | 'zuKnapp' | 'lageLeer' | 'ueberschneidung' | 'zuVielMaterial'
+    | 'fahrtFrisstAufenthalt' | 'lageZweiOrte'
 
 /**
  * Ein Fund. Nichts davon blockiert die Eingabe: ein Plan darf zwischendurch unfertig sein, und
@@ -135,6 +160,48 @@ export function vonOrt(lauf: Lauf, schritt: Schritt): string {
     return lauf.schritte[lauf.schritte.indexOf(schritt) - 1]?.ortId ?? schritt.ortId
 }
 
+/** Womit dieser Schritt zurückgelegt wird. Eine Fahrzeugkette kennt nur das Fahrzeug. */
+export function mittelVon(lauf: Lauf, schritt: Schritt): Mittel {
+    return lauf.fahrzeugId ? 'fahrzeug' : schritt.mittel
+}
+
+/**
+ * Die Fahrt zu diesem Aufenthalt, sofern sie entsteht: der Schritt davor ist ein Aufenthalt an
+ * einem anderen Ort. Steht dort eine eingetragene Fahrt, gilt die, und hier entsteht nichts.
+ *
+ * Sie beginnt, wenn der Aufenthalt beginnt — wer um 7:50 aufbricht und fünf Minuten braucht, ist
+ * um 7:55 da. Deshalb ist 7:50 auch die Einsatzzeit des Alarms, der an der Lage hängt.
+ */
+export function anfahrt(daten: Plandaten, lauf: Lauf, schritt: Schritt): Anfahrt | null {
+    if (schritt.art !== 'aufenthalt') return null
+    const vorher = lauf.schritte[lauf.schritte.indexOf(schritt) - 1]
+    if (!vorher || vorher.art !== 'aufenthalt' || vorher.ortId === schritt.ortId) return null
+    const mittel = mittelVon(lauf, schritt)
+    const minuten = schritt.fahrzeit
+        || schaetzung(daten, vorher.ortId, schritt.ortId, mittel) || 0
+    return {
+        vonOrtId: vorher.ortId, nachOrtId: schritt.ortId, von: schritt.von,
+        bis: verschieben(schritt.von, minuten), minuten, mittel,
+    }
+}
+
+/** Wann jemand an dem Ort dieses Schritts steht: nach der erzeugten Anfahrt, sonst sofort. */
+export function ankunft(daten: Plandaten, lauf: Lauf, schritt: Schritt): string {
+    return anfahrt(daten, lauf, schritt)?.bis ?? schritt.von
+}
+
+/** Wo eine Lage stattfindet: dort, wo die Schritte stehen, die auf sie zeigen. */
+export function lagenOrt(daten: Plandaten, programmpunktId: string): string {
+    for (const lauf of daten.planung.laeufe) {
+        for (const schritt of lauf.schritte) {
+            if (schritt.programmpunktId === programmpunktId && schritt.art === 'aufenthalt') {
+                return schritt.ortId
+            }
+        }
+    }
+    return ''
+}
+
 function nachZeit<T extends { von: string }>(eintraege: T[]): T[] {
     return [...eintraege].sort((a, b) => (alsMinuten(a.von) ?? 0) - (alsMinuten(b.von) ?? 0))
 }
@@ -142,6 +209,10 @@ function nachZeit<T extends { von: string }>(eintraege: T[]): T[] {
 /**
  * Der Plan einer Person: alle Fahrzeugschritte, in deren Besatzung sie steht, plus die Schritte
  * ihrer eigenen Kette, nach Zeit sortiert. Er wird nirgends gepflegt, sondern hieraus gelesen.
+ *
+ * Die erzeugte Anfahrt fährt nur mit, wer vorher am Startort stand. Wer schon am Ziel wartet —
+ * der Mime, der auf das Fahrzeug wartet — steigt dort zu, fährt nicht mit und ist mit dem
+ * Beginn des Schritts da.
  */
 export function personenplan(daten: Plandaten, personId: string): Personenschritt[] {
     const eintraege: (Personenschritt & { von: string })[] = []
@@ -154,10 +225,31 @@ export function personenplan(daten: Plandaten, personId: string): Personenschrit
                 lauf, schritt, von: schritt.von,
                 faehrt: Boolean(sitzt?.faehrt),
                 vonOrtId: vonOrt(lauf, schritt), nachOrtId: schritt.ortId,
+                ankunft: ankunft(daten, lauf, schritt),
             })
         }
     }
-    return nachZeit(eintraege)
+    const plan = nachZeit(eintraege)
+    for (let stelle = 0; stelle < plan.length; stelle++) {
+        const weg = anfahrt(daten, plan[stelle]!.lauf, plan[stelle]!.schritt)
+        if (!weg) continue
+        if (stelle > 0 && plan[stelle - 1]!.nachOrtId === weg.vonOrtId) {
+            plan[stelle]!.vonOrtId = weg.vonOrtId
+        } else {
+            plan[stelle]!.ankunft = plan[stelle]!.schritt.von
+        }
+    }
+    return plan
+}
+
+/** Wer diese erzeugte Anfahrt mitfährt: wer laut eigenem Plan davor am Startort stand. */
+export function mitfahrer(daten: Plandaten, lauf: Lauf, schritt: Schritt): string[] {
+    const weg = anfahrt(daten, lauf, schritt)
+    if (!weg) return []
+    const dabei = lauf.personId ? [lauf.personId] : []
+    dabei.push(...schritt.besatzung.map(platz => platz.personId))
+    return dabei.filter(personId => personenplan(daten, personId)
+        .some(eintrag => eintrag.schritt.id === schritt.id && eintrag.vonOrtId === weg.vonOrtId))
 }
 
 /** Wer und was an diesem Ort steht, nach Zeit sortiert — die Ortssicht. */
@@ -167,7 +259,7 @@ export function ortssicht(daten: Plandaten, ortId: string): Ortsbelegung[] {
         for (const schritt of lauf.schritte) {
             if (schritt.art !== 'aufenthalt' || schritt.ortId !== ortId) continue
             belegungen.push({
-                lauf, schritt, von: schritt.von, bis: schritt.bis,
+                lauf, schritt, von: ankunft(daten, lauf, schritt), bis: schritt.bis,
                 personIds: lauf.personId
                     ? [lauf.personId, ...schritt.besatzung.map(platz => platz.personId)]
                     : schritt.besatzung.map(platz => platz.personId),
@@ -183,12 +275,15 @@ export function ortssicht(daten: Plandaten, ortId: string): Ortsbelegung[] {
  * sich einen Eintrag statt ihn zu verdoppeln.
  */
 export function lagensicht(daten: Plandaten, punkt: Programmpunkt): Lagensicht {
-    const sicht: Lagensicht = {programmpunkt: punkt, von: '', bis: '', laeufe: [], personIds: []}
+    const sicht: Lagensicht = {programmpunkt: punkt, ortId: '', von: '', bis: '', laeufe: [],
+        personIds: []}
     for (const lauf of daten.planung.laeufe) {
         for (const schritt of lauf.schritte) {
             if (schritt.programmpunktId !== punkt.id) continue
-            if (!sicht.von || (alsMinuten(schritt.von) ?? 0) < (alsMinuten(sicht.von) ?? 0)) {
-                sicht.von = schritt.von
+            if (!sicht.ortId) sicht.ortId = schritt.ortId
+            const da = ankunft(daten, lauf, schritt)
+            if (!sicht.von || (alsMinuten(da) ?? 0) < (alsMinuten(sicht.von) ?? 0)) {
+                sicht.von = da
             }
             if (!sicht.bis || (alsMinuten(schritt.bis) ?? 0) > (alsMinuten(sicht.bis) ?? 0)) {
                 sicht.bis = schritt.bis
@@ -243,23 +338,43 @@ export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): 
 
     const geschaetzt = fahrzeitSchaetzung(daten, lauf, schritt)
     const geplant = dauer(schritt.von, schritt.bis)
-    if (geschaetzt !== null && geplant !== null && geplant < geschaetzt * KNAPP) {
+    if (schritt.art === 'fahrt' && geschaetzt !== null && geplant !== null
+        && geplant < geschaetzt * KNAPP) {
         befunde.push({art: 'zuKnapp', ...stelle, werte: {geplant, geschaetzt}})
+    }
+
+    const weg = anfahrt(daten, lauf, schritt)
+    if (weg && weg.minuten > 0 && geplant !== null && geplant <= weg.minuten) {
+        befunde.push({art: 'fahrtFrisstAufenthalt', ...stelle,
+            werte: {fahrzeit: weg.minuten, geplant}})
     }
     return befunde
 }
 
 /**
- * Geschätzte Fahrzeit dieses Schritts: Luftlinie mal Minuten je Kilometer, auf fünf Minuten
+ * Geschätzte Fahrzeit zwischen zwei Orten: Luftlinie mal Minuten je Kilometer, auf fünf Minuten
  * gerundet und nie unter fünf. Ohne Koordinaten an einem der beiden Orte gibt es keine Schätzung
  * — die Luftlinie kennt ohnehin weder Spree noch Baustelle.
  */
+export function schaetzung(daten: Plandaten, vonOrtId: string, nachOrtId: string,
+                           mittel: Mittel): number | null {
+    if (mittel === 'eigen' || vonOrtId === nachOrtId) return null
+    const von = daten.punkte?.[vonOrtId]
+    const nach = daten.punkte?.[nachOrtId]
+    if (!von || !nach) return null
+    return Math.max(5, Math.round(entfernungKm(von, nach) * MINUTEN_JE_KM[mittel] / 5) * 5)
+}
+
+/**
+ * Die Schätzung, die zu diesem Schritt gehört: bei einer eingetragenen Fahrt die für sie selbst,
+ * bei einem Aufenthalt die für seine erzeugte Anfahrt.
+ */
 export function fahrzeitSchaetzung(daten: Plandaten, lauf: Lauf, schritt: Schritt): number | null {
-    if (schritt.art !== 'fahrt' || schritt.mittel === 'eigen') return null
-    const von = daten.punkte?.[vonOrt(lauf, schritt)]
-    const nach = daten.punkte?.[schritt.ortId]
-    if (!von || !nach || vonOrt(lauf, schritt) === schritt.ortId) return null
-    return Math.max(5, Math.round(entfernungKm(von, nach) * MINUTEN_JE_KM[schritt.mittel] / 5) * 5)
+    if (schritt.art === 'fahrt') {
+        return schaetzung(daten, vonOrt(lauf, schritt), schritt.ortId, mittelVon(lauf, schritt))
+    }
+    const weg = anfahrt(daten, lauf, schritt)
+    return weg ? schaetzung(daten, weg.vonOrtId, weg.nachOrtId, weg.mittel) : null
 }
 
 /**
@@ -391,6 +506,14 @@ export function pruefen(daten: Plandaten): Befund[] {
     for (const punkt of daten.planung.programmpunkte) {
         if (!benutzt.has(punkt.id)) {
             befunde.push({art: 'lageLeer', programmpunktId: punkt.id, werte: {was: punkt.name}})
+            continue
+        }
+        const orte = new Set(daten.planung.laeufe.flatMap(lauf => lauf.schritte
+            .filter(schritt => schritt.programmpunktId === punkt.id)
+            .map(schritt => schritt.ortId)))
+        if (orte.size > 1) {
+            befunde.push({art: 'lageZweiOrte', programmpunktId: punkt.id,
+                werte: {was: punkt.name, anzahl: orte.size}})
         }
     }
     return befunde

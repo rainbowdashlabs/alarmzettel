@@ -16,10 +16,11 @@ STAMM = {
 PLAN = {
     "aktiv": True,
     "programmpunkte": [{"id": "g1", "sortierung": 0.0, "name": "Brand im Kindergarten",
-                        "ortId": "o1", "alarmId": "a1"}],
+                        "alarmId": "a1"}],
     "laeufe": [{"id": "l1", "sortierung": 0.0, "fahrzeugId": "f1", "personId": "",
                 "schritte": [
                     {"id": "s1", "sortierung": 0.0, "art": "aufenthalt", "mittel": "fahrzeug",
+                     "fahrzeit": 0,
                      "von": "2026-09-19T06:30", "bis": "2026-09-19T07:45", "ortId": "o1",
                      "programmpunktId": "", "aufgebot": True, "notiz": "Fahrzeugcheck",
                      "besatzung": [{"id": "b1", "sortierung": 0.0, "personId": "p1",
@@ -27,6 +28,7 @@ PLAN = {
                      "material": [{"id": "m1", "sortierung": 0.0, "materialId": "mat1",
                                    "anzahl": 4}]},
                     {"id": "s2", "sortierung": 1.0, "art": "fahrt", "mittel": "fahrzeug",
+                     "fahrzeit": 0,
                      "von": "2026-09-19T07:45", "bis": "2026-09-19T08:00", "ortId": "o1",
                      "programmpunktId": "g1", "aufgebot": False, "notiz": "",
                      "besatzung": [{"id": "b2", "sortierung": 0.0, "personId": "p1",

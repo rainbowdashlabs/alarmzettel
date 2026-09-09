@@ -20,6 +20,7 @@ defineProps<{ abgeleitet: Alarmableitung }>()
             class="border-t border-rule">
           <td class="py-1 pr-3 font-bold">{{ blatt.funkrufname }}</td>
           <td class="tabular py-1 pr-3">{{ blatt.einsatzDatum }} {{ blatt.einsatzZeit }}</td>
+          <td class="tabular py-1 pr-3 text-muted">{{ blatt.einsatzNr }}</td>
           <td class="py-1 text-muted">{{ t('ausPlan.staerke', {n: blatt.staerke}) }}</td>
         </tr>
       </tbody>

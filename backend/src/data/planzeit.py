@@ -26,3 +26,12 @@ def tag(zeitpunkt: str) -> str:
 
 def uhrzeit(zeitpunkt: str) -> str:
     return zeitpunkt[11:16] if len(zeitpunkt) >= 16 else ""
+
+
+def verschieben(zeitpunkt: str, dazu: int) -> str:
+    """Denselben Zeitpunkt um Minuten versetzt — auch über Mitternacht hinweg."""
+    wert = minuten(zeitpunkt)
+    if wert is None:
+        return zeitpunkt
+    tage, rest = divmod(wert + dazu, 24 * 60)
+    return f"{date.fromordinal(tage).isoformat()}T{rest // 60:02d}:{rest % 60:02d}"

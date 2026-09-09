@@ -140,16 +140,10 @@
             "programmpunktId": "",
             "besatzung": [
               {
-                "id": "b1",
+                "id": "b-p-alex-0",
                 "sortierung": 0,
                 "personId": "p-alex",
                 "faehrt": true
-              },
-              {
-                "id": "b2",
-                "sortierung": 1,
-                "personId": "p-maria",
-                "faehrt": false
               }
             ],
             "notiz": "",
@@ -160,7 +154,8 @@
                 "materialId": "m-puppe",
                 "anzahl": 4
               }
-            ]
+            ],
+            "fahrzeit": 0
           },
           {
             "id": "s2",
@@ -173,16 +168,10 @@
             "programmpunktId": "",
             "besatzung": [
               {
-                "id": "b3",
+                "id": "b-p-alex-0",
                 "sortierung": 0,
                 "personId": "p-alex",
                 "faehrt": true
-              },
-              {
-                "id": "b4",
-                "sortierung": 1,
-                "personId": "p-maria",
-                "faehrt": false
               }
             ],
             "notiz": "",
@@ -193,7 +182,8 @@
                 "materialId": "m-puppe",
                 "anzahl": 4
               }
-            ]
+            ],
+            "fahrzeit": 0
           },
           {
             "id": "s3",
@@ -206,16 +196,10 @@
             "programmpunktId": "g-brand",
             "besatzung": [
               {
-                "id": "b5",
+                "id": "b-p-alex-0",
                 "sortierung": 0,
                 "personId": "p-alex",
                 "faehrt": true
-              },
-              {
-                "id": "b6",
-                "sortierung": 1,
-                "personId": "p-mimen",
-                "faehrt": false
               }
             ],
             "notiz": "Nebel erst auf Zeichen",
@@ -232,27 +216,29 @@
                 "materialId": "m-nebel",
                 "anzahl": 1
               }
-            ]
+            ],
+            "fahrzeit": 0
           },
           {
             "id": "s4",
             "sortierung": 3,
             "art": "aufenthalt",
             "mittel": "fahrzeug",
-            "von": "2026-09-20T09:00",
-            "bis": "2026-09-20T11:00",
+            "von": "2026-09-19T10:00",
+            "bis": "2026-09-19T11:30",
             "ortId": "o-nord",
             "programmpunktId": "g-rea",
             "besatzung": [
               {
-                "id": "b7",
+                "id": "b-p-alex-0",
                 "sortierung": 0,
-                "personId": "p-maria",
+                "personId": "p-alex",
                 "faehrt": true
               }
             ],
             "notiz": "",
-            "material": []
+            "material": [],
+            "fahrzeit": 0
           }
         ]
       },
@@ -261,17 +247,18 @@
         "fahrzeugId": "f-mtf",
         "schritte": [
           {
-            "id": "s5",
+            "id": "s8",
             "sortierung": 0,
             "art": "aufenthalt",
             "mittel": "fahrzeug",
-            "von": "2026-09-19T09:00",
-            "bis": "2026-09-19T10:00",
-            "ortId": "o-kita",
-            "programmpunktId": "g-brand",
+            "fahrzeit": 0,
+            "von": "2026-09-19T08:00",
+            "bis": "2026-09-19T08:50",
+            "ortId": "o-nord",
+            "programmpunktId": "",
             "besatzung": [
               {
-                "id": "b8",
+                "id": "b-p-maria-0",
                 "sortierung": 0,
                 "personId": "p-maria",
                 "faehrt": true
@@ -279,6 +266,33 @@
             ],
             "notiz": "",
             "material": []
+          },
+          {
+            "id": "s5",
+            "sortierung": 1,
+            "art": "aufenthalt",
+            "mittel": "fahrzeug",
+            "von": "2026-09-19T08:50",
+            "bis": "2026-09-19T10:00",
+            "ortId": "o-kita",
+            "programmpunktId": "g-brand",
+            "besatzung": [
+              {
+                "id": "b-p-maria-0",
+                "sortierung": 0,
+                "personId": "p-maria",
+                "faehrt": true
+              },
+              {
+                "id": "b-p-mimen-1",
+                "sortierung": 1,
+                "personId": "p-mimen",
+                "faehrt": false
+              }
+            ],
+            "notiz": "",
+            "material": [],
+            "fahrzeit": 0
           }
         ]
       },
@@ -292,25 +306,27 @@
             "art": "aufenthalt",
             "mittel": "fuss",
             "von": "2026-09-19T07:30",
-            "bis": "2026-09-19T08:39",
+            "bis": "2026-09-19T08:50",
             "ortId": "o-kita",
             "programmpunktId": "",
             "besatzung": [],
             "notiz": "",
-            "material": []
+            "material": [],
+            "fahrzeit": 0
           },
           {
             "id": "s7",
             "sortierung": 1,
-            "art": "fahrt",
+            "art": "aufenthalt",
             "mittel": "fuss",
             "von": "2026-09-19T10:00",
-            "bis": "2026-09-19T10:45",
+            "bis": "2026-09-19T11:30",
             "ortId": "o-nord",
             "programmpunktId": "",
             "besatzung": [],
             "notiz": "",
-            "material": []
+            "material": [],
+            "fahrzeit": 0
           }
         ]
       }

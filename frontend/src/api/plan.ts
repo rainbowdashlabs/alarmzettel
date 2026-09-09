@@ -7,6 +7,8 @@ export interface Planblatt {
     staerke: string
     einsatzDatum: string
     einsatzZeit: string
+    /** Aus der Uhrzeit gerechnet, sofern der Katalog Alarme pro Tag führt. */
+    einsatzNr: string
 }
 
 export interface Alarmableitung {

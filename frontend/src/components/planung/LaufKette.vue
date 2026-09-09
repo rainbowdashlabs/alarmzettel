@@ -5,9 +5,10 @@ import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
   alleOrte, darfFahren, lageName, materialHinzufuegen, materialName, materialSichern,
-  mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
+  mehrereTage, ortName, personName, plandaten, programmpunkt, programmpunktAnlegen,
+  schrittAnhaengen,
 } from '../../store/planung'
-import {fahrzeitSchaetzung, pruefen} from '../../scripts/ablauf'
+import {anfahrt, fahrzeitSchaetzung, pruefen} from '../../scripts/ablauf'
 import type {Befund} from '../../scripts/ablauf'
 import {alsMinuten, dauer, tagVon, uhrzeit, verschieben} from '../../scripts/zeit'
 import type {Lauf, Schritt} from '../../interfaces/Planung'
@@ -37,6 +38,14 @@ const befunde = computed(() => {
  */
 function schaetzung(schritt: Schritt): number | null {
   return fahrzeitSchaetzung(plandaten(), lauf, schritt)
+}
+
+/**
+ * Die Fahrt, die vor diesem Aufenthalt von selbst entsteht. Sie wird nirgends gepflegt, steht
+ * aber am Schritt — sonst sähe es aus, als sei man um 7:50 schon da.
+ */
+function weg(schritt: Schritt) {
+  return anfahrt(plandaten(), lauf, schritt)
 }
 
 function meldung(befund: Befund): string {
@@ -106,7 +115,7 @@ function materialGewaehlt(schritt: Schritt, feld: HTMLInputElement) {
 }
 
 function lageAnlegen(schritt: Schritt) {
-  schritt.programmpunktId = programmpunktAnlegen(schritt.ortId).id
+  schritt.programmpunktId = programmpunktAnlegen().id
 }
 </script>
 
@@ -125,6 +134,14 @@ function lageAnlegen(schritt: Schritt) {
           {{ uhrzeit(schritt.von) }}–{{ uhrzeit(schritt.bis) }}
         </span>
         <span class="text-muted text-[13px]">{{ dauer(schritt.von, schritt.bis) }} min</span>
+        <span v-if="weg(schritt)" class="text-muted text-[13px]"
+              :title="t('ablauf.anfahrtHinweis')">
+          <font-awesome-icon
+            :icon="weg(schritt)!.mittel === 'fahrzeug'
+              ? 'fa-solid fa-truck' : 'fa-solid fa-person-walking'" class="mr-1"/>
+          {{ t('ablauf.anfahrt', {
+            woher: ortName(weg(schritt)!.vonOrtId), an: uhrzeit(weg(schritt)!.bis)}) }}
+        </span>
         <span v-if="schaetzung(schritt) !== null" class="text-muted text-[13px]"
               :title="t('ablauf.schaetzungHinweis')">
           <font-awesome-icon
@@ -160,7 +177,7 @@ function lageAnlegen(schritt: Schritt) {
             </option>
           </select>
         </div>
-        <div v-if="schritt.art === 'fahrt' && !lauf.fahrzeugId">
+        <div v-if="!lauf.fahrzeugId && (schritt.art === 'fahrt' || weg(schritt))">
           <label class="feld-label">{{ t('ablauf.mittel') }}</label>
           <select v-model="schritt.mittel" class="field" @change="zielGewaehlt(schritt)">
             <option value="fuss">{{ t('ablauf.zuFuss') }}</option>
@@ -183,6 +200,13 @@ function lageAnlegen(schritt: Schritt) {
             </button>
           </div>
         </div>
+      </div>
+
+      <div v-if="weg(schritt)" class="flex items-center gap-2">
+        <label class="feld-label mb-0">{{ t('ablauf.fahrzeit') }}</label>
+        <input v-model.number="schritt.fahrzeit" type="number" min="0" step="5"
+               class="field field-menge tabular" :placeholder="String(schaetzung(schritt) ?? 0)"/>
+        <span class="text-muted text-[13px]">{{ t('ablauf.fahrzeitHinweis') }}</span>
       </div>
 
       <div v-if="schritt.programmpunktId && programmpunkt(schritt.programmpunktId)"

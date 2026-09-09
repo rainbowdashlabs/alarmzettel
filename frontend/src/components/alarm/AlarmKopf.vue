@@ -42,7 +42,11 @@ function stichwortGewaehlt() {
   <section class="abschnitt">
     <h2 class="abschnitt-titel">{{ t('abschnitt.kopf') }}</h2>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <TextFeld v-model="alarm.einsatzNr" :label="t('feld.einsatzNr')"/>
+      <div v-if="zeiten?.einsatzNr">
+        <label class="feld-label">{{ t('feld.einsatzNr') }}</label>
+        <input type="text" class="field" disabled :value="zeiten.einsatzNr"/>
+      </div>
+      <TextFeld v-else v-model="alarm.einsatzNr" :label="t('feld.einsatzNr')"/>
       <TextFeld v-model="alarm.aPlatz" :label="t('feld.aPlatz')"/>
       <TextFeld v-model="alarm.behoerde" :label="t('feld.behoerde')"/>
       <TextFeld v-model="alarm.titel" :label="t('feld.titel')"/>

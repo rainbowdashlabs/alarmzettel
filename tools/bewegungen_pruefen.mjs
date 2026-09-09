@@ -148,8 +148,9 @@ fall('Jeder Tag bekommt sein eigenes Bild', () => {
     const gesetzt = daten({fahrzeuge: [fahrzeug('f-lhf', 'LHF')], laeufe: [kette]})
     return [
         ['zwei Tage', bewegungstage(gesetzt).join(','), '2026-09-19,2026-09-20'],
-        ['und je Tag nur, was an ihm geschieht',
-            bewegungsbild(gesetzt, '2026-09-20').baender.map(b => b.name).join(','), 'Kindergarten'],
+        ['und je Tag, was an ihm geschieht — auch die Wache, von der die Anfahrt herführt',
+            bewegungsbild(gesetzt, '2026-09-20').baender.map(b => b.name).join(','),
+            'Wache Nord,Kindergarten'],
     ]
 })
 

@@ -148,6 +148,12 @@ export interface Kataloge {
     wache: Adresse
     /** Wie die Dienststelle im Plan heißt. Sie ist ein Ort, den es immer gibt. */
     wacheName: string
+    /**
+     * Wie viele Alarme die Leitstelle an einem Tag zählt. Daraus wird die Einsatznummer einer
+     * geplanten Lage: der Anteil des Tages, der bis zur Einsatzzeit vergangen ist. Null heißt,
+     * dass keine abgeleitet wird.
+     */
+    alarmeProTag: number
 }
 
 export interface Arbeitsmappe {
@@ -253,7 +259,7 @@ export function leereArbeitsmappe(): Arbeitsmappe {
             stichwoerter: stichwortvorlagen(), fahrzeuge: [], status: [], trupp: [], orte: [],
             material: [], tage: [], personen: [],
             rollen: [...ROLLEN], fahrerlaubnisse: [...FAHRERLAUBNISSE],
-            arbeitsgruppe: '', wache: leereAdresse(), wacheName: '',
+            arbeitsgruppe: '', wache: leereAdresse(), wacheName: '', alarmeProTag: 2200,
         },
     }
 }

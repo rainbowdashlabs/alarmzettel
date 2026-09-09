@@ -10,7 +10,7 @@ import {reactive} from 'vue'
 import {arbeitsmappe} from './arbeitsmappe'
 import {naechste, leereAdresse} from '../interfaces/Alarm'
 import {zuPunkt} from '../api/adressen'
-import {darfFahren as darfFahrenLaut, lagenName, MINUTEN_JE_KM} from '../scripts/ablauf'
+import {darfFahren as darfFahrenLaut, lagenName, lagenOrt, MINUTEN_JE_KM} from '../scripts/ablauf'
 import {entfernungKm} from '../scripts/polar'
 import type {Plandaten} from '../scripts/ablauf'
 import type {Punkt} from '../scripts/polar'
@@ -157,7 +157,7 @@ export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30):
     const beginn = vorher?.bis ?? standardBeginn()
     const schritt: Schritt = {
         id: crypto.randomUUID(), sortierung: naechste(lauf.schritte),
-        art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss',
+        art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss', fahrzeit: 0,
         von: beginn, bis: verschieben(beginn, minuten),
         ortId: vorher?.ortId ?? alleOrte()[0]?.id ?? '',
         programmpunktId: '', aufgebot: true, notiz: '',
@@ -246,13 +246,18 @@ export function materialName(materialId: string): string {
     return arbeitsmappe.kataloge.material.find(stueck => stueck.id === materialId)?.name ?? ''
 }
 
-export function programmpunktAnlegen(ortId: string): Programmpunkt {
+export function programmpunktAnlegen(): Programmpunkt {
     const punkt: Programmpunkt = {
         id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.planung.programmpunkte),
-        name: '', ortId, alarmId: '',
+        name: '', alarmId: '',
     }
     arbeitsmappe.planung.programmpunkte.push(punkt)
     return punkt
+}
+
+/** Wo eine Lage stattfindet: dort, wo die Schritte stehen, die auf sie zeigen. */
+export function lageOrt(programmpunktId: string): string {
+    return lagenOrt(plandaten(), programmpunktId)
 }
 
 /** Wie eine Lage heißt: das Stichwort ihres Alarms, sonst was an ihr steht. */

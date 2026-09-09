@@ -10,6 +10,7 @@ können, und das Typst-Template legt nur noch aus, was hier steht.
 from data.bewegungen import bewegungsbilder
 from data.fahrzeit import schaetzung
 from data.karten import adresstext, karten
+from data.kette import anfahrt, mittel_von, personenplan, von_ort as _von_ort
 from data.planzeit import minuten as _minuten, tag as _datum, uhrzeit as _uhrzeit
 from entities.alarm import Arbeitsmappe
 from entities.planung import Lauf, Person, Planung, Schritt
@@ -21,16 +22,13 @@ SPALTEN_JE_BLATT = 7
 """So viele Spalten passen quer auf ein Blatt; der Rest kommt auf das nächste."""
 
 
-def _von_ort(lauf: Lauf, schritt: Schritt) -> str:
-    """Wo eine Fahrt losgeht, sagt der vorige Schritt; ein Aufenthalt fängt an, wo er ist."""
-    if schritt.art != "fahrt":
-        return schritt.ortId
-    stelle = lauf.schritte.index(schritt)
-    return lauf.schritte[stelle - 1].ortId if stelle > 0 else schritt.ortId
-
-
 class Plan:
-    """Namen und Ketten der laufenden Arbeitsmappe, in der Form, die der Druck braucht."""
+    """
+    Namen und Ketten der laufenden Arbeitsmappe, in der Form, die der Druck braucht.
+
+    Zeigt eine Lage auf einen Alarm, ist dessen Stichwort ihr Name: zweimal dasselbe zu pflegen
+    hieße, es widersprüchlich pflegen zu können.
+    """
 
     def __init__(self, arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> None:
         self.planung: Planung = arbeitsmappe.planung
@@ -38,8 +36,6 @@ class Plan:
         self.personen = arbeitsmappe.kataloge.personen
         self._personen = {person.id: person for person in self.personen}
         stichwoerter = {alarm.id: alarm.stichwort for alarm in arbeitsmappe.alarme}
-        # Zeigt eine Lage auf einen Alarm, ist dessen Stichwort ihr Name: zweimal dasselbe zu
-        # pflegen hieße, es widersprüchlich pflegen zu können.
         self._lagen = {punkt.id: stichwoerter.get(punkt.alarmId) or punkt.name
                        for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
@@ -81,12 +77,23 @@ class Plan:
             return None
         return {"name": ort.name, "adresse": adresstext(ort.adresse), **karten(ort.adresse)}
 
+    @property
+    def punkte(self) -> dict:
+        return self._punkte
+
     def fahrzeit(self, lauf: Lauf, schritt: Schritt) -> int | None:
-        """Wie lange die Luftlinie dauern würde — neben der geplanten Zeit auf dem Blatt."""
-        if schritt.art != "fahrt":
+        """
+        Wie lange die Luftlinie dauern würde — neben der geplanten Zeit auf dem Blatt. Bei einer
+        eingetragenen Fahrt ist es ihre eigene, bei einem Aufenthalt die seiner Anfahrt.
+        """
+        if schritt.art == "fahrt":
+            return schaetzung(self._punkte.get(_von_ort(lauf, schritt)),
+                              self._punkte.get(schritt.ortId), mittel_von(lauf, schritt))
+        weg = anfahrt(lauf, schritt, self._punkte)
+        if weg is None:
             return None
-        return schaetzung(self._punkte.get(_von_ort(lauf, schritt)),
-                          self._punkte.get(schritt.ortId), schritt.mittel)
+        return schaetzung(self._punkte.get(weg.von_ort_id),
+                          self._punkte.get(weg.nach_ort_id), weg.mittel)
 
     def wohin(self, schritt: Schritt) -> str:
         """Wo man ist; bei einer Fahrt, wohin sie geht."""
@@ -94,17 +101,44 @@ class Plan:
         return f"→ {ort}" if schritt.art == "fahrt" else ort
 
 
-def _zeile(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict:
+def _anfahrtszeile(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict | None:
+    """
+    Die erzeugte Anfahrt als eigene Zeile. Ohne sie stünde auf dem Blatt, man sei um 7:50 schon
+    da, obwohl man da erst losfährt.
+    """
+    weg = anfahrt(lauf, schritt, plan.punkte)
+    if weg is None:
+        return None
     return {
-        "datum": _datum(schritt.von), "von": _uhrzeit(schritt.von), "bis": _uhrzeit(schritt.bis),
-        "art": schritt.art, "mittel": schritt.mittel,
+        "datum": _datum(weg.von), "von": _uhrzeit(weg.von), "bis": _uhrzeit(weg.bis),
+        "art": "fahrt", "mittel": weg.mittel,
+        "was": f"→ {plan.ort(weg.nach_ort_id)}", "ort": plan.ort(weg.nach_ort_id), "lage": "",
+        "vonOrt": plan.ort(weg.von_ort_id),
+        "material": [], "notiz": "",
+        "geschaetzt": plan.fahrzeit(lauf, schritt),
+        "_orte": [ort_id for ort_id in (weg.von_ort_id, weg.nach_ort_id) if ort_id],
+    }
+
+
+def _zeile(plan: Plan, lauf: Lauf, schritt: Schritt, ankunft: str = "") -> dict:
+    return {
+        "datum": _datum(schritt.von),
+        "von": _uhrzeit(ankunft or _ankunft(plan, lauf, schritt)),
+        "bis": _uhrzeit(schritt.bis),
+        "art": schritt.art, "mittel": mittel_von(lauf, schritt),
         "was": plan.wohin(schritt), "ort": plan.ort(schritt.ortId), "lage": plan.lage(schritt),
         "vonOrt": plan.ort(_von_ort(lauf, schritt)),
         "material": [name for name in plan.material(schritt) if name],
         "notiz": schritt.notiz,
-        "geschaetzt": plan.fahrzeit(lauf, schritt),
+        "geschaetzt": None if schritt.art == "aufenthalt" else plan.fahrzeit(lauf, schritt),
         "_orte": [ort_id for ort_id in (_von_ort(lauf, schritt), schritt.ortId) if ort_id],
     }
+
+
+def _ankunft(plan: Plan, lauf: Lauf, schritt: Schritt) -> str:
+    """Auf dem Blatt beginnt ein Aufenthalt, wenn man da ist — nicht, wenn man losfährt."""
+    weg = anfahrt(lauf, schritt, plan.punkte)
+    return weg.bis if weg else schritt.von
 
 
 def _personenblatt(plan: Plan, person: Person) -> dict:
@@ -113,17 +147,18 @@ def _personenblatt(plan: Plan, person: Person) -> dict:
     sortiert. Das ist der Zettel, den man morgens in die Hand drückt.
     """
     zeilen = []
-    for lauf in plan.planung.laeufe:
-        eigene = lauf.personId == person.id
-        for schritt in lauf.schritte:
-            sitzt = next((platz for platz in schritt.besatzung
-                          if platz.personId == person.id), None)
-            if not eigene and sitzt is None:
-                continue
-            zeilen.append({**_zeile(plan, lauf, schritt),
-                           "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
-                           "faehrt": bool(sitzt and sitzt.faehrt),
-                           "_sortierung": _minuten(schritt.von) or 0})
+    for eintrag in personenplan(plan.planung, person.id, plan.punkte):
+        lauf, schritt = eintrag.lauf, eintrag.schritt
+        faehrt_mit = eintrag.von_ort_id != schritt.ortId and schritt.art == "aufenthalt"
+        weg = _anfahrtszeile(plan, lauf, schritt) if faehrt_mit else None
+        if weg:
+            zeilen.append({**weg, "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
+                           "faehrt": eintrag.faehrt,
+                           "_sortierung": (_minuten(schritt.von) or 0) - 1})
+        zeilen.append({**_zeile(plan, lauf, schritt, eintrag.ankunft),
+                       "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
+                       "faehrt": eintrag.faehrt,
+                       "_sortierung": _minuten(eintrag.ankunft) or 0})
     zeilen.sort(key=lambda zeile: zeile["_sortierung"])
     for zeile in zeilen:
         del zeile["_sortierung"]
@@ -141,6 +176,9 @@ def _fahrzeugblatt(plan: Plan, lauf: Lauf) -> dict:
             if person:
                 besatzung.append({"name": person.name, "anzahl": person.anzahl,
                                   "faehrt": platz.faehrt})
+        weg = _anfahrtszeile(plan, lauf, schritt)
+        if weg:
+            zeilen.append({**weg, "besatzung": besatzung})
         zeilen.append({**_zeile(plan, lauf, schritt), "besatzung": besatzung})
     return {"name": plan.name(lauf), "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
 
@@ -230,13 +268,27 @@ def _zelle_zur_zeit(plan: Plan, lauf: Lauf, datum: str, minute: int) -> str:
     for schritt in lauf.schritte:
         if _datum(schritt.von) != datum:
             continue
-        von, bis = _minuten(schritt.von), _minuten(schritt.bis)
-        if von is None or bis is None:
-            continue
-        anteil = min(bis, minute + RASTER) - max(von, minute)
-        if anteil > laengster:
-            beste, laengster = _zelle(plan, lauf, schritt), anteil
+        for von, bis, text in _abschnitte(plan, lauf, schritt):
+            anteil = min(bis, minute + RASTER) - max(von, minute)
+            if anteil > laengster:
+                beste, laengster = text, anteil
     return beste
+
+
+def _abschnitte(plan: Plan, lauf: Lauf, schritt: Schritt) -> list[tuple[int, int, str]]:
+    """
+    Ein Schritt auf der Zeitachse. Ein Aufenthalt mit erzeugter Anfahrt zerfällt in zwei Stücke:
+    erst die Fahrt, dann das Dasein — sonst stünde die Lage schon im Raster, während man noch
+    unterwegs ist.
+    """
+    von, bis = _minuten(schritt.von), _minuten(schritt.bis)
+    if von is None or bis is None:
+        return []
+    weg = anfahrt(lauf, schritt, plan.punkte)
+    da = _minuten(weg.bis) if weg else None
+    if da is None or da <= von or da >= bis:
+        return [(von, bis, _zelle(plan, lauf, schritt))]
+    return [(von, da, f"→ {plan.ort(schritt.ortId)}"), (da, bis, _zelle(plan, lauf, schritt))]
 
 
 def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
@@ -252,5 +304,5 @@ def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe
                       if lauf.fahrzeugId and lauf.schritte],
         "gesamt": _gesamtplan(plan),
-        "bewegung": bewegungsbilder(arbeitsmappe),
+        "bewegung": bewegungsbilder(arbeitsmappe, punkte),
     }

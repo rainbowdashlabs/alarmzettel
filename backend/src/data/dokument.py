@@ -51,7 +51,7 @@ UMGEZOGEN = ("orte", "tage", "personen", "rollen", "fahrerlaubnisse")
 # Jede Liste des Plans mit den Feldern, die als Pfad je Eintrag geschrieben werden. Die
 # geschachtelten Teile — Schritte und Besatzung — hängen darunter.
 PLANUNGSEINTRAEGE = {
-    "programmpunkte": ("name", "ortId", "alarmId"),
+    "programmpunkte": ("name", "alarmId"),
     "laeufe": ("fahrzeugId", "personId"),
 }
 
@@ -61,10 +61,10 @@ KATALOGEINTRAEGE = {
     "personen": ("name", "anzahl"),
 }
 
-SCHRITTFELDER = ("art", "mittel", "von", "bis", "ortId", "programmpunktId", "aufgebot",
-                 "notiz")
+SCHRITTFELDER = ("art", "mittel", "fahrzeit", "von", "bis", "ortId", "programmpunktId",
+                 "aufgebot", "notiz")
 
-VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False, "anzahl": 1}
+VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False, "anzahl": 1, "fahrzeit": 0}
 """
 Was ein Feld bedeutet, das eine ältere Arbeitsmappe noch gar nicht kannte. Für Text ist das der
 leere String; ein Wahrheitswert und eine Anzahl brauchen ihre eigene Vorgabe, sonst käme ein
@@ -163,6 +163,7 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
     kataloge = arbeitsmappe.get("kataloge") or {}
     werte[_pfad("kataloge", "arbeitsgruppe")] = kataloge.get("arbeitsgruppe", "")
     werte[_pfad("kataloge", "wacheName")] = kataloge.get("wacheName", "")
+    werte[_pfad("kataloge", "alarmeProTag")] = kataloge.get("alarmeProTag", 2200)
     werte.update(_adresse_felder(_pfad("kataloge", "wache"), kataloge.get("wache") or {}))
     # Status and Trupp are words and nothing else, so the word is its own key. Stichwörter and
     # vehicles are pointed at by the Alarme, so they are keyed by an id that a rename survives.

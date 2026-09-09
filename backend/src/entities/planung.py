@@ -60,12 +60,12 @@ class Person(Eintrag):
 
 class Programmpunkt(Eintrag):
     """
-    Die Lage als solche, ohne Zeiten und ohne Teilnehmer: wann sie läuft und wer dabei ist, sagen
-    die Schritte, die auf sie zeigen. So kann sie sich nicht selbst widersprechen.
+    Die Lage als solche, ohne Zeiten, ohne Ort und ohne Teilnehmer: wann sie läuft, wo sie
+    stattfindet und wer dabei ist, sagen die Schritte, die auf sie zeigen. So kann sie sich nicht
+    selbst widersprechen.
     """
 
     name: str = ""
-    ortId: str = ""
     alarmId: str = ""
 
 
@@ -93,7 +93,11 @@ class Schritt(Eintrag):
     """
 
     art: Literal["aufenthalt", "fahrt"] = "aufenthalt"
+    """Womit es hergeht — bei einem Aufenthalt für die erzeugte Anfahrt, bei einer Fahrt für sie
+    selbst."""
     mittel: Literal["fahrzeug", "fuss", "eigen"] = "fahrzeug"
+    """Minuten für die erzeugte Anfahrt. Null heißt: die Schätzung gilt."""
+    fahrzeit: int = 0
     von: str = ""
     bis: str = ""
     """Wo man ist, beziehungsweise wohin es geht. Woher, sagt der vorige Schritt."""

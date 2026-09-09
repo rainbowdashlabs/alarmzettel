@@ -28,8 +28,8 @@ MAPPE = {
     },
     "planung": {
         "aktiv": True,
-        "programmpunkte": [{"id": "g-brand", "name": "Brand im Kindergarten", "ortId": "o-kita"},
-                           {"id": "g-leer", "name": "Rea", "ortId": "o-nord"}],
+        "programmpunkte": [{"id": "g-brand", "name": "Brand im Kindergarten"},
+                           {"id": "g-leer", "name": "Rea"}],
         "laeufe": [
             {"id": "l-lhf", "fahrzeugId": "f-lhf", "schritte": [
                 {"id": "s1", "sortierung": 0.0, "art": "aufenthalt",
@@ -286,6 +286,74 @@ class FahrzeitTest(unittest.TestCase):
         self.assertTrue(all(zeile["geschaetzt"] is None for zeile in self.zeilen()))
 
 
+class AnfahrtTest(unittest.TestCase):
+    """
+    Folgt ein Aufenthalt direkt auf einen anderen an einem anderen Ort, entsteht die Fahrt
+    dazwischen von selbst. Sie beginnt mit dem Aufenthalt — er ist der Aufbruch, nicht die
+    Ankunft.
+    """
+
+    PUNKTE = {"o-nord": {"ostwert": 400000, "nordwert": 5818000},
+              "o-kita": {"ostwert": 400000, "nordwert": 5814000}}
+
+    def zeilen(self, **schrittfelder) -> list[dict]:
+        kette = {"id": "l-mtf", "fahrzeugId": "f-mtf", "schritte": [
+            {"id": "a1", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T07:00", "bis": "2026-09-19T07:50", "ortId": "o-nord",
+             "besatzung": [{"id": "c1", "personId": "p-alex", "faehrt": True}]},
+            {"id": "a2", "sortierung": 1.0, "art": "aufenthalt",
+             "von": "2026-09-19T07:50", "bis": "2026-09-19T09:00", "ortId": "o-kita",
+             "programmpunktId": "g-brand",
+             "besatzung": [{"id": "c2", "personId": "p-alex", "faehrt": True}],
+             **schrittfelder},
+        ]}
+        mappe = Arbeitsmappe.model_validate(
+            MAPPE | {"planung": MAPPE["planung"] | {"laeufe": [kette]}})
+        blatt = next(blatt for blatt in plandaten(mappe, self.PUNKTE)["fahrzeuge"]
+                     if blatt["name"] == "MTF 6502.1")
+        return blatt["zeilen"]
+
+    def test_die_fahrt_steht_als_eigene_zeile(self):
+        arten = [(zeile["art"], zeile["von"], zeile["bis"]) for zeile in self.zeilen()]
+        self.assertEqual([("aufenthalt", "07:00", "07:50"),
+                          ("fahrt", "07:50", "08:00"),
+                          ("aufenthalt", "08:00", "09:00")], arten)
+
+    def test_eine_eigene_fahrzeit_schlaegt_die_schaetzung(self):
+        arten = [(zeile["art"], zeile["von"]) for zeile in self.zeilen(fahrzeit=25)]
+        self.assertEqual([("aufenthalt", "07:00"), ("fahrt", "07:50"), ("aufenthalt", "08:15")],
+                         arten)
+
+    def test_ohne_ortswechsel_entsteht_nichts(self):
+        arten = [zeile["art"] for zeile in self.zeilen(ortId="o-nord")]
+        self.assertEqual(["aufenthalt", "aufenthalt"], arten)
+
+    def test_wer_schon_am_ziel_steht_faehrt_nicht_mit(self):
+        """Der Mime wartet am Kindergarten; auf seinem Blatt steht keine Anfahrt."""
+        kette = {"id": "l-mtf", "fahrzeugId": "f-mtf", "schritte": [
+            {"id": "a1", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T07:00", "bis": "2026-09-19T07:50", "ortId": "o-nord",
+             "besatzung": [{"id": "c1", "personId": "p-alex", "faehrt": True}]},
+            {"id": "a2", "sortierung": 1.0, "art": "aufenthalt",
+             "von": "2026-09-19T07:50", "bis": "2026-09-19T09:00", "ortId": "o-kita",
+             "besatzung": [{"id": "c2", "personId": "p-alex", "faehrt": True},
+                           {"id": "c3", "personId": "p-mimen"}]},
+        ]}
+        wartend = {"id": "l-mimen", "personId": "p-mimen", "schritte": [
+            {"id": "a3", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T06:00", "bis": "2026-09-19T07:50", "ortId": "o-kita"}]}
+        mappe = Arbeitsmappe.model_validate(
+            MAPPE | {"planung": MAPPE["planung"] | {"laeufe": [kette, wartend]}})
+        blaetter = {blatt["name"]: blatt for blatt in plandaten(mappe, self.PUNKTE)["personen"]}
+        self.assertEqual(["fahrt"],
+                         [zeile["art"] for zeile in blaetter["Alex"]["zeilen"]
+                          if zeile["art"] == "fahrt"])
+        self.assertEqual([], [zeile["art"] for zeile in blaetter["Mimen"]["zeilen"]
+                              if zeile["art"] == "fahrt"])
+        self.assertEqual(["06:00", "07:50"],
+                         [zeile["von"] for zeile in blaetter["Mimen"]["zeilen"]])
+
+
 class BewegungTest(unittest.TestCase):
     """Das Bild, das der Bildschirm auch zeichnet: Bänder, Reihen darin, Zeitfenster."""
 
@@ -341,7 +409,8 @@ class BewegungTest(unittest.TestCase):
              "ortId": "o-kita"})
         bilder = self.bild(zwei)
         self.assertEqual(["2026-09-19", "2026-09-20"], [bild["datum"] for bild in bilder])
-        self.assertEqual(["Kindergarten"], [band["name"] for band in bilder[1]["baender"]])
+        self.assertEqual(["Wache Nord", "Kindergarten"],
+                         [band["name"] for band in bilder[1]["baender"]])
 
     def test_die_minuten_zaehlen_vom_tag_des_bildes(self):
         """Über Mitternacht hinaus wird die Achse länger, nicht kürzer."""

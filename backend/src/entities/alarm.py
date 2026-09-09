@@ -161,6 +161,12 @@ class Kataloge(BaseModel):
     wache: Adresse = Adresse()
     """Wie die Dienststelle im Plan heißt. Sie ist ein Ort, den es immer gibt."""
     wacheName: str = ""
+    """
+    Wie viele Alarme die Leitstelle an einem Tag zählt. Daraus wird die Einsatznummer einer
+    geplanten Lage: der Anteil des Tages, der bis zur Einsatzzeit vergangen ist. Null heißt,
+    dass keine abgeleitet wird und die getippte stehen bleibt.
+    """
+    alarmeProTag: int = 2200
 
     def alle_orte(self) -> list[Ort]:
         """

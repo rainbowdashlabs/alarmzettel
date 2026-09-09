@@ -52,13 +52,12 @@ export interface Person extends Eintrag {
 }
 
 /**
- * Die Lage als solche, ohne Zeiten und ohne Teilnehmer: wann sie läuft und wer dabei ist, sagen
- * die Schritte, die auf sie zeigen. So kann sie sich nicht selbst widersprechen, und zwei
- * Fahrzeuge an derselben Lage teilen sich einen Eintrag.
+ * Die Lage als solche, ohne Zeiten, ohne Ort und ohne Teilnehmer: wann sie läuft, wo sie
+ * stattfindet und wer dabei ist, sagen die Schritte, die auf sie zeigen. So kann sie sich nicht
+ * selbst widersprechen, und zwei Fahrzeuge an derselben Lage teilen sich einen Eintrag.
  */
 export interface Programmpunkt extends Eintrag {
     name: string
-    ortId: string
     /** Der Alarm, der zu dieser Lage gehört. Leer, wenn es keiner ist — Frühstück etwa. */
     alarmId: string
 }
@@ -88,8 +87,10 @@ export interface Materialposten extends Eintrag {
  */
 export interface Schritt extends Eintrag {
     art: 'aufenthalt' | 'fahrt'
-    /** Nur bei `fahrt` von Belang. */
+    /** Womit es hergeht — beim Aufenthalt für die erzeugte Anfahrt, bei der Fahrt für sie selbst. */
     mittel: Mittel
+    /** Minuten für die erzeugte Anfahrt. Null heißt: die Schätzung gilt. */
+    fahrzeit: number
     von: string
     bis: string
     /** Wo man ist, beziehungsweise wohin es geht. Woher, sagt der vorige Schritt. */

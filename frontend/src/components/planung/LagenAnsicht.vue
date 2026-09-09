@@ -27,7 +27,7 @@ function alarmStichwort(alarmId: string): string {
         <h2 class="abschnitt-titel">
           {{ lageName(sicht.programmpunkt.id) || t('ablauf.ohneName') }}
         </h2>
-        <span class="text-muted text-sm">{{ ortName(sicht.programmpunkt.ortId) }}</span>
+        <span class="text-muted text-sm">{{ ortName(sicht.ortId) }}</span>
         <span v-if="sicht.von" class="tabular text-sm">
           <span v-if="mehrereTage() || tagVon(sicht.von) !== tagVon(sicht.bis)" class="text-muted">
             {{ tagVon(sicht.von) }}

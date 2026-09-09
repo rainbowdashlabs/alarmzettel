@@ -10,6 +10,7 @@ Ein Alarm, auf den keine Lage zeigt, verhält sich wie bisher; ohne eingeschalte
 sich überhaupt nichts.
 """
 
+from data.kette import lagen_ort
 from entities.alarm import Alarm, Arbeitsmappe, Einsatzmittelgruppe, Fahrzeug
 from entities.planung import Lauf, Programmpunkt, Schritt
 
@@ -26,10 +27,26 @@ def _uhrzeit(zeitpunkt: str) -> str:
     return zeitpunkt[11:16] if len(zeitpunkt) >= 16 else ""
 
 
+def _nummer(beginn: str, pro_tag: int) -> str:
+    """
+    Die Einsatznummer aus der Uhrzeit: der Anteil des Tages, der bis dahin vergangen ist, mal die
+    Alarme, die die Leitstelle an einem Tag zählt. Damit steigen die Nummern über den Tag und
+    haben Lücken — wie im Echtbetrieb, wo dazwischen die der ganzen Stadt liegen.
+    """
+    if not pro_tag or len(beginn) < 16:
+        return ""
+    try:
+        stunde, minute = int(beginn[11:13]), int(beginn[14:16])
+    except ValueError:
+        return ""
+    return str(round((stunde * 60 + minute) / (24 * 60) * pro_tag))
+
+
 def _anfahrt(lauf: Lauf, stelle: int) -> str:
     """
-    Wann das Fahrzeug für diese Lage losfährt. Steht es schon dort, ist es der Beginn des
-    Aufenthalts — dann gibt es keine Anfahrt, zu der eine Zeit gehören könnte.
+    Wann das Fahrzeug für diese Lage losfährt. Bei einer eingetragenen Fahrt ist es deren Beginn;
+    sonst der Beginn des Aufenthalts, denn der ist der Aufbruch — die Fahrt dorthin entsteht aus
+    ihm und dauert bis zur Ankunft.
     """
     schritt = lauf.schritte[stelle]
     vorher = lauf.schritte[stelle - 1] if stelle > 0 else None
@@ -81,7 +98,9 @@ def _beteiligte(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt) -> list[dict]:
 
 
 def _adresse(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt):
-    ort = next((ort for ort in arbeitsmappe.kataloge.alle_orte() if ort.id == punkt.ortId), None)
+    """Die Lage findet dort statt, wo die Schritte stehen, die auf sie zeigen."""
+    ort_id = lagen_ort(arbeitsmappe.planung, punkt.id)
+    ort = next((ort for ort in arbeitsmappe.kataloge.alle_orte() if ort.id == ort_id), None)
     return ort.adresse if ort else None
 
 
@@ -95,19 +114,20 @@ def ableitung(arbeitsmappe: Arbeitsmappe, alarm: Alarm) -> dict | None:
         return None
     adresse = _adresse(arbeitsmappe, punkt)
     return {
-        "lage": punkt.name,
+        "lage": alarm.stichwort or punkt.name,
         "einsatzadresse": adresse.model_dump() if adresse else None,
         "blaetter": [{
             "funkrufname": eintrag["funkrufname"],
             "staerke": eintrag["staerke"],
             "einsatzDatum": _datum(eintrag["beginn"]),
             "einsatzZeit": _uhrzeit(eintrag["beginn"]),
+            "einsatzNr": _nummer(eintrag["beginn"], arbeitsmappe.kataloge.alarmeProTag),
         } for eintrag in _beteiligte(arbeitsmappe, punkt)],
     }
 
 
 def _blatt(alarm: Alarm, punkt: Programmpunkt, beteiligte: list[dict], fuer: dict,
-           adresse) -> Alarm:
+           adresse, pro_tag: int = 0) -> Alarm:
     """Ein Zettel, gerichtet an ein Fahrzeug. Das Aufgebot listet trotzdem alle."""
     beginn = fuer["beginn"]
     gruppe = alarm.einsatzmittel[0].gruppe if alarm.einsatzmittel else ""
@@ -125,6 +145,9 @@ def _blatt(alarm: Alarm, punkt: Programmpunkt, beteiligte: list[dict], fuer: dic
     if beginn:
         aenderung |= {"einsatzDatum": _datum(beginn), "einsatzZeit": _uhrzeit(beginn),
                       "meldungDatum": _datum(beginn), "meldungZeit": _uhrzeit(beginn)}
+        nummer = _nummer(beginn, pro_tag)
+        if nummer:
+            aenderung["einsatzNr"] = nummer
     if adresse is not None:
         aenderung["einsatzadresse"] = adresse
     return alarm.model_copy(update=aenderung)
@@ -152,5 +175,7 @@ def mit_plan(arbeitsmappe: Arbeitsmappe) -> Arbeitsmappe:
             alarme.append(alarm.model_copy(
                 update={"einsatzadresse": adresse} if adresse is not None else {}))
             continue
-        alarme += [_blatt(alarm, punkt, beteiligte, fuer, adresse) for fuer in beteiligte]
+        alarme += [_blatt(alarm, punkt, beteiligte, fuer, adresse,
+                          arbeitsmappe.kataloge.alarmeProTag)
+                   for fuer in beteiligte]
     return arbeitsmappe.model_copy(update={"alarme": alarme})

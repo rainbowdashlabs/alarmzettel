@@ -231,8 +231,14 @@ function truppVorschau(staerke: string): string {
         <TextFeld v-model="arbeitsmappe.kataloge.arbeitsgruppe" :label="t('feld.arbeitsgruppe')"/>
         <TextFeld v-model="arbeitsmappe.kataloge.wacheName" :label="t('kataloge.wacheName')"
                   :platzhalter="t('kataloge.wachePlatzhalter')"/>
+        <div>
+          <label class="feld-label">{{ t('kataloge.alarmeProTag') }}</label>
+          <input v-model.number="arbeitsmappe.kataloge.alarmeProTag" type="number" min="0"
+                 step="100" class="field tabular"/>
+        </div>
       </div>
       <p class="text-muted text-[13px] mt-3 mb-4">{{ t('kataloge.arbeitsgruppeHinweis') }}</p>
+      <p class="text-muted text-[13px] mb-4">{{ t('kataloge.alarmeProTagHinweis') }}</p>
 
       <AdresseFeld v-model="arbeitsmappe.kataloge.wache" :titel="t('kataloge.wache')"/>
       <p class="text-muted text-[13px] mt-3">{{ t('kataloge.wacheHinweis') }}</p>

@@ -20,7 +20,8 @@ const gebaut = await build({
     entryPoints: [resolve(WURZEL, 'frontend/src/scripts/ablauf.ts')],
     bundle: true, format: 'esm', write: false, platform: 'node',
 })
-const {darfFahren, lagensicht, ortssicht, personenplan, pruefen} = await import(
+const {anfahrt, darfFahren, lagensicht, lagenOrt, mitfahrer, ortssicht, personenplan,
+    pruefen} = await import(
     'data:text/javascript;base64,' + Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 
 const TAG = '2026-09-19'
@@ -121,6 +122,105 @@ fall('Eine Fahrt fängt dort an, wo der vorige Schritt endete', () => {
     return [
         ['die Fahrt geht von Nord los', plan[1].vonOrtId, 'o-nord'],
         ['und kommt in Süd an', plan[1].nachOrtId, 'o-sued'],
+    ]
+})
+
+fall('Zwei Aufenthalte hintereinander erzeugen die Fahrt dazwischen', () => {
+    const kette = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('aufenthalt', '07:50', '09:00', 'o-sued', {besatzung: [sitzt('p-alex', true)]}),
+    ])
+    const gesetzt = daten({personen: [person('p-alex', 'Alex')], laeufe: [kette]})
+    const langsam = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord'),
+        schritt('aufenthalt', '07:50', '09:00', 'o-sued', {fahrzeit: 25}),
+    ])
+    const eigene = daten({laeufe: [langsam]})
+    const weg = anfahrt(gesetzt, kette, kette.schritte[1])
+    return [
+        ['sie geht von Nord nach Süd', `${weg.vonOrtId}→${weg.nachOrtId}`, 'o-nord→o-sued'],
+        ['und dauert die geschätzten zehn Minuten', weg.minuten, 10],
+        ['sie beginnt mit dem Aufenthalt und endet mit der Ankunft',
+            `${weg.von.slice(11)}–${weg.bis.slice(11)}`, '07:50–08:00'],
+        ['der Ort ist ab der Ankunft belegt',
+            ortssicht(gesetzt, 'o-sued')[0].von.slice(11), '08:00'],
+        ['eine eigene Fahrzeit schlägt die Schätzung',
+            anfahrt(eigene, eigene.planung.laeufe[0], eigene.planung.laeufe[0].schritte[1])
+                .bis.slice(11), '08:15'],
+    ]
+})
+
+fall('Steht eine Fahrt davor, entsteht keine zweite', () => {
+    const kette = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord'),
+        schritt('fahrt', '07:50', '08:20', 'o-sued'),
+        schritt('aufenthalt', '08:20', '09:00', 'o-sued'),
+    ])
+    const gesetzt = daten({laeufe: [kette]})
+    return [
+        ['die eingetragene bleibt die einzige',
+            anfahrt(gesetzt, kette, kette.schritte[2]), null],
+        ['und der Aufenthalt beginnt, wo sie endet',
+            ortssicht(gesetzt, 'o-sued')[0].von.slice(11), '08:20'],
+    ]
+})
+
+fall('Wer schon am Ziel steht, fährt nicht mit', () => {
+    const kette = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('aufenthalt', '07:50', '09:00', 'o-sued',
+            {besatzung: [sitzt('p-alex', true), sitzt('p-mimen')]}),
+    ])
+    const wartend = lauf({personId: 'p-mimen'}, [
+        schritt('aufenthalt', '06:00', '07:50', 'o-sued'),
+    ])
+    const gesetzt = daten({
+        personen: [person('p-alex', 'Alex'), person('p-mimen', 'Mimen')],
+        laeufe: [kette, wartend],
+    })
+    const alex = personenplan(gesetzt, 'p-alex')
+    const mimen = personenplan(gesetzt, 'p-mimen')
+    return [
+        ['Alex kommt aus Nord', alex[1].vonOrtId, 'o-nord'],
+        ['und ist um 08:00 da', alex[1].ankunft.slice(11), '08:00'],
+        ['die Mimen warten in Süd', mimen[1].vonOrtId, 'o-sued'],
+        ['und sind mit dem Schritt da', mimen[1].ankunft.slice(11), '07:50'],
+        ['nur Alex fährt mit', mitfahrer(gesetzt, kette, kette.schritte[1]).join(','), 'p-alex'],
+        ['und das ist kein Zustieg ins Nichts', arten(pruefen(gesetzt)).join(','), ''],
+    ]
+})
+
+fall('Die Anfahrt frisst den Aufenthalt', () => {
+    const kette = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord'),
+        schritt('aufenthalt', '07:50', '07:55', 'o-sued'),
+    ])
+    const knapp = lauf({fahrzeugId: 'f-mtf'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord'),
+        schritt('aufenthalt', '07:50', '08:30', 'o-sued'),
+    ])
+    return [
+        ['zehn Minuten Fahrt in fünf Minuten Schritt',
+            arten(pruefen(daten({laeufe: [kette]}))).join(','), 'fahrtFrisstAufenthalt'],
+        ['vierzig Minuten reichen', arten(pruefen(daten({laeufe: [knapp]}))).join(','), ''],
+    ]
+})
+
+fall('Eine Lage an zwei Orten', () => {
+    const punkt = {id: 'g-brand', sortierung: 0, name: 'Brand', alarmId: ''}
+    const eine = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-nord', {programmpunktId: 'g-brand'}),
+    ])
+    const andere = lauf({fahrzeugId: 'f-mtf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-sued', {programmpunktId: 'g-brand'}),
+    ])
+    const zwei = daten({programmpunkte: [punkt], laeufe: [eine, andere]})
+    const einig = daten({programmpunkte: [punkt], laeufe: [eine]})
+    return [
+        ['auseinandergelaufen wird gemeldet',
+            arten(pruefen(zwei)).join(','), 'lageZweiOrte'],
+        ['der Ort der Lage ist der ihrer Schritte', lagenOrt(einig, 'g-brand'), 'o-nord'],
+        ['an einem Ort ist alles in Ordnung', arten(pruefen(einig)).join(','), ''],
     ]
 })
 

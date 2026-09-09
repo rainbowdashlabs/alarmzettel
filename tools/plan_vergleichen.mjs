@@ -33,7 +33,8 @@ async function laden(pfad) {
         Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 }
 
-const {fahrzeitSchaetzung, lagenName, personenplan} = await laden('frontend/src/scripts/ablauf.ts')
+const {anfahrt, fahrzeitSchaetzung, lagenName, personenplan} =
+    await laden('frontend/src/scripts/ablauf.ts')
 const {bewegungsbild, bewegungstage} = await laden('frontend/src/scripts/bewegungen.ts')
 
 const mappe = JSON.parse(readFileSync(quelle, 'utf8'))
@@ -56,16 +57,29 @@ const ort = id => namen(orte, id, 'name')
 const lage = id => lagenName(daten, id)
 const fahrzeug = id => namen(mappe.kataloge?.fahrzeuge, id, 'funkrufname')
 
+const zeile = (name, felder) => console.log(['PLAN', name, ...felder].join(' | '))
+
 for (const person of mappe.kataloge?.personen ?? []) {
     for (const eintrag of personenplan(daten, person.id)) {
-        console.log([
-            'PLAN', person.name,
-            eintrag.schritt.von.slice(0, 10), eintrag.schritt.von.slice(11, 16),
-            eintrag.schritt.bis.slice(11, 16), eintrag.schritt.art,
-            ort(eintrag.vonOrtId), ort(eintrag.nachOrtId), lage(eintrag.schritt.programmpunktId),
+        const schritt = eintrag.schritt
+        const weg = eintrag.vonOrtId === schritt.ortId ? null : anfahrt(daten, eintrag.lauf, schritt)
+        if (weg && schritt.art === 'aufenthalt') {
+            zeile(person.name, [
+                weg.von.slice(0, 10), weg.von.slice(11, 16), weg.bis.slice(11, 16), 'fahrt',
+                ort(weg.vonOrtId), ort(weg.nachOrtId), '',
+                eintrag.faehrt ? 'faehrt' : '-', fahrzeug(eintrag.lauf.fahrzeugId),
+                fahrzeitSchaetzung(daten, eintrag.lauf, schritt) ?? '-',
+            ])
+        }
+        zeile(person.name, [
+            schritt.von.slice(0, 10), eintrag.ankunft.slice(11, 16), schritt.bis.slice(11, 16),
+            schritt.art, ort(schritt.art === 'fahrt' ? eintrag.vonOrtId : schritt.ortId),
+            ort(eintrag.nachOrtId),
+            lage(schritt.programmpunktId),
             eintrag.faehrt ? 'faehrt' : '-', fahrzeug(eintrag.lauf.fahrzeugId),
-            fahrzeitSchaetzung(daten, eintrag.lauf, eintrag.schritt) ?? '-',
-        ].join(' | '))
+            schritt.art === 'aufenthalt'
+                ? '-' : fahrzeitSchaetzung(daten, eintrag.lauf, schritt) ?? '-',
+        ])
     }
 }
 

@@ -26,9 +26,10 @@ const abgeleitet = ref<Alarmableitung | null>(null)
  */
 const planstand = computed(() => JSON.stringify([
   route.params.id,
-  arbeitsmappe.planung.programmpunkte.map(punkt => [punkt.id, punkt.alarmId, punkt.ortId]),
+  arbeitsmappe.planung.programmpunkte.map(punkt => [punkt.id, punkt.alarmId]),
   arbeitsmappe.planung.laeufe.map(lauf => lauf.schritte.map(
-      schritt => [schritt.programmpunktId, schritt.von, schritt.besatzung.length])),
+      schritt => [schritt.programmpunktId, schritt.ortId, schritt.von,
+                  schritt.besatzung.length])),
 ]))
 
 watch(planstand, async () => {
@@ -46,6 +47,7 @@ const planzeiten = computed(() => {
   return blatt ? {
     einsatzDatum: blatt.einsatzDatum, einsatzZeit: blatt.einsatzZeit,
     meldungDatum: blatt.einsatzDatum, meldungZeit: blatt.einsatzZeit,
+    einsatzNr: blatt.einsatzNr,
   } : undefined
 })
 

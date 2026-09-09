@@ -39,7 +39,7 @@ const UMGEZOGEN = ['orte', 'tage', 'personen', 'rollen', 'fahrerlaubnisse']
  * `PLANUNGSEINTRAEGE` in `backend/src/data/dokument.py`.
  */
 const PLANUNGSEINTRAEGE = {
-    programmpunkte: ['name', 'ortId', 'alarmId'],
+    programmpunkte: ['name', 'alarmId'],
     laeufe: ['fahrzeugId', 'personId'],
 } as const
 
@@ -49,8 +49,8 @@ const KATALOGEINTRAEGE = {
     personen: ['name', 'anzahl'],
 } as const
 
-const SCHRITTFELDER =
-    ['art', 'mittel', 'von', 'bis', 'ortId', 'programmpunktId', 'aufgebot', 'notiz'] as const
+const SCHRITTFELDER = ['art', 'mittel', 'fahrzeit', 'von', 'bis', 'ortId', 'programmpunktId',
+    'aufgebot', 'notiz'] as const
 
 type Eintragsdaten = Record<string, unknown> & { id: string, sortierung?: number }
 
@@ -59,7 +59,7 @@ type Eintragsdaten = Record<string, unknown> & { id: string, sortierung?: number
  * leere String; ein Wahrheitswert und eine Anzahl brauchen ihre eigene Vorgabe, sonst käme ein
  * leerer String zurück, den das Modell weder als Ja oder Nein noch als Zahl lesen kann.
  */
-const VORGABEN: Record<string, unknown> = {aufgebot: true, faehrt: false, anzahl: 1}
+const VORGABEN: Record<string, unknown> = {aufgebot: true, faehrt: false, anzahl: 1, fahrzeit: 0}
 
 function eintragsfelder(basis: string, werte: Flachbild, eintrag: Eintragsdaten,
                         felder: readonly string[], stelle: number) {
@@ -162,6 +162,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
 
     werte[pfad('kataloge', 'arbeitsgruppe')] = mappe.kataloge.arbeitsgruppe ?? ''
     werte[pfad('kataloge', 'wacheName')] = mappe.kataloge.wacheName ?? ''
+    werte[pfad('kataloge', 'alarmeProTag')] = mappe.kataloge.alarmeProTag ?? 2200
     adresse(pfad('kataloge', 'wache'), werte, mappe.kataloge.wache as never)
     // Status and Trupp are words and nothing else, so the word is its own key. Stichwörter and
     // vehicles are pointed at by the Alarme, so they are keyed by an id that a rename survives.
@@ -260,6 +261,7 @@ export function rund(werte: Flachbild): unknown {
         orte: {} as Record<string, Record<string, unknown>>,
         material: {} as Record<string, Record<string, unknown>>,
         arbeitsgruppe: '', wache: {} as Record<string, unknown>, wacheName: '',
+        alarmeProTag: 2200,
         ...Object.fromEntries(KATALOGWORTLISTEN.map(liste => [liste, [] as string[]])),
         ...Object.fromEntries(Object.keys(KATALOGEINTRAEGE).map(liste => [liste, {}])),
     }

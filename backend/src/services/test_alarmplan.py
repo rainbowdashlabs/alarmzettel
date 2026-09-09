@@ -31,7 +31,7 @@ MAPPE = {
     "planung": {
         "aktiv": True,
         "programmpunkte": [{"id": "g-brand", "name": "Brand im Kindergarten",
-                            "ortId": "o-kita", "alarmId": "a-brand"}],
+                            "alarmId": "a-brand"}],
         "laeufe": [
             {"id": "l-lhf", "fahrzeugId": "f-lhf", "schritte": [
                 {"id": "s1", "sortierung": 0.0, "art": "aufenthalt",
@@ -59,6 +59,24 @@ MAPPE = {
 
 def mappe(**aenderung) -> Arbeitsmappe:
     return Arbeitsmappe.model_validate(MAPPE | aenderung)
+
+
+class EinsatznummerTest(unittest.TestCase):
+    """
+    Die Nummer kommt aus der Uhrzeit: der Anteil des Tages, der bis dahin vergangen ist, mal die
+    Alarme, die die Leitstelle an einem Tag zählt.
+    """
+
+    def nummern(self, **kataloge) -> list[str]:
+        mappe = Arbeitsmappe.model_validate(
+            MAPPE | {"kataloge": MAPPE["kataloge"] | kataloge})
+        return [alarm.einsatzNr for alarm in mit_plan(mappe).alarme if alarm.id != "a-frei"]
+
+    def test_acht_uhr_dreissig_bei_2200_alarmen(self):
+        self.assertEqual(["779", "825"], self.nummern(alarmeProTag=2200))
+
+    def test_ohne_angabe_bleibt_die_getippte_nummer(self):
+        self.assertEqual(["", ""], self.nummern(alarmeProTag=0))
 
 
 class BlaetterTest(unittest.TestCase):
@@ -121,13 +139,17 @@ class BlaetterTest(unittest.TestCase):
                           for fahrzeug in alarme[0].einsatzmittel[0].fahrzeuge])
 
     def test_ohne_fahrzeug_bleibt_das_getippte_aufgebot(self):
-        """Sonst druckt der Zwischenstand „Lage da, Ketten noch nicht“ an niemanden adressiert."""
+        """
+        Sonst druckt der Zwischenstand „Lage da, Ketten noch nicht“ an niemanden adressiert. Auch
+        die Adresse bleibt die getippte: die Lage findet dort statt, wo ihre Schritte stehen, und
+        solange keiner steht, weiß der Plan den Ort nicht.
+        """
         ohne = {**MAPPE["planung"], "laeufe": []}
         alarme = self.alarme(planung=ohne)
         self.assertEqual(["a-brand", "a-frei"], [alarm.id for alarm in alarme])
         self.assertEqual("1. Alarm", alarme[0].einsatzmittel[0].gruppe)
         self.assertEqual("07:00", alarme[0].einsatzZeit)
-        self.assertEqual("Archenholdstraße", alarme[0].einsatzadresse.strasse)
+        self.assertEqual("Von Hand", alarme[0].einsatzadresse.strasse)
 
     def test_ausgeschaltete_planung_aendert_nichts(self):
         alarme = self.alarme(planung=MAPPE["planung"] | {"aktiv": False})
@@ -162,7 +184,7 @@ class AnfahrtTest(unittest.TestCase):
 
     def test_zwei_lagen_auf_denselben_alarm_nimmt_die_erste(self):
         punkte = MAPPE["planung"]["programmpunkte"] + [
-            {"id": "g-zweite", "name": "Noch eine", "ortId": "o-nord", "alarmId": "a-brand"}]
+            {"id": "g-zweite", "name": "Noch eine", "alarmId": "a-brand"}]
         alarme = mit_plan(mappe(planung=MAPPE["planung"] | {"programmpunkte": punkte})).alarme
         self.assertEqual("Archenholdstraße", alarme[0].einsatzadresse.strasse)
 
@@ -257,7 +279,7 @@ class AbleitungTest(unittest.TestCase):
         gelesen = mappe()
         alarm = next(alarm for alarm in gelesen.alarme if alarm.id == "a-brand")
         gefunden = ableitung(gelesen, alarm)
-        self.assertEqual("Brand im Kindergarten", gefunden["lage"])
+        self.assertEqual("Brand M", gefunden["lage"])
         self.assertEqual("Archenholdstraße", gefunden["einsatzadresse"]["strasse"])
         self.assertEqual(
             [("LHF 6501.3", "5", "08:30"), ("MTF 6502.1", "1", "09:00")],

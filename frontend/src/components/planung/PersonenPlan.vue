@@ -3,9 +3,19 @@ import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {lageName, mehrereTage, ortName, plandaten} from '../../store/planung'
-import {personenplan, pruefen} from '../../scripts/ablauf'
+import {anfahrt, personenplan, pruefen} from '../../scripts/ablauf'
 import type {Befund, Personenschritt} from '../../scripts/ablauf'
 import {tagwechsel, uhrzeit} from '../../scripts/zeit'
+
+/** Eine Zeile des Plans: ein Schritt, oder die Fahrt, die zu ihm hinführt. */
+interface Planzeile {
+  schluessel: string
+  von: string
+  bis: string
+  was: string
+  lage: string
+  womit: string
+}
 
 /**
  * Der Plan einer Person wird nirgends gepflegt: er ist die Summe der Schritte, in deren Besatzung
@@ -13,12 +23,31 @@ import {tagwechsel, uhrzeit} from '../../scripts/zeit'
  * widersprechen.
  */
 const plaene = computed(() => arbeitsmappe.kataloge.personen.map(person => {
-  const eintraege = personenplan(plandaten(), person.id)
-  return {
-    person, eintraege,
-    tage: tagwechsel(eintraege.map(eintrag => eintrag.schritt.von)),
-  }
+  const zeilen = personenplan(plandaten(), person.id).flatMap(zeilenVon)
+  return {person, zeilen, tage: tagwechsel(zeilen.map(zeile => zeile.von))}
 }))
+
+/**
+ * Die Zeilen zu einem Schritt. Fährt jemand die erzeugte Anfahrt mit, bekommt sie eine eigene —
+ * sonst stünde da, er sei um 7:50 schon dort, wo er erst hinfährt.
+ */
+function zeilenVon(eintrag: Personenschritt): Planzeile[] {
+  const zeilen: Planzeile[] = []
+  const weg = eintrag.vonOrtId === eintrag.schritt.ortId
+      ? null : anfahrt(plandaten(), eintrag.lauf, eintrag.schritt)
+  if (weg && eintrag.schritt.art === 'aufenthalt') {
+    zeilen.push({
+      schluessel: `${eintrag.schritt.id}-anfahrt`, von: weg.von, bis: weg.bis,
+      was: `→ ${ortName(weg.nachOrtId) || t('ablauf.ohneName')}`, lage: '',
+      womit: womit(eintrag, 'fahrt'),
+    })
+  }
+  zeilen.push({
+    schluessel: eintrag.schritt.id, von: eintrag.ankunft, bis: eintrag.schritt.bis,
+    was: was(eintrag), lage: lage(eintrag), womit: womit(eintrag, eintrag.schritt.art),
+  })
+  return zeilen
+}
 
 const befunde = computed(() => {
   const nachPerson = new Map<string, Befund[]>()
@@ -39,12 +68,12 @@ function was(eintrag: Personenschritt): string {
   return eintrag.schritt.art === 'fahrt' ? `→ ${ort}` : ort
 }
 
-function womit(eintrag: Personenschritt): string {
+function womit(eintrag: Personenschritt, art: string): string {
   if (eintrag.lauf.fahrzeugId) {
     return fahrzeugName(eintrag.lauf.fahrzeugId) +
         (eintrag.faehrt ? ` · ${t('ablauf.faehrt')}` : '')
   }
-  if (eintrag.schritt.art !== 'fahrt') return ''
+  if (art !== 'fahrt') return ''
   return t(`ablauf.${eintrag.schritt.mittel === 'eigen' ? 'eigen' : 'zuFuss'}`)
 }
 
@@ -60,20 +89,20 @@ function lage(eintrag: Personenschritt): string {
         {{ plan.person.name || t('ablauf.ohneName') }}
         <span v-if="plan.person.anzahl > 1" class="text-muted">({{ plan.person.anzahl }})</span>
       </h2>
-      <p v-if="!plan.eintraege.length" class="text-muted text-sm">{{ t('ablauf.ohnePlan') }}</p>
+      <p v-if="!plan.zeilen.length" class="text-muted text-sm">{{ t('ablauf.ohnePlan') }}</p>
       <table v-else class="w-full text-sm">
         <tbody>
-          <tr v-for="(eintrag, zeile) in plan.eintraege" :key="eintrag.schritt.id"
+          <tr v-for="(zeile, nummer) in plan.zeilen" :key="zeile.schluessel"
               class="border-t border-rule">
             <td v-if="mehrereTage()" class="tabular py-1 pr-3 text-muted whitespace-nowrap">
-              {{ plan.tage[zeile] }}
+              {{ plan.tage[nummer] }}
             </td>
             <td class="tabular py-1 pr-3 whitespace-nowrap">
-              {{ uhrzeit(eintrag.schritt.von) }}–{{ uhrzeit(eintrag.schritt.bis) }}
+              {{ uhrzeit(zeile.von) }}–{{ uhrzeit(zeile.bis) }}
             </td>
-            <td class="py-1 pr-3">{{ was(eintrag) }}</td>
-            <td class="py-1 pr-3 text-muted">{{ lage(eintrag) }}</td>
-            <td class="py-1 text-muted whitespace-nowrap">{{ womit(eintrag) }}</td>
+            <td class="py-1 pr-3">{{ zeile.was }}</td>
+            <td class="py-1 pr-3 text-muted">{{ zeile.lage }}</td>
+            <td class="py-1 text-muted whitespace-nowrap">{{ zeile.womit }}</td>
           </tr>
         </tbody>
       </table>
