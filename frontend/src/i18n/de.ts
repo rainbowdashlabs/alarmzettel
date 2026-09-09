@@ -18,10 +18,13 @@ export default {
         notFound: 'Nicht gefunden',
     },
     fuss: {
-        urheber: '© 2026 RainbowDashLabs und Mitwirkende',
-        gemacht: 'Gemacht mit ❤️ und 🏳️‍🌈',
-        lizenz: 'Lizenziert unter AGPL-3.0',
-        fassung: 'Alarmplaner {commit} · gebaut {gebaut}',
+        // Der Fuß bleibt englisch: Urheber-, Lizenz- und Bauhinweis stehen so in jeder
+        // Quelldatei, in der LICENSE und in den übrigen Projekten. Ein übersetzter
+        // Lizenzhinweis ist keiner mehr.
+        urheber: '© 2026 RainbowDashLabs and Contributor',
+        gemacht: 'Made with ❤️ and 🏳️‍🌈',
+        lizenz: 'Licensed under AGPL-3.0',
+        fassung: 'Alarmplaner {commit} · built {gebaut}',
     },
     liste: {
         leer: 'Noch kein Alarm angelegt.',
