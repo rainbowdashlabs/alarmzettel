@@ -42,7 +42,7 @@ watch(offen, wert => {
       <button type="button" class="flex items-center gap-3 grow text-left" @click="offen = !offen">
         <font-awesome-icon :icon="offen ? 'fa-solid fa-angle-down' : 'fa-solid fa-angle-right'"
                            class="text-muted"/>
-        <h2 class="abschnitt-titel mb-0">{{ titel }}</h2>
+        <h2 class="abschnitt-titel">{{ titel }}</h2>
         <span v-if="anzahl !== undefined" class="text-muted tabular text-sm">{{ anzahl }}</span>
       </button>
       <slot v-if="offen" name="werkzeug"/>

@@ -2,6 +2,7 @@
 import AuswahlFeld from '../base/AuswahlFeld.vue'
 import JaNeinFeld from '../base/JaNeinFeld.vue'
 import TextFeld from '../base/TextFeld.vue'
+import ZeitpunktFeld from '../base/ZeitpunktFeld.vue'
 import TextBereich from '../base/TextBereich.vue'
 import {t} from '../../i18n'
 import {stichwortSichern, stichwortVorschlaege} from '../../store/arbeitsmappe'
@@ -15,15 +16,15 @@ const alarm = defineModel<Alarm>({required: true})
  */
 const {zeiten} = defineProps<{ zeiten?: Record<string, string> }>()
 
-const ZEITFELDER = ['einsatzDatum', 'einsatzZeit', 'meldungDatum', 'meldungZeit']
+const ZEITPUNKTE = ['einsatz', 'meldung'] as const
 
 /**
  * The Meldung follows the Einsatz. The two are minutes apart on a real call, but on a sheet
  * written for an exercise they are the same time far more often than not, and typing it twice is
- * work for nothing. Correcting the Meldungszeit afterwards stands until the Einsatzzeit is
- * touched again.
+ * work for nothing. Correcting the Meldung afterwards stands until the Einsatz is touched again.
  */
-function meldungszeitFolgen() {
+function meldungFolgt() {
+  alarm.value.meldungDatum = alarm.value.einsatzDatum
   alarm.value.meldungZeit = alarm.value.einsatzZeit
 }
 
@@ -46,17 +47,17 @@ function stichwortGewaehlt() {
       <TextFeld v-model="alarm.behoerde" :label="t('feld.behoerde')"/>
       <TextFeld v-model="alarm.titel" :label="t('feld.titel')"/>
       <template v-if="zeiten">
-        <div v-for="feld in ZEITFELDER" :key="feld">
-          <label class="feld-label">{{ t(`feld.${feld}`) }}</label>
-          <input type="text" class="field" disabled :value="zeiten[feld]"/>
+        <div v-for="name in ZEITPUNKTE" :key="name">
+          <label class="feld-label">{{ t(`feld.${name}`) }}</label>
+          <input type="text" class="field" disabled
+                 :value="`${zeiten[`${name}Datum`]} ${zeiten[`${name}Zeit`]}`.trim()"/>
         </div>
       </template>
       <template v-else>
-        <TextFeld v-model="alarm.einsatzDatum" :label="t('feld.einsatzDatum')"/>
-        <TextFeld v-model="alarm.einsatzZeit" :label="t('feld.einsatzZeit')"
-                  @change="meldungszeitFolgen"/>
-        <TextFeld v-model="alarm.meldungDatum" :label="t('feld.meldungDatum')"/>
-        <TextFeld v-model="alarm.meldungZeit" :label="t('feld.meldungZeit')"/>
+        <ZeitpunktFeld v-model:datum="alarm.einsatzDatum" v-model:zeit="alarm.einsatzZeit"
+                       :label="t('feld.einsatz')" @change="meldungFolgt"/>
+        <ZeitpunktFeld v-model:datum="alarm.meldungDatum" v-model:zeit="alarm.meldungZeit"
+                       :label="t('feld.meldung')"/>
       </template>
       <JaNeinFeld v-model="alarm.polizei" :label="t('feld.polizei')"/>
       <JaNeinFeld v-model="alarm.sonderrechte" :label="t('feld.sonderrechte')"/>

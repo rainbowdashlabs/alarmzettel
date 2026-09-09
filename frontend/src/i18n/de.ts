@@ -63,6 +63,8 @@ export default {
         behoerde: 'Behörde',
         titel: 'Titel',
         einsatzNr: 'Einsatz',
+        einsatz: 'Einsatz',
+        meldung: 'Meldung',
         einsatzDatum: 'Einsatz Datum',
         einsatzZeit: 'Einsatz Uhrzeit',
         meldungDatum: 'Meldung Datum',

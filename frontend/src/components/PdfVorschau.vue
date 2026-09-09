@@ -91,7 +91,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="abschnitt h-full flex flex-col">
     <div class="flex items-center justify-between mb-3 gap-2">
-      <h2 class="abschnitt-titel mb-0">{{ t('abschnitt.vorschau') }}</h2>
+      <h2 class="abschnitt-titel">{{ t('abschnitt.vorschau') }}</h2>
       <span class="label transition-opacity duration-200" :class="laedt ? 'opacity-100' : 'opacity-0'">
         {{ t('vorschau.laedt') }}
       </span>
