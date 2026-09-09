@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref} from 'vue'
+import {computed, reactive, ref, watch} from 'vue'
 import AdresseFeld from '../components/base/AdresseFeld.vue'
 import TextFeld from '../components/base/TextFeld.vue'
 import {t} from '../i18n'
@@ -17,6 +17,49 @@ const listen: { schluessel: Wortliste, titel: string }[] = [
   {schluessel: 'status', titel: t('kataloge.status')},
   {schluessel: 'trupp', titel: t('kataloge.trupp')},
 ]
+
+/**
+ * Eine Anzeigereihenfolge, die stillsteht, solange jemand im Abschnitt schreibt.
+ *
+ * Der Aufbau sortiert die Kataloge nach Namen. Täte die Ansicht das bei jedem Tastendruck mit,
+ * wanderte die Zeile unter dem Cursor weg und der nächste Buchstabe landete in einem fremden
+ * Feld. Neu geordnet wird deshalb erst, wenn der Abschnitt den Fokus verliert — und wenn ein
+ * Eintrag dazukommt oder verschwindet.
+ */
+function geordnet<T extends { id: string }>(quelle: () => T[], lesen: (eintrag: T) => string) {
+  const reihenfolge = ref<string[]>([])
+
+  function ordnen() {
+    reihenfolge.value = [...quelle()]
+        .sort((a, b) => lesen(a).localeCompare(lesen(b), 'de') || a.id.localeCompare(b.id))
+        .map(eintrag => eintrag.id)
+  }
+
+  /** Was neu ist, hängt hinten an, bis neu geordnet wird — dort sieht man es auch. */
+  const liste = computed(() => {
+    const nachId = new Map(quelle().map(eintrag => [eintrag.id, eintrag]))
+    const bekannt = reihenfolge.value
+        .map(id => nachId.get(id))
+        .filter((eintrag): eintrag is T => Boolean(eintrag))
+    const gesehen = new Set(bekannt.map(eintrag => eintrag.id))
+    return [...bekannt, ...quelle().filter(eintrag => !gesehen.has(eintrag.id))]
+  })
+
+  watch(() => quelle().map(eintrag => eintrag.id).join(), ordnen, {immediate: true})
+  // Als `reactive`, damit die Vorlage `liste` ohne `.value` liest — in einem einfachen Objekt
+  // packt Vue eine Referenz nicht aus.
+  return reactive({liste, ordnen})
+}
+
+/** Erst wenn der Fokus den Abschnitt ganz verlässt, nicht schon beim Sprung ins nächste Feld. */
+function verlassen(ereignis: FocusEvent, ordnen: () => void) {
+  const ziel = ereignis.relatedTarget
+  if (!(ziel instanceof Node) || !(ereignis.currentTarget as Node).contains(ziel)) ordnen()
+}
+
+const fahrzeuge = geordnet(() => arbeitsmappe.kataloge.fahrzeuge, eintrag => eintrag.funkrufname)
+const stichwoerter = geordnet(() => arbeitsmappe.kataloge.stichwoerter, eintrag => eintrag.text)
+const materialliste = geordnet(() => arbeitsmappe.kataloge.material, eintrag => eintrag.name)
 
 const stichwort = ref('')
 const materialname = ref('')
@@ -199,8 +242,8 @@ function truppVorschau(staerke: string): string {
         {{ t('kataloge.leer') }}
       </p>
 
-      <div class="grid gap-2">
-        <div v-for="(fahrzeug, index) in arbeitsmappe.kataloge.fahrzeuge" :key="index"
+      <div class="grid gap-2" @focusout="verlassen($event, fahrzeuge.ordnen)">
+        <div v-for="fahrzeug in fahrzeuge.liste" :key="fahrzeug.id"
              class="grid md:grid-cols-[1fr_auto] gap-2 items-end">
           <div class="grid grid-cols-2 gap-2"
                :class="arbeitsmappe.planung.aktiv ? 'md:grid-cols-6' : 'md:grid-cols-4'">
@@ -215,7 +258,8 @@ function truppVorschau(staerke: string): string {
                       :label="t('planung.fuehrerschein')"/>
           </div>
           <button type="button" class="knopf knopf-klein knopf-gefahr"
-                  :title="t('kataloge.eintragEntfernen')" @click="fahrzeugEntfernen(index)">
+                  :title="t('kataloge.eintragEntfernen')"
+                  @click="fahrzeugEntfernen(arbeitsmappe.kataloge.fahrzeuge.indexOf(fahrzeug))">
             <font-awesome-icon icon="fa-solid fa-xmark"/>
           </button>
           <p v-if="truppVorschau(fahrzeug.staerke)" class="tabular text-[13px] text-muted md:col-span-2">
@@ -240,8 +284,8 @@ function truppVorschau(staerke: string): string {
       <p v-if="!arbeitsmappe.kataloge.material.length" class="text-muted text-sm">
         {{ t('kataloge.keinMaterial') }}
       </p>
-      <div class="grid gap-2">
-        <div v-for="stueck in arbeitsmappe.kataloge.material" :key="stueck.id"
+      <div class="grid gap-2" @focusout="verlassen($event, materialliste.ordnen)">
+        <div v-for="stueck in materialliste.liste" :key="stueck.id"
              class="flex gap-2 items-center">
           <input v-model="stueck.name" type="text" class="field"/>
           <input v-model.number="stueck.bestand" type="number" min="0" step="1"
@@ -272,13 +316,14 @@ function truppVorschau(staerke: string): string {
         {{ t('kataloge.leer') }}
       </p>
 
-      <div class="grid md:grid-cols-2 gap-2">
-        <div v-for="(eintrag, index) in arbeitsmappe.kataloge.stichwoerter" :key="eintrag.id"
+      <div class="grid md:grid-cols-2 gap-2" @focusout="verlassen($event, stichwoerter.ordnen)">
+        <div v-for="eintrag in stichwoerter.liste" :key="eintrag.id"
              class="flex gap-2 items-center">
           <input v-model="eintrag.text" type="text" class="field"
                  @change="stichwortUmbenannt(eintrag)"/>
           <button type="button" class="knopf knopf-klein knopf-gefahr shrink-0"
-                  :title="t('kataloge.eintragEntfernen')" @click="stichwortEntfernen(index)">
+                  :title="t('kataloge.eintragEntfernen')"
+                  @click="stichwortEntfernen(arbeitsmappe.kataloge.stichwoerter.indexOf(eintrag))">
             <font-awesome-icon icon="fa-solid fa-xmark"/>
           </button>
         </div>
