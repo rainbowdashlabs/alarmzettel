@@ -2,7 +2,7 @@
 import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {mehrereTage, ortName, plandaten} from '../../store/planung'
+import {lageName, mehrereTage, ortName, plandaten} from '../../store/planung'
 import {personenplan, pruefen} from '../../scripts/ablauf'
 import type {Befund, Personenschritt} from '../../scripts/ablauf'
 import {tagwechsel, uhrzeit} from '../../scripts/zeit'
@@ -49,8 +49,7 @@ function womit(eintrag: Personenschritt): string {
 }
 
 function lage(eintrag: Personenschritt): string {
-  return arbeitsmappe.planung.programmpunkte
-      .find(punkt => punkt.id === eintrag.schritt.programmpunktId)?.name ?? ''
+  return lageName(eintrag.schritt.programmpunktId)
 }
 </script>
 

@@ -113,7 +113,7 @@
     "programmpunkte": [
       {
         "id": "g-brand",
-        "name": "Brand im Kindergarten",
+        "name": "veraltete Bezeichnung",
         "ortId": "o-kita",
         "alarmId": "a-brand"
       },

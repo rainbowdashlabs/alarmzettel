@@ -36,6 +36,8 @@ export interface Plandaten {
     personen: Person[]
     /** Was die Wache an Material führt — wonach die Standorte benannt werden. */
     kataloge?: {material: Materialvorlage[]}
+    /** Die Alarme, damit eine Lage den Namen ihres Alarmzettels tragen kann. */
+    alarme?: {id: string, stichwort: string}[]
     punkte?: Record<string, Punkt>
 }
 
@@ -103,6 +105,18 @@ function name(daten: Plandaten, personId: string): string {
 /** Wie viele Köpfe eine Zeile bedeutet — „Mimen (4)“ zählt vier. */
 function koepfe(daten: Plandaten, personId: string): number {
     return person(daten, personId)?.anzahl || 1
+}
+
+/**
+ * Wie eine Lage heißt. Zeigt sie auf einen Alarm, ist dessen Stichwort ihr Name — zweimal
+ * dasselbe zu pflegen hieße, es widersprüchlich pflegen zu können. Ohne Alarm zählt, was an ihr
+ * steht: „Frühstück“ hat kein Stichwort.
+ */
+export function lagenName(daten: Plandaten, programmpunktId: string): string {
+    const punkt = daten.planung.programmpunkte.find(eintrag => eintrag.id === programmpunktId)
+    if (!punkt) return ''
+    const stichwort = daten.alarme?.find(alarm => alarm.id === punkt.alarmId)?.stichwort
+    return stichwort?.trim() || punkt.name
 }
 
 /**

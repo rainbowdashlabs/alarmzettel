@@ -2,7 +2,7 @@
 import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {mehrereTage, ortName, personName, plandaten} from '../../store/planung'
+import {lageName, mehrereTage, ortName, personName, plandaten} from '../../store/planung'
 import {lagensicht} from '../../scripts/ablauf'
 import {tagVon, uhrzeit} from '../../scripts/zeit'
 
@@ -25,7 +25,7 @@ function alarmStichwort(alarmId: string): string {
     <section v-for="sicht in lagen" :key="sicht.programmpunkt.id" class="abschnitt">
       <div class="flex items-baseline gap-3 flex-wrap">
         <h2 class="abschnitt-titel">
-          {{ sicht.programmpunkt.name || t('ablauf.ohneName') }}
+          {{ lageName(sicht.programmpunkt.id) || t('ablauf.ohneName') }}
         </h2>
         <span class="text-muted text-sm">{{ ortName(sicht.programmpunkt.ortId) }}</span>
         <span v-if="sicht.von" class="tabular text-sm">
@@ -36,7 +36,7 @@ function alarmStichwort(alarmId: string): string {
         </span>
       </div>
       <p v-if="!sicht.laeufe.length" class="text-signal-ink text-[13px] mt-2">
-        {{ t('ablauf.befund.lageLeer', {was: sicht.programmpunkt.name || t('ablauf.ohneName')}) }}
+        {{ t('ablauf.befund.lageLeer', {was: lageName(sicht.programmpunkt.id) || t('ablauf.ohneName')}) }}
       </p>
       <div v-else class="grid gap-1 mt-2 text-sm">
         <p>

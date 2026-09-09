@@ -77,7 +77,11 @@ class _Namen:
         self._orte = {ort.id: ort.name for ort in self.orte}
         self.personen = arbeitsmappe.kataloge.personen
         self._personen = {person.id: person for person in self.personen}
-        self._lagen = {punkt.id: punkt.name for punkt in self.planung.programmpunkte}
+        stichwoerter = {alarm.id: alarm.stichwort for alarm in arbeitsmappe.alarme}
+        # Zeigt eine Lage auf einen Alarm, ist dessen Stichwort ihr Name: zweimal dasselbe zu
+        # pflegen hieße, es widersprüchlich pflegen zu können.
+        self._lagen = {punkt.id: stichwoerter.get(punkt.alarmId) or punkt.name
+                       for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
 

@@ -4,8 +4,8 @@ import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
-  alleOrte, darfFahren, materialHinzufuegen, materialName, materialSichern, mehrereTage,
-  personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
+  alleOrte, darfFahren, lageName, materialHinzufuegen, materialName, materialSichern,
+  mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
 } from '../../store/planung'
 import {fahrzeitSchaetzung, pruefen} from '../../scripts/ablauf'
 import type {Befund} from '../../scripts/ablauf'
@@ -174,7 +174,7 @@ function lageAnlegen(schritt: Schritt) {
               <option value="">{{ t('ablauf.keineLage') }}</option>
               <option v-for="punkt in arbeitsmappe.planung.programmpunkte" :key="punkt.id"
                       :value="punkt.id">
-                {{ punkt.name || t('ablauf.ohneName') }}
+                {{ lageName(punkt.id) || t('ablauf.ohneName') }}
               </option>
             </select>
             <button type="button" class="knopf knopf-klein shrink-0" :title="t('ablauf.lageNeu')"
@@ -192,7 +192,7 @@ function lageAnlegen(schritt: Schritt) {
           {{ t('ablauf.imAufgebot') }}
           <span class="text-muted text-[13px]">{{ t('ablauf.imAufgebotHinweis') }}</span>
         </label>
-        <div>
+        <div v-if="!programmpunkt(schritt.programmpunktId)!.alarmId">
           <label class="feld-label">{{ t('ablauf.lageName') }}</label>
           <input v-model="programmpunkt(schritt.programmpunktId)!.name" type="text" class="field"/>
         </div>

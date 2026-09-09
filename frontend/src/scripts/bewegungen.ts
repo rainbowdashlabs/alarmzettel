@@ -16,7 +16,7 @@
  */
 import type {Lauf, Schritt} from '../interfaces/Planung'
 import type {Plandaten} from './ablauf'
-import {personenplan, vonOrt} from './ablauf'
+import {lagenName, personenplan, vonOrt} from './ablauf'
 import {alsMinuten, tagVon} from './zeit'
 
 /** Wovon der Tag erzählt wird. */
@@ -235,8 +235,7 @@ export function bewegungsbild(daten: Plandaten, datum: string,
             ortId: anwesend.eintrag.schritt.ortId, reihe,
             von: anwesend.von, bis: anwesend.bis, name: anwesend.spur.name,
             begleitung: anwesend.eintrag.begleitung,
-            lage: daten.planung.programmpunkte
-                .find(punkt => punkt.id === anwesend.eintrag.schritt.programmpunktId)?.name ?? '',
+            lage: lagenName(daten, anwesend.eintrag.schritt.programmpunktId),
             material: materialnamen(daten, anwesend.eintrag.schritt),
             notiz: anwesend.eintrag.schritt.notiz,
         })
@@ -323,8 +322,7 @@ export function standorte(daten: Plandaten, zeitpunkt: string): Standort[] {
             personen: lauf.personId
                 ? [laufName(daten, lauf), ...besatzung(daten, schritt)]
                 : besatzung(daten, schritt),
-            lage: daten.planung.programmpunkte
-                .find(punkt => punkt.id === schritt.programmpunktId)?.name ?? '',
+            lage: lagenName(daten, schritt.programmpunktId),
         })
     }
     return gefunden
@@ -403,8 +401,7 @@ export function ereignisse(daten: Plandaten, zeitpunkt: string, anzahl = 8): Ere
                 zeitpunkt: schritt.von,
                 art: schritt.art === 'fahrt' ? 'abfahrt' : 'ankunft',
                 name: laufName(daten, lauf), ortId: schritt.ortId,
-                lage: daten.planung.programmpunkte
-                    .find(punkt => punkt.id === schritt.programmpunktId)?.name ?? '',
+                lage: lagenName(daten, schritt.programmpunktId),
                 in: beginn - jetzt,
             })
         }

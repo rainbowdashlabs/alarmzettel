@@ -33,7 +33,7 @@ async function laden(pfad) {
         Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 }
 
-const {fahrzeitSchaetzung, personenplan} = await laden('frontend/src/scripts/ablauf.ts')
+const {fahrzeitSchaetzung, lagenName, personenplan} = await laden('frontend/src/scripts/ablauf.ts')
 const {bewegungsbild, bewegungstage} = await laden('frontend/src/scripts/bewegungen.ts')
 
 const mappe = JSON.parse(readFileSync(quelle, 'utf8'))
@@ -47,12 +47,13 @@ const punkte = JSON.parse(readFileSync(resolve(quelle, '..', 'punkte.json'), 'ut
 const daten = {
     planung: mappe.planung, fahrzeuge: mappe.kataloge?.fahrzeuge ?? [], orte, punkte,
     personen: mappe.kataloge?.personen ?? [],
+    alarme: mappe.alarme ?? [],
     kataloge: {material: mappe.kataloge?.material ?? []},
 }
 
 const namen = (liste, id, feld) => liste?.find(eintrag => eintrag.id === id)?.[feld] ?? ''
 const ort = id => namen(orte, id, 'name')
-const lage = id => namen(mappe.planung.programmpunkte, id, 'name')
+const lage = id => lagenName(daten, id)
 const fahrzeug = id => namen(mappe.kataloge?.fahrzeuge, id, 'funkrufname')
 
 for (const person of mappe.kataloge?.personen ?? []) {

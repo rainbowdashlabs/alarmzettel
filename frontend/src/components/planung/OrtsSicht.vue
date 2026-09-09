@@ -2,7 +2,7 @@
 import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
-import {alleOrte, mehrereTage, personName, plandaten} from '../../store/planung'
+import {alleOrte, lageName, mehrereTage, personName, plandaten} from '../../store/planung'
 import {ortssicht} from '../../scripts/ablauf'
 import type {Ortsbelegung} from '../../scripts/ablauf'
 import {tagwechsel, uhrzeit} from '../../scripts/zeit'
@@ -26,8 +26,7 @@ function wer(belegung: Ortsbelegung): string {
 }
 
 function lage(belegung: Ortsbelegung): string {
-  return arbeitsmappe.planung.programmpunkte
-      .find(punkt => punkt.id === belegung.schritt.programmpunktId)?.name ?? ''
+  return lageName(belegung.schritt.programmpunktId)
 }
 </script>
 

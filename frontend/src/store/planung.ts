@@ -10,7 +10,7 @@ import {reactive} from 'vue'
 import {arbeitsmappe} from './arbeitsmappe'
 import {naechste, leereAdresse} from '../interfaces/Alarm'
 import {zuPunkt} from '../api/adressen'
-import {darfFahren as darfFahrenLaut, MINUTEN_JE_KM} from '../scripts/ablauf'
+import {darfFahren as darfFahrenLaut, lagenName, MINUTEN_JE_KM} from '../scripts/ablauf'
 import {entfernungKm} from '../scripts/polar'
 import type {Plandaten} from '../scripts/ablauf'
 import type {Punkt} from '../scripts/polar'
@@ -56,6 +56,7 @@ export function plandaten(): Plandaten {
         fahrzeuge: arbeitsmappe.kataloge.fahrzeuge,
         orte: alleOrte(),
         personen: arbeitsmappe.kataloge.personen,
+        alarme: arbeitsmappe.alarme.map(alarm => ({id: alarm.id, stichwort: alarm.stichwort})),
         kataloge: {material: arbeitsmappe.kataloge.material},
         punkte: ortsPunkte,
     }
@@ -252,6 +253,11 @@ export function programmpunktAnlegen(ortId: string): Programmpunkt {
     }
     arbeitsmappe.planung.programmpunkte.push(punkt)
     return punkt
+}
+
+/** Wie eine Lage heißt: das Stichwort ihres Alarms, sonst was an ihr steht. */
+export function lageName(programmpunktId: string): string {
+    return lagenName(plandaten(), programmpunktId)
 }
 
 export function programmpunkt(id: string): Programmpunkt | undefined {
