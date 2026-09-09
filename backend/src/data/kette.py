@@ -78,6 +78,18 @@ def ankunft(lauf: Lauf, schritt: Schritt, punkte: dict) -> str:
     return weg.bis if weg else schritt.von
 
 
+def mitfahrer(planung: Planung, lauf: Lauf, schritt: Schritt, punkte: dict) -> list[str]:
+    """Wer diese erzeugte Anfahrt mitfährt: wer laut eigenem Plan davor am Startort stand."""
+    weg = anfahrt(lauf, schritt, punkte)
+    if weg is None:
+        return []
+    dabei = [lauf.personId] if lauf.personId else []
+    dabei += [platz.personId for platz in schritt.besatzung]
+    return [person_id for person_id in dabei
+            if any(eintrag.schritt.id == schritt.id and eintrag.von_ort_id == weg.von_ort_id
+                   for eintrag in personenplan(planung, person_id, punkte))]
+
+
 def lagen_ort(planung: Planung, programmpunkt_id: str) -> str:
     """Wo eine Lage stattfindet: dort, wo die Schritte stehen, die auf sie zeigen."""
     for lauf in planung.laeufe:

@@ -3,12 +3,27 @@ import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {lageName, mehrereTage, ortName, personName, plandaten} from '../../store/planung'
-import {lagensicht} from '../../scripts/ablauf'
+import {lagensicht, pruefen} from '../../scripts/ablauf'
+import type {Befund} from '../../scripts/ablauf'
 import {tagVon, uhrzeit} from '../../scripts/zeit'
 
 /** Dieselbe Sache von der anderen Seite: die Lage, und was an ihr hängt. */
 const lagen = computed(() => arbeitsmappe.planung.programmpunkte
     .map(punkt => lagensicht(plandaten(), punkt)))
+
+/**
+ * Was an einer Lage nicht stimmt. Ein Befund ohne Schritt und ohne Person hängt an der Lage
+ * selbst — sonst stünde er nirgends, denn die Ketten zeigen nur, was an ihrem Schritt hängt.
+ */
+const befunde = computed(() => {
+  const nachLage = new Map<string, Befund[]>()
+  for (const befund of pruefen(plandaten())) {
+    if (!befund.programmpunktId) continue
+    nachLage.set(befund.programmpunktId,
+        [...(nachLage.get(befund.programmpunktId) ?? []), befund])
+  }
+  return nachLage
+})
 
 function fahrzeugName(fahrzeugId: string): string {
   return arbeitsmappe.kataloge.fahrzeuge.find(v => v.id === fahrzeugId)?.funkrufname
@@ -35,10 +50,12 @@ function alarmStichwort(alarmId: string): string {
           {{ uhrzeit(sicht.von) }}–{{ uhrzeit(sicht.bis) }}
         </span>
       </div>
-      <p v-if="!sicht.laeufe.length" class="text-signal-ink text-[13px] mt-2">
-        {{ t('ablauf.befund.lageLeer', {was: lageName(sicht.programmpunkt.id) || t('ablauf.ohneName')}) }}
+      <p v-for="(befund, nummer) in befunde.get(sicht.programmpunkt.id)" :key="nummer"
+         class="text-signal-ink text-[13px] mt-2">
+        {{ t(`ablauf.befund.${befund.art}`, {
+          ...befund.werte, was: lageName(sicht.programmpunkt.id) || t('ablauf.ohneName')}) }}
       </p>
-      <div v-else class="grid gap-1 mt-2 text-sm">
+      <div v-if="sicht.laeufe.length" class="grid gap-1 mt-2 text-sm">
         <p>
           <span class="label mr-2">{{ t('ablauf.fahrzeuge') }}</span>
           {{ sicht.laeufe.filter(lauf => lauf.fahrzeugId)

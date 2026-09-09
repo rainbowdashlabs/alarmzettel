@@ -15,7 +15,27 @@ def kennung() -> str:
     return str(uuid.uuid4())
 
 
-class Eintrag(BaseModel):
+class Modell(BaseModel):
+    """
+    Ein Teil der Arbeitsmappe, der ein leeres Zahlenfeld übersteht.
+
+    Ein leerer String, wo eine Zahl oder ein Ja oder Nein stehen sollte, ist kein Wert, sondern
+    ein Feld, das es zu der Zeit noch nicht gab: der Flattener schrieb für alles Unbekannte "".
+    Ein Feld, das der Nutzer leert, sieht genauso aus. Solche Felder bekommen ihre Vorgabe, statt
+    die Arbeitsmappe unlesbar zu machen.
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _leere_werte(cls, werte: Any) -> Any:
+        if not isinstance(werte, dict):
+            return werte
+        leer = [name for name, feld in cls.model_fields.items()
+                if feld.annotation in (bool, int, float) and werte.get(name) == ""]
+        return {name: wert for name, wert in werte.items() if name not in leer} if leer else werte
+
+
+class Eintrag(Modell):
     """
     Anything that sits in a list carries an id and a sort key.
 
@@ -27,21 +47,6 @@ class Eintrag(BaseModel):
 
     id: str = Field(default_factory=kennung)
     sortierung: float = 0
-
-    @model_validator(mode="before")
-    @classmethod
-    def _leere_werte(cls, werte: Any) -> Any:
-        """
-        Ein leerer String, wo eine Zahl oder ein Ja oder Nein stehen sollte, ist kein Wert,
-        sondern ein Feld, das es zu der Zeit noch nicht gab: der Flattener schrieb für alles
-        Unbekannte "". Solche Felder bekommen ihre Vorgabe, statt eine Arbeitsmappe unlesbar zu
-        machen, die vor der Erweiterung angelegt wurde.
-        """
-        if not isinstance(werte, dict):
-            return werte
-        leer = [name for name, feld in cls.model_fields.items()
-                if feld.annotation in (bool, int, float) and werte.get(name) == ""]
-        return {name: wert for name, wert in werte.items() if name not in leer} if leer else werte
 
 
 class Adresse(BaseModel):

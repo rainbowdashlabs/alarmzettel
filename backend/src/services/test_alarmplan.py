@@ -73,7 +73,8 @@ class EinsatznummerTest(unittest.TestCase):
         return [alarm.einsatzNr for alarm in mit_plan(mappe).alarme if alarm.id != "a-frei"]
 
     def test_acht_uhr_dreissig_bei_2200_alarmen(self):
-        self.assertEqual(["779", "825"], self.nummern(alarmeProTag=2200))
+        """Beide Blätter desselben Alarms tragen dieselbe Nummer — die des ersten, der losfährt."""
+        self.assertEqual(["779", "779"], self.nummern(alarmeProTag=2200))
 
     def test_ohne_angabe_bleibt_die_getippte_nummer(self):
         self.assertEqual(["", ""], self.nummern(alarmeProTag=0))

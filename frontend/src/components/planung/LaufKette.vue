@@ -196,7 +196,7 @@ function lageAnlegen(schritt: Schritt) {
             <option value="eigen">{{ t('ablauf.eigen') }}</option>
           </select>
         </div>
-        <div v-else-if="schritt.art === 'aufenthalt'" class="md:col-span-1">
+        <div v-if="schritt.art === 'aufenthalt'" class="md:col-span-1">
           <label class="feld-label">{{ t('ablauf.lage') }}</label>
           <div class="flex gap-2">
             <select v-model="schritt.programmpunktId" class="field">

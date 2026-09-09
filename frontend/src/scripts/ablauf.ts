@@ -280,7 +280,7 @@ export function lagensicht(daten: Plandaten, punkt: Programmpunkt): Lagensicht {
     for (const lauf of daten.planung.laeufe) {
         for (const schritt of lauf.schritte) {
             if (schritt.programmpunktId !== punkt.id) continue
-            if (!sicht.ortId) sicht.ortId = schritt.ortId
+            if (!sicht.ortId && schritt.art === 'aufenthalt') sicht.ortId = schritt.ortId
             const da = ankunft(daten, lauf, schritt)
             if (!sicht.von || (alsMinuten(da) ?? 0) < (alsMinuten(sicht.von) ?? 0)) {
                 sicht.von = da
@@ -300,6 +300,9 @@ export function lagensicht(daten: Plandaten, punkt: Programmpunkt): Lagensicht {
 /**
  * Die Prüfungen, die an einem einzelnen Schritt hängen: Plätze, Fahrerlaubnis, Fahrer und die
  * Fahrzeit. Die Oberfläche zeigt sie am Schritt, `pruefen` sammelt sie über den ganzen Plan.
+ *
+ * Gefahren wird auch in einem Aufenthalt, dem eine erzeugte Anfahrt vorausgeht — sonst führe ein
+ * Fahrzeug ungeprüft, sobald eine Kette aus lauter Aufenthalten besteht.
  */
 export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): Befund[] {
     const befunde: Befund[] = []
@@ -315,8 +318,9 @@ export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): 
         }
     }
 
+    const faehrtLos = schritt.art === 'fahrt' || anfahrt(daten, lauf, schritt) !== null
     const fahrer = schritt.besatzung.filter(platz => platz.faehrt)
-    if (lauf.fahrzeugId && schritt.art === 'fahrt') {
+    if (lauf.fahrzeugId && faehrtLos) {
         if (fahrer.length === 0) befunde.push({art: 'ohneFahrer', ...stelle})
         if (fahrer.length > 1) {
             befunde.push({art: 'zweiFahrer', ...stelle, werte: {anzahl: fahrer.length}})
@@ -324,7 +328,7 @@ export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): 
     }
 
     const klasse = wagen?.fuehrerschein?.trim()
-    if (klasse && schritt.art === 'fahrt') {
+    if (klasse && faehrtLos) {
         for (const platz of fahrer) {
             const wer = person(daten, platz.personId)
             if (wer && !darfFahren(daten, lauf.fahrzeugId, wer.id)) {
@@ -355,13 +359,19 @@ export function schrittBefunde(daten: Plandaten, lauf: Lauf, schritt: Schritt): 
  * Geschätzte Fahrzeit zwischen zwei Orten: Luftlinie mal Minuten je Kilometer, auf fünf Minuten
  * gerundet und nie unter fünf. Ohne Koordinaten an einem der beiden Orte gibt es keine Schätzung
  * — die Luftlinie kennt ohnehin weder Spree noch Baustelle.
+ *
+ * Zwei Orte auf demselben Punkt — dieselbe Adresse, zwei Namen — sind kein Weg und bekommen
+ * keine Schätzung. Sonst käme die Untergrenze von fünf Minuten heraus, und der Server, der die
+ * Koordinaten vergleicht, rechnete anders.
  */
 export function schaetzung(daten: Plandaten, vonOrtId: string, nachOrtId: string,
                            mittel: Mittel): number | null {
     if (mittel === 'eigen' || vonOrtId === nachOrtId) return null
     const von = daten.punkte?.[vonOrtId]
     const nach = daten.punkte?.[nachOrtId]
-    if (!von || !nach) return null
+    if (!von || !nach || (von.ostwert === nach.ostwert && von.nordwert === nach.nordwert)) {
+        return null
+    }
     return Math.max(5, Math.round(entfernungKm(von, nach) * MINUTEN_JE_KM[mittel] / 5) * 5)
 }
 
@@ -509,7 +519,8 @@ export function pruefen(daten: Plandaten): Befund[] {
             continue
         }
         const orte = new Set(daten.planung.laeufe.flatMap(lauf => lauf.schritte
-            .filter(schritt => schritt.programmpunktId === punkt.id)
+            .filter(schritt => schritt.programmpunktId === punkt.id
+                && schritt.art === 'aufenthalt')
             .map(schritt => schritt.ortId)))
         if (orte.size > 1) {
             befunde.push({art: 'lageZweiOrte', programmpunktId: punkt.id,

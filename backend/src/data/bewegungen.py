@@ -80,7 +80,7 @@ class _Namen:
         self.personen = arbeitsmappe.kataloge.personen
         self._personen = {person.id: person for person in self.personen}
         stichwoerter = {alarm.id: alarm.stichwort for alarm in arbeitsmappe.alarme}
-        self._lagen = {punkt.id: stichwoerter.get(punkt.alarmId) or punkt.name
+        self._lagen = {punkt.id: (stichwoerter.get(punkt.alarmId) or "").strip() or punkt.name
                        for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}

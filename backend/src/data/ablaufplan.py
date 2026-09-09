@@ -10,7 +10,7 @@ können, und das Typst-Template legt nur noch aus, was hier steht.
 from data.bewegungen import bewegungsbilder
 from data.fahrzeit import schaetzung
 from data.karten import adresstext, karten
-from data.kette import anfahrt, mittel_von, personenplan, von_ort as _von_ort
+from data.kette import anfahrt, mittel_von, mitfahrer, personenplan, von_ort as _von_ort
 from data.planzeit import minuten as _minuten, tag as _datum, uhrzeit as _uhrzeit
 from entities.alarm import Arbeitsmappe
 from entities.planung import Lauf, Person, Planung, Schritt
@@ -36,7 +36,7 @@ class Plan:
         self.personen = arbeitsmappe.kataloge.personen
         self._personen = {person.id: person for person in self.personen}
         stichwoerter = {alarm.id: alarm.stichwort for alarm in arbeitsmappe.alarme}
-        self._lagen = {punkt.id: stichwoerter.get(punkt.alarmId) or punkt.name
+        self._lagen = {punkt.id: (stichwoerter.get(punkt.alarmId) or "").strip() or punkt.name
                        for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
@@ -101,7 +101,8 @@ class Plan:
         return f"→ {ort}" if schritt.art == "fahrt" else ort
 
 
-def _anfahrtszeile(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict | None:
+def _anfahrtszeile(plan: Plan, lauf: Lauf, schritt: Schritt,
+                   besatzung: list[dict] | None = None) -> dict | None:
     """
     Die erzeugte Anfahrt als eigene Zeile. Ohne sie stünde auf dem Blatt, man sei um 7:50 schon
     da, obwohl man da erst losfährt.
@@ -112,6 +113,7 @@ def _anfahrtszeile(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict | None:
     return {
         "datum": _datum(weg.von), "von": _uhrzeit(weg.von), "bis": _uhrzeit(weg.bis),
         "art": "fahrt", "mittel": weg.mittel,
+        "besatzung": besatzung if besatzung is not None else [],
         "was": f"→ {plan.ort(weg.nach_ort_id)}", "ort": plan.ort(weg.nach_ort_id), "lage": "",
         "vonOrt": plan.ort(weg.von_ort_id),
         "material": [], "notiz": "",
@@ -121,9 +123,11 @@ def _anfahrtszeile(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict | None:
 
 
 def _zeile(plan: Plan, lauf: Lauf, schritt: Schritt, ankunft: str = "") -> dict:
+    """Die Zeile trägt das Datum der Zeit, die auf ihr steht — das der Ankunft, nicht des Aufbruchs."""
+    da = ankunft or _ankunft(plan, lauf, schritt)
     return {
-        "datum": _datum(schritt.von),
-        "von": _uhrzeit(ankunft or _ankunft(plan, lauf, schritt)),
+        "datum": _datum(da),
+        "von": _uhrzeit(da),
         "bis": _uhrzeit(schritt.bis),
         "art": schritt.art, "mittel": mittel_von(lauf, schritt),
         "was": plan.wohin(schritt), "ort": plan.ort(schritt.ortId), "lage": plan.lage(schritt),
@@ -153,33 +157,37 @@ def _personenblatt(plan: Plan, person: Person) -> dict:
         weg = _anfahrtszeile(plan, lauf, schritt) if faehrt_mit else None
         if weg:
             zeilen.append({**weg, "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
-                           "faehrt": eintrag.faehrt,
-                           "_sortierung": (_minuten(schritt.von) or 0) - 1})
+                           "faehrt": eintrag.faehrt})
         zeilen.append({**_zeile(plan, lauf, schritt, eintrag.ankunft),
                        "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
-                       "faehrt": eintrag.faehrt,
-                       "_sortierung": _minuten(eintrag.ankunft) or 0})
-    zeilen.sort(key=lambda zeile: zeile["_sortierung"])
-    for zeile in zeilen:
-        del zeile["_sortierung"]
+                       "faehrt": eintrag.faehrt})
     return {"name": person.name, "anzahl": person.anzahl, "rollen": person.rollen,
             "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
 
 
+def _besatzung(plan: Plan, schritt: Schritt, nur: set[str] | None = None) -> list[dict]:
+    """Die Besatzung mit Namen; `nur` grenzt sie auf die ein, die die Anfahrt mitfahren."""
+    eintraege = []
+    for platz in schritt.besatzung:
+        person = plan.person(platz.personId)
+        if person and (nur is None or platz.personId in nur):
+            eintraege.append({"name": person.name, "anzahl": person.anzahl,
+                              "faehrt": platz.faehrt})
+    return eintraege
+
+
 def _fahrzeugblatt(plan: Plan, lauf: Lauf) -> dict:
-    """Der Zettel fürs Armaturenbrett: die Kette, wie sie geplant wurde, samt Besatzung."""
+    """
+    Der Zettel fürs Armaturenbrett: die Kette, wie sie geplant wurde, samt Besatzung. In der
+    Anfahrt steht nur, wer sie mitfährt — wer am Ziel wartet, sitzt nicht im Fahrzeug.
+    """
     zeilen = []
     for schritt in lauf.schritte:
-        besatzung = []
-        for platz in schritt.besatzung:
-            person = plan.person(platz.personId)
-            if person:
-                besatzung.append({"name": person.name, "anzahl": person.anzahl,
-                                  "faehrt": platz.faehrt})
-        weg = _anfahrtszeile(plan, lauf, schritt)
+        faehrt_mit = set(mitfahrer(plan.planung, lauf, schritt, plan.punkte))
+        weg = _anfahrtszeile(plan, lauf, schritt, _besatzung(plan, schritt, faehrt_mit))
         if weg:
-            zeilen.append({**weg, "besatzung": besatzung})
-        zeilen.append({**_zeile(plan, lauf, schritt), "besatzung": besatzung})
+            zeilen.append(weg)
+        zeilen.append({**_zeile(plan, lauf, schritt), "besatzung": _besatzung(plan, schritt)})
     return {"name": plan.name(lauf), "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
 
 

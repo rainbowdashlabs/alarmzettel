@@ -97,6 +97,14 @@ def _beteiligte(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt) -> list[dict]:
     return beteiligte
 
 
+def _einsatznummer(beteiligte: list[dict], pro_tag: int) -> str:
+    """
+    Ein Einsatz trägt eine Nummer, auch wenn drei Fahrzeuge dazu fahren: sie kommt von dem, der
+    zuerst losfährt. `beteiligte` steht nach Zeit sortiert, also ist das der erste.
+    """
+    return _nummer(beteiligte[0]["beginn"], pro_tag) if beteiligte else ""
+
+
 def _adresse(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt):
     """Die Lage findet dort statt, wo die Schritte stehen, die auf sie zeigen."""
     ort_id = lagen_ort(arbeitsmappe.planung, punkt.id)
@@ -113,6 +121,8 @@ def ableitung(arbeitsmappe: Arbeitsmappe, alarm: Alarm) -> dict | None:
     if punkt is None:
         return None
     adresse = _adresse(arbeitsmappe, punkt)
+    beteiligte = _beteiligte(arbeitsmappe, punkt)
+    nummer = _einsatznummer(beteiligte, arbeitsmappe.kataloge.alarmeProTag)
     return {
         "lage": alarm.stichwort or punkt.name,
         "einsatzadresse": adresse.model_dump() if adresse else None,
@@ -121,13 +131,13 @@ def ableitung(arbeitsmappe: Arbeitsmappe, alarm: Alarm) -> dict | None:
             "staerke": eintrag["staerke"],
             "einsatzDatum": _datum(eintrag["beginn"]),
             "einsatzZeit": _uhrzeit(eintrag["beginn"]),
-            "einsatzNr": _nummer(eintrag["beginn"], arbeitsmappe.kataloge.alarmeProTag),
-        } for eintrag in _beteiligte(arbeitsmappe, punkt)],
+            "einsatzNr": nummer,
+        } for eintrag in beteiligte],
     }
 
 
 def _blatt(alarm: Alarm, punkt: Programmpunkt, beteiligte: list[dict], fuer: dict,
-           adresse, pro_tag: int = 0) -> Alarm:
+           adresse, nummer: str = "") -> Alarm:
     """Ein Zettel, gerichtet an ein Fahrzeug. Das Aufgebot listet trotzdem alle."""
     beginn = fuer["beginn"]
     gruppe = alarm.einsatzmittel[0].gruppe if alarm.einsatzmittel else ""
@@ -145,7 +155,6 @@ def _blatt(alarm: Alarm, punkt: Programmpunkt, beteiligte: list[dict], fuer: dic
     if beginn:
         aenderung |= {"einsatzDatum": _datum(beginn), "einsatzZeit": _uhrzeit(beginn),
                       "meldungDatum": _datum(beginn), "meldungZeit": _uhrzeit(beginn)}
-        nummer = _nummer(beginn, pro_tag)
         if nummer:
             aenderung["einsatzNr"] = nummer
     if adresse is not None:
@@ -175,7 +184,7 @@ def mit_plan(arbeitsmappe: Arbeitsmappe) -> Arbeitsmappe:
             alarme.append(alarm.model_copy(
                 update={"einsatzadresse": adresse} if adresse is not None else {}))
             continue
-        alarme += [_blatt(alarm, punkt, beteiligte, fuer, adresse,
-                          arbeitsmappe.kataloge.alarmeProTag)
+        nummer = _einsatznummer(beteiligte, arbeitsmappe.kataloge.alarmeProTag)
+        alarme += [_blatt(alarm, punkt, beteiligte, fuer, adresse, nummer)
                    for fuer in beteiligte]
     return arbeitsmappe.model_copy(update={"alarme": alarme})

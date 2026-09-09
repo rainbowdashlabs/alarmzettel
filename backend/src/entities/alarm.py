@@ -2,7 +2,7 @@ from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field, model_validator
 
-from entities.basis import Adresse, Eintrag, kennung as _kennung
+from entities.basis import Adresse, Eintrag, Modell, kennung as _kennung
 from entities.planung import DIENSTSTELLE, Ort, Person, Planung, Tag
 
 __all__ = ["Adresse", "Eintrag", "Karte", "Fahrzeug", "Einsatzmittelgruppe", "HinweisText",
@@ -132,7 +132,7 @@ class Stichwortvorlage(BaseModel):
     text: str = ""
 
 
-class Kataloge(BaseModel):
+class Kataloge(Modell):
     """Suggestion lists the user maintains; the open data covers only the medical codes."""
 
     stichwoerter: list[Stichwortvorlage] = []

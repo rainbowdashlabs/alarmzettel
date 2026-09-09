@@ -26,8 +26,13 @@ def entfernung_km(von: dict, nach: dict) -> float:
 
 
 def schaetzung(von: dict | None, nach: dict | None, mittel: str) -> int | None:
-    """Auf fünf Minuten gerundet und nie unter fünf; ohne Koordinaten gibt es keine Schätzung."""
+    """
+    Auf fünf Minuten gerundet und nie unter fünf; ohne Koordinaten gibt es keine Schätzung.
+
+    Gerundet wird von der Hälfte weg und nicht zur geraden Zahl hin, weil der Browser es so tut —
+    eine halbe Minute Unterschied wäre eine andere Ankunftszeit auf dem Blatt als auf dem Schirm.
+    """
     je_km = MINUTEN_JE_KM.get(mittel, 0)
     if not je_km or von is None or nach is None or von == nach:
         return None
-    return max(5, round(entfernung_km(von, nach) * je_km / 5) * 5)
+    return max(5, math.floor(entfernung_km(von, nach) * je_km / 5 + 0.5) * 5)

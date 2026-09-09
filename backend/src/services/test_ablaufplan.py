@@ -2,6 +2,7 @@ import shutil
 import unittest
 
 from data.ablaufplan import SPALTEN_JE_BLATT, plandaten
+from data.fahrzeit import schaetzung
 from data.typst import RenderError, plan_blattweise, render_plan
 from entities.alarm import Arbeitsmappe
 from entities.planung import Materialposten
@@ -284,6 +285,16 @@ class FahrzeitTest(unittest.TestCase):
 
     def test_ohne_koordinaten_gibt_es_keine_schaetzung(self):
         self.assertTrue(all(zeile["geschaetzt"] is None for zeile in self.zeilen()))
+
+    def test_zwei_orte_auf_demselben_punkt_sind_kein_weg(self):
+        """Dieselbe Adresse unter zwei Namen: der Browser rechnet hier ebenfalls nichts."""
+        derselbe = {"ostwert": 400000, "nordwert": 5818000}
+        self.assertIsNone(schaetzung(derselbe, dict(derselbe), "fahrzeug"))
+
+    def test_gerundet_wird_von_der_haelfte_weg(self):
+        """7,5 km im Fahrzeug sind 22,5 Minuten — 25, wie `Math.round` im Browser."""
+        self.assertEqual(25, schaetzung({"ostwert": 0, "nordwert": 0},
+                                        {"ostwert": 0, "nordwert": 7500}, "fahrzeug"))
 
 
 class AnfahrtTest(unittest.TestCase):

@@ -16,7 +16,7 @@
  */
 import type {Lauf, Schritt} from '../interfaces/Planung'
 import type {Anfahrt, Plandaten} from './ablauf'
-import {anfahrt, lagenName, personenplan, vonOrt} from './ablauf'
+import {anfahrt, lagenName, mitfahrer, personenplan, vonOrt} from './ablauf'
 import {alsMinuten, tagVon} from './zeit'
 
 /** Wovon der Tag erzählt wird. */
@@ -342,6 +342,9 @@ function unterwegsIn(daten: Plandaten, lauf: Lauf, schritt: Schritt,
 /**
  * Der Stand zu einem Zeitpunkt — das, was am Ausführungstag zählt: wer steht wo, wer ist
  * unterwegs und wie weit. Wer zu dieser Zeit nichts geplant hat, taucht nicht auf.
+ *
+ * Auf der erzeugten Anfahrt sitzt nur, wer sie mitfährt: wer am Ziel wartet, steht dort und
+ * nicht im Fahrzeug.
  */
 export function standorte(daten: Plandaten, zeitpunkt: string): Standort[] {
     const jetzt = alsMinuten(zeitpunkt)
@@ -354,14 +357,15 @@ export function standorte(daten: Plandaten, zeitpunkt: string): Standort[] {
         })
         if (!schritt) continue
         const fahrend = unterwegsIn(daten, lauf, schritt, jetzt)
+        const dabei = fahrend && schritt.art === 'aufenthalt'
+            ? mitfahrer(daten, lauf, schritt).map(personId => personName(daten, personId))
+            : besatzung(daten, schritt)
         gefunden.push({
             laufId: lauf.id, name: laufName(daten, lauf),
             art: lauf.fahrzeugId ? 'fahrzeug' : 'person',
             ortId: fahrend ? '' : schritt.ortId,
             unterwegs: fahrend,
-            personen: lauf.personId
-                ? [laufName(daten, lauf), ...besatzung(daten, schritt)]
-                : besatzung(daten, schritt),
+            personen: lauf.personId ? [laufName(daten, lauf), ...dabei] : dabei,
             lage: lagenName(daten, schritt.programmpunktId),
         })
     }

@@ -20,8 +20,8 @@ const gebaut = await build({
     entryPoints: [resolve(WURZEL, 'frontend/src/scripts/ablauf.ts')],
     bundle: true, format: 'esm', write: false, platform: 'node',
 })
-const {anfahrt, darfFahren, lagensicht, lagenOrt, mitfahrer, ortssicht, personenplan,
-    pruefen} = await import(
+const {anfahrt, darfFahren, lagensicht, lagenOrt, mitfahrer, ortssicht, personenplan, pruefen,
+    schaetzung} = await import(
     'data:text/javascript;base64,' + Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 
 const TAG = '2026-09-19'
@@ -191,18 +191,40 @@ fall('Wer schon am Ziel steht, fährt nicht mit', () => {
 })
 
 fall('Die Anfahrt frisst den Aufenthalt', () => {
+    const alex = [sitzt('p-alex', true)]
     const kette = lauf({fahrzeugId: 'f-lhf'}, [
-        schritt('aufenthalt', '07:00', '07:50', 'o-nord'),
-        schritt('aufenthalt', '07:50', '07:55', 'o-sued'),
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord', {besatzung: alex}),
+        schritt('aufenthalt', '07:50', '07:55', 'o-sued', {besatzung: alex}),
     ])
     const knapp = lauf({fahrzeugId: 'f-mtf'}, [
-        schritt('aufenthalt', '07:00', '07:50', 'o-nord'),
-        schritt('aufenthalt', '07:50', '08:30', 'o-sued'),
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord', {besatzung: alex}),
+        schritt('aufenthalt', '07:50', '08:30', 'o-sued', {besatzung: alex}),
     ])
+    const mit = (kette) => daten({personen: [person('p-alex', 'Alex')], laeufe: [kette]})
     return [
         ['zehn Minuten Fahrt in fünf Minuten Schritt',
-            arten(pruefen(daten({laeufe: [kette]}))).join(','), 'fahrtFrisstAufenthalt'],
-        ['vierzig Minuten reichen', arten(pruefen(daten({laeufe: [knapp]}))).join(','), ''],
+            arten(pruefen(mit(kette))).join(','), 'fahrtFrisstAufenthalt'],
+        ['vierzig Minuten reichen', arten(pruefen(mit(knapp))).join(','), ''],
+    ]
+})
+
+fall('Auch die erzeugte Anfahrt braucht einen Fahrer', () => {
+    const ohne = lauf({fahrzeugId: 'f-schwer'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord'),
+        schritt('aufenthalt', '07:50', '09:00', 'o-sued'),
+    ])
+    const falsch = lauf({fahrzeugId: 'f-schwer'}, [
+        schritt('aufenthalt', '07:00', '07:50', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('aufenthalt', '07:50', '09:00', 'o-sued', {besatzung: [sitzt('p-alex', true)]}),
+    ])
+    const gesetzt = (kette) => daten({
+        personen: [person('p-alex', 'Alex')],
+        fahrzeuge: [fahrzeug('f-schwer', 'LHF', {fuehrerschein: 'C'})],
+        laeufe: [kette],
+    })
+    return [
+        ['ohne Besatzung fährt niemand', arten(pruefen(gesetzt(ohne))).join(','), 'ohneFahrer'],
+        ['und Alex hat kein C', arten(pruefen(gesetzt(falsch))).join(','), 'ohneErlaubnis'],
     ]
 })
 
@@ -478,6 +500,37 @@ fall('Die Fahrerlaubnis zählt beim Fahren, nicht beim Dastehen', () => {
         laeufe: [stehend],
     }))
     return [['nichts gemeldet', arten(befunde).join(','), '']]
+})
+
+fall('Zwei Orte auf demselben Punkt sind kein Weg', () => {
+    const gleich = daten({
+        laeufe: [lauf({fahrzeugId: 'f-lhf'}, [
+            schritt('aufenthalt', '07:00', '07:50', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+            schritt('aufenthalt', '07:50', '09:00', 'o-hof', {besatzung: [sitzt('p-alex', true)]}),
+        ])],
+        personen: [person('p-alex', 'Alex')],
+        orte: [ort('o-nord', 'Wache Nord'), ort('o-hof', 'Hof der Wache')],
+    })
+    gleich.punkte = {'o-nord': PUNKTE['o-nord'], 'o-hof': {...PUNKTE['o-nord']}}
+    const kette = gleich.planung.laeufe[0]
+    return [
+        ['keine Schätzung', schaetzung(gleich, 'o-nord', 'o-hof', 'fahrzeug'), null],
+        ['und damit keine Fahrzeit', anfahrt(gleich, kette, kette.schritte[1]).minuten, 0],
+        ['man ist sofort da',
+            anfahrt(gleich, kette, kette.schritte[1]).bis.slice(11), '07:50'],
+    ]
+})
+
+fall('Gerundet wird von der Hälfte weg', () => {
+    const weit = daten({orte: [ort('o-nord', 'Wache Nord'), ort('o-sued', 'Kindergarten')]})
+    weit.punkte = {
+        'o-nord': {ostwert: 400000, nordwert: 5818000},
+        'o-sued': {ostwert: 400000, nordwert: 5810500},
+    }
+    return [
+        ['7,5 km im Fahrzeug sind 22,5 Minuten, also 25',
+            schaetzung(weit, 'o-nord', 'o-sued', 'fahrzeug'), 25],
+    ]
 })
 
 fall('Über die eigene Anreise wird nichts geschätzt', () => {
