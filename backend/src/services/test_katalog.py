@@ -1,8 +1,8 @@
 import unittest
 
 from data.katalog import mit_katalog
-from entities.alarm import (Alarm, Arbeitsmappe, Einsatzmittelgruppe, Fahrzeug, Fahrzeugvorlage,
-                            Kataloge)
+from entities.alarm import (Adresse, Alarm, Arbeitsmappe, Einsatzmittelgruppe, Fahrzeug,
+                            Fahrzeugvorlage, Kataloge)
 
 VORLAGE = Fahrzeugvorlage(funkrufname="LHF 6501.3", staerke="6", ezp="6", status="R2(A1)")
 
@@ -58,3 +58,30 @@ class KatalogTest(unittest.TestCase):
         arbeitsmappe = mappe(Fahrzeug(funkrufname="LHF 6501.3"))
         mit_katalog(arbeitsmappe)
         self.assertEqual("", arbeitsmappe.alarme[0].einsatzmittel[0].fahrzeuge[0].ezp)
+
+
+class AnfahrtsadresseTest(unittest.TestCase):
+    """
+    Wohin gefahren wird, ist die Einsatzadresse — außer jemand hat ausdrücklich eine andere
+    eingetragen.
+    """
+
+    def anfahrt(self, alarm: Alarm) -> Adresse:
+        arbeitsmappe = Arbeitsmappe(alarme=[alarm], kataloge=Kataloge())
+        return mit_katalog(arbeitsmappe).alarme[0].anfahrtsadresse
+
+    def test_leer_heisst_wie_die_einsatzadresse(self):
+        alarm = Alarm(id="a1", einsatzadresse=Adresse(strasse="Archenholdstraße", hnr="21"))
+        self.assertEqual(("Archenholdstraße", "21"),
+                         (self.anfahrt(alarm).strasse, self.anfahrt(alarm).hnr))
+
+    def test_eine_eingetragene_bleibt_stehen(self):
+        alarm = Alarm(id="a1", einsatzadresse=Adresse(strasse="Archenholdstraße", hnr="21"),
+                      anfahrtsadresse=Adresse(strasse="Hintereingang"))
+        self.assertEqual("Hintereingang", self.anfahrt(alarm).strasse)
+
+    def test_die_arbeitsmappe_bleibt_unberuehrt(self):
+        alarm = Alarm(id="a1", einsatzadresse=Adresse(strasse="Archenholdstraße"))
+        arbeitsmappe = Arbeitsmappe(alarme=[alarm], kataloge=Kataloge())
+        mit_katalog(arbeitsmappe)
+        self.assertEqual("", arbeitsmappe.alarme[0].anfahrtsadresse.strasse)

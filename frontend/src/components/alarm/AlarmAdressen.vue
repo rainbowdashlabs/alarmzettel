@@ -12,14 +12,6 @@ const alarm = defineModel<Alarm>({required: true})
 /** Zeigt eine Lage auf diesen Alarm, ist die Einsatzadresse die des Orts, an dem sie stattfindet. */
 defineProps<{ ausPlan?: boolean }>()
 
-/** The two addresses usually agree, so copying one over the other saves typing it twice. */
-async function uebernehmen() {
-  alarm.value.einsatzadresse = {...alarm.value.anfahrtsadresse}
-  ortSichern(alarm.value.einsatzadresse)
-  const ziel = await zuPunkt(alarm.value.einsatzadresse)
-  if (ziel) await polarSetzen(ziel)
-}
-
 /**
  * Eine aufgelöste Einsatzadresse wird ein Ort im Katalog. Damit kann der Ablaufplan sie
  * auswählen, ohne dass sie ein zweites Mal getippt wird.
@@ -41,14 +33,12 @@ async function polarSetzen(ziel: Adresspunkt) {
 
 <template>
   <section class="abschnitt">
-    <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
-      <h2 class="abschnitt-titel">{{ t('abschnitt.adressen') }}</h2>
-      <button v-if="!ausPlan" type="button" class="knopf knopf-klein" @click="uebernehmen">
-        {{ t('adresse.uebernehmen') }}
-      </button>
-    </div>
+    <h2 class="abschnitt-titel">{{ t('abschnitt.adressen') }}</h2>
     <div class="grid md:grid-cols-2 gap-5">
-      <AdresseFeld v-model="alarm.anfahrtsadresse" :titel="t('adresse.anfahrt')"/>
+      <div>
+        <AdresseFeld v-model="alarm.anfahrtsadresse" :titel="t('adresse.anfahrt')"/>
+        <p class="text-muted text-[13px] mt-2">{{ t('adresse.anfahrtLeer') }}</p>
+      </div>
       <AdresseFeld v-if="!ausPlan" v-model="alarm.einsatzadresse" :titel="t('adresse.einsatz')"
                    @aufgeloest="einsatzadresseGesetzt"/>
       <div v-else>

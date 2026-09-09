@@ -107,8 +107,8 @@ export default {
     adresse: {
         platzhalter: 'z. B. Archenholdstr 21',
         anfahrt: 'Anfahrtsadresse',
+        anfahrtLeer: 'Leer heißt: wie die Einsatzadresse. Nur eintragen, wo woanders hingefahren wird als hin gemeldet wurde.',
         einsatz: 'Einsatzadresse',
-        uebernehmen: 'Einsatzadresse = Anfahrtsadresse',
     },
     hinweise: {
         leer: 'Keine Hinweise erfasst.',

@@ -10,7 +10,7 @@ whatever asked for it, and because a rule worth having is worth a test.
 """
 
 from data.staerke import trupp_text
-from entities.alarm import Alarm, Arbeitsmappe, Fahrzeug, Fahrzeugvorlage
+from entities.alarm import Adresse, Alarm, Arbeitsmappe, Fahrzeug, Fahrzeugvorlage
 
 
 def _schluessel(funkrufname: str) -> str:
@@ -60,6 +60,16 @@ def _stichwort(alarm: Alarm, stichwoerter: dict[str, str]) -> str:
     return stichwoerter.get(alarm.stichwortId, alarm.stichwort)
 
 
+def _anfahrt(alarm: Alarm) -> Adresse:
+    """
+    Wohin gefahren wird, ist die Einsatzadresse — außer jemand hat ausdrücklich eine andere
+    Anfahrtsadresse eingetragen. Zwei Felder, die fast immer dasselbe tragen, würden sonst
+    zweimal getippt und einmal vergessen.
+    """
+    getippt = alarm.anfahrtsadresse
+    return getippt if any(getippt.model_dump().values()) else alarm.einsatzadresse
+
+
 def mit_katalog(arbeitsmappe: Arbeitsmappe) -> Arbeitsmappe:
     """The working set with everything resolved against the catalogue, ready to render."""
     bekannt = vorlagen(arbeitsmappe)
@@ -76,5 +86,6 @@ def mit_katalog(arbeitsmappe: Arbeitsmappe) -> Arbeitsmappe:
             ]
             gruppen.append(gruppe.model_copy(update={"fahrzeuge": fahrzeuge}))
         alarme.append(alarm.model_copy(update={
-            "stichwort": _stichwort(alarm, stichwoerter), "einsatzmittel": gruppen}))
+            "stichwort": _stichwort(alarm, stichwoerter), "einsatzmittel": gruppen,
+            "anfahrtsadresse": _anfahrt(alarm)}))
     return arbeitsmappe.model_copy(update={"alarme": alarme})
