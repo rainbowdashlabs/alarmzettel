@@ -14,6 +14,7 @@ import {
     faCopy,
     faDownload,
     faFilePdf,
+    faFileZipper,
     faBox,
     faListCheck,
     faMoon,
@@ -39,9 +40,9 @@ import {sitzungStarten} from './store/sitzung'
 
 
 library.add(faAngleDown, faAngleRight, faAngleUp, faArrowLeft, faBox, faCheck, faCircle,
-    faCircleCheck, faCopy, faDownload, faFilePdf, faListCheck, faLocationDot, faMoon, faPen,
-    faPersonWalking, faPlus, faRotate, faShareNodes, faSun, faTable, faTrash, faTruck, faUpload,
-    faUsers, faXmark, faGithub)
+    faCircleCheck, faCopy, faDownload, faFilePdf, faFileZipper, faListCheck, faLocationDot,
+    faMoon, faPen, faPersonWalking, faPlus, faRotate, faShareNodes, faSun, faTable, faTrash,
+    faTruck, faUpload, faUsers, faXmark, faGithub)
 
 initTheme()
 void sitzungStarten()

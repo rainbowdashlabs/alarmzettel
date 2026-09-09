@@ -9,13 +9,16 @@ Test ihn auf ein eigenes Verzeichnis umstellen kann, ohne das der laufenden Inst
 anzurühren.
 """
 
+import io
+import zipfile
+
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from data.ablaufplan import plandaten
 from services.adressen import adressen
 from data.alarmplan import ableitung, mit_plan
 from data.katalog import mit_katalog
-from data.typst import RenderError, render, render_plan
+from data.typst import RenderError, plan_blattweise, render, render_plan
 from entities.alarm import Arbeitsmappe
 from data.sitzung import SitzungFehler
 from services import sitzung as sitzungsdienst
@@ -85,6 +88,25 @@ def render_ablaufplan(request: Request) -> Response:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": 'inline; filename="ablaufplan.pdf"'})
+
+
+@router.post("/plan/ablauf/zip")
+def render_ablaufplan_zip(request: Request) -> Response:
+    """
+    Derselbe Plan als Archiv, ein PDF je Person und je Fahrzeug. Wer austeilt, greift damit den
+    einen Zettel heraus, statt den ganzen Stapel zu blättern und zu trennen.
+    """
+    mappe = _mappe(request)
+    daten = plandaten(mappe, _ortspunkte(mappe))
+    puffer = io.BytesIO()
+    try:
+        with zipfile.ZipFile(puffer, "w", zipfile.ZIP_DEFLATED) as archiv:
+            for name, teil in plan_blattweise(daten):
+                archiv.writestr(name, render_plan(teil))
+    except RenderError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(content=puffer.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="ablaufplan.zip"'})
 
 
 @router.get("/plan/alarm/{alarm_id}")

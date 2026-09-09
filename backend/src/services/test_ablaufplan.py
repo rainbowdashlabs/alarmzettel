@@ -2,7 +2,7 @@ import shutil
 import unittest
 
 from data.ablaufplan import SPALTEN_JE_BLATT, plandaten
-from data.typst import RenderError, render_plan
+from data.typst import RenderError, plan_blattweise, render_plan
 from entities.alarm import Arbeitsmappe
 from entities.planung import Materialposten
 from web.settings import settings
@@ -430,6 +430,24 @@ class RenderTest(unittest.TestCase):
     def test_der_plan_wird_zu_einem_pdf(self):
         pdf = render_plan(daten())
         self.assertTrue(pdf.startswith(b"%PDF"))
+
+    def test_blattweise_gibt_je_blatt_ein_dokument(self):
+        teile = dict(plan_blattweise(daten()))
+        self.assertEqual(
+            ["person-Alex.pdf", "person-Maria.pdf", "person-Mimen.pdf",
+             "fahrzeug-LHF-6501.3.pdf", "gesamtplan.pdf"],
+            list(teile))
+        self.assertEqual(["Alex"],
+                         [blatt["name"] for blatt in teile["person-Alex.pdf"]["personen"]])
+        self.assertEqual([], teile["person-Alex.pdf"]["fahrzeuge"])
+        self.assertEqual([], teile["gesamtplan.pdf"]["personen"])
+        self.assertTrue(teile["gesamtplan.pdf"]["gesamt"]["bloecke"])
+
+    @unittest.skipIf(shutil.which(settings.typst_binary) is None, "typst nicht installiert")
+    def test_jedes_einzelblatt_wird_ein_pdf(self):
+        for name, teil in plan_blattweise(daten()):
+            with self.subTest(name=name):
+                self.assertTrue(render_plan(teil).startswith(b"%PDF"))
 
 
 if __name__ == "__main__":

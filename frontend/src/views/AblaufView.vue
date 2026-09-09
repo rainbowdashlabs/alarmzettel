@@ -7,7 +7,7 @@ import LaufKette from '../components/planung/LaufKette.vue'
 import OrtsSicht from '../components/planung/OrtsSicht.vue'
 import PersonenPlan from '../components/planung/PersonenPlan.vue'
 import {t} from '../i18n'
-import {fehlertext, renderAblaufplan} from '../api/render'
+import {fehlertext, renderAblaufplan, renderAblaufplanZip, renderAlle} from '../api/render'
 import {arbeitsmappe} from '../store/arbeitsmappe'
 import {alleOrte, entfernen, laufAnlegen, laufVon, personName, punkteLaden} from '../store/planung'
 import {jetztAbgleichen} from '../store/sync'
@@ -49,15 +49,14 @@ const fehler = ref<string | null>(null)
  * Vor dem Drucken abgleichen, damit die Blätter den Stand tragen, den alle haben, und nicht den,
  * den dieser Browser vor ein paar Sekunden gesehen hat.
  */
-async function drucken() {
+async function drucken(holen: () => Promise<Blob>, name: string) {
   fehler.value = null
   try {
     await jetztAbgleichen()
-    const blob = await renderAblaufplan()
-    const url = URL.createObjectURL(blob)
+    const url = URL.createObjectURL(await holen())
     const link = document.createElement('a')
     link.href = url
-    link.download = 'ablaufplan.pdf'
+    link.download = name
     link.click()
     URL.revokeObjectURL(url)
   } catch (error) {
@@ -74,9 +73,21 @@ async function drucken() {
         <p class="text-muted text-sm mt-1">{{ t('ablauf.beschreibung') }}</p>
       </div>
       <div class="flex gap-2">
-        <button type="button" class="knopf knopf-klein" @click="drucken()">
+        <button type="button" class="knopf knopf-klein"
+                @click="drucken(renderAblaufplan, 'ablaufplan.pdf')">
           <font-awesome-icon icon="fa-solid fa-file-pdf"/>
           {{ t('ablauf.drucken') }}
+        </button>
+        <button type="button" class="knopf knopf-klein" :title="t('ablauf.archivHinweis')"
+                @click="drucken(renderAblaufplanZip, 'ablaufplan.zip')">
+          <font-awesome-icon icon="fa-solid fa-file-zipper"/>
+          {{ t('ablauf.archiv') }}
+        </button>
+        <button type="button" class="knopf knopf-klein" :title="t('ablauf.zettelHinweis')"
+                :disabled="!arbeitsmappe.alarme.length"
+                @click="drucken(renderAlle, 'alarmzettel.pdf')">
+          <font-awesome-icon icon="fa-solid fa-file-pdf"/>
+          {{ t('ablauf.zettel') }}
         </button>
         <RouterLink to="/kataloge" class="knopf knopf-klein">{{ t('ablauf.stammdaten') }}</RouterLink>
       </div>

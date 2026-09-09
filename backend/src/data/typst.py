@@ -82,6 +82,37 @@ def render_plan(daten: dict) -> bytes:
                     "ablaufplan.pdf", beilagen=_kennmuster)
 
 
+LEERER_PLAN = {"personen": [], "fahrzeuge": [], "gesamt": {"bloecke": []}, "bewegung": []}
+
+
+def _dateiname(name: str, art: str) -> str:
+    """
+    Ein Name, den jedes Dateisystem annimmt. Umlaute bleiben — der Zettel gehört einem Menschen,
+    und „Jörg“ soll auch so heißen.
+    """
+    sauber = "".join("-" if zeichen in '/\\:*?"<>|' or zeichen.isspace() else zeichen
+                     for zeichen in name).strip("-")
+    while "--" in sauber:
+        sauber = sauber.replace("--", "-")
+    return f"{art}-{sauber or 'ohne-namen'}.pdf"
+
+
+def plan_blattweise(daten: dict) -> list[tuple[str, dict]]:
+    """
+    Derselbe Plan, zerlegt in ein Dokument je Blatt: eines für jede Person, eines für jedes
+    Fahrzeug, und der Gesamtplan mit dem Bewegungsbild für sich. So bekommt jeder genau seinen
+    Zettel in die Hand, statt den Stapel aller.
+    """
+    teile = [(_dateiname(blatt["name"], "person"), {**LEERER_PLAN, "personen": [blatt]})
+             for blatt in daten["personen"]]
+    teile += [(_dateiname(blatt["name"], "fahrzeug"), {**LEERER_PLAN, "fahrzeuge": [blatt]})
+              for blatt in daten["fahrzeuge"]]
+    if daten["gesamt"]["bloecke"] or daten["bewegung"]:
+        teile.append(("gesamtplan.pdf", {**LEERER_PLAN, "gesamt": daten["gesamt"],
+                                         "bewegung": daten["bewegung"]}))
+    return teile
+
+
 def render(arbeitsmappe: Arbeitsmappe) -> bytes:
     """Compiles the Alarmzettel to PDF: one sheet per Alarm, in the order given."""
     if not arbeitsmappe.alarme:
