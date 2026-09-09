@@ -21,6 +21,9 @@ defineProps<{ abgeleitet: Alarmableitung }>()
           <td class="py-1 pr-3 font-bold">{{ blatt.funkrufname }}</td>
           <td class="tabular py-1 pr-3">{{ blatt.einsatzDatum }} {{ blatt.einsatzZeit }}</td>
           <td class="tabular py-1 pr-3 text-muted">{{ blatt.einsatzNr }}</td>
+          <td v-if="blatt.ezp" class="tabular py-1 pr-3 text-muted">
+            {{ t('ausPlan.ezp', {n: blatt.ezp}) }}
+          </td>
           <td class="py-1 text-muted">{{ t('ausPlan.staerke', {n: blatt.staerke}) }}</td>
         </tr>
       </tbody>

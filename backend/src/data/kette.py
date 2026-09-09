@@ -90,6 +90,21 @@ def mitfahrer(planung: Planung, lauf: Lauf, schritt: Schritt, punkte: dict) -> l
                    for eintrag in personenplan(planung, person_id, punkte))]
 
 
+def fahrzeit(lauf: Lauf, schritt: Schritt, punkte: dict) -> int | None:
+    """
+    Die geschätzte Dauer des Weges, der zu diesem Schritt gehört: bei einer eingetragenen Fahrt
+    ihre eigene, bei einem Aufenthalt die seiner erzeugten Anfahrt. Ohne Koordinaten an einem der
+    beiden Orte gibt es keine Schätzung.
+    """
+    if schritt.art == "fahrt":
+        return schaetzung(punkte.get(von_ort(lauf, schritt)), punkte.get(schritt.ortId),
+                          mittel_von(lauf, schritt))
+    weg = anfahrt(lauf, schritt, punkte)
+    if weg is None:
+        return None
+    return schaetzung(punkte.get(weg.von_ort_id), punkte.get(weg.nach_ort_id), weg.mittel)
+
+
 def lagen_ort(planung: Planung, programmpunkt_id: str) -> str:
     """Wo eine Lage stattfindet: dort, wo die Schritte stehen, die auf sie zeigen."""
     for lauf in planung.laeufe:

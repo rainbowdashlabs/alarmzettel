@@ -28,7 +28,7 @@ const planstand = computed(() => JSON.stringify([
   route.params.id,
   arbeitsmappe.planung.programmpunkte.map(punkt => [punkt.id, punkt.alarmId]),
   arbeitsmappe.planung.laeufe.map(lauf => lauf.schritte.map(
-      schritt => [schritt.programmpunktId, schritt.ortId, schritt.von,
+      schritt => [schritt.programmpunktId, schritt.ortId, schritt.von, schritt.bis,
                   schritt.besatzung.length])),
 ]))
 

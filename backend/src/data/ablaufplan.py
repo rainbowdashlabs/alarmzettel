@@ -8,9 +8,9 @@ können, und das Typst-Template legt nur noch aus, was hier steht.
 """
 
 from data.bewegungen import bewegungsbilder
-from data.fahrzeit import schaetzung
 from data.karten import adresstext, karten
-from data.kette import anfahrt, mittel_von, mitfahrer, personenplan, von_ort as _von_ort
+from data.kette import (
+    anfahrt, fahrzeit as _fahrzeit, mittel_von, mitfahrer, personenplan, von_ort as _von_ort)
 from data.planzeit import minuten as _minuten, tag as _datum, uhrzeit as _uhrzeit
 from entities.alarm import Arbeitsmappe
 from entities.planung import Lauf, Person, Planung, Schritt
@@ -82,18 +82,8 @@ class Plan:
         return self._punkte
 
     def fahrzeit(self, lauf: Lauf, schritt: Schritt) -> int | None:
-        """
-        Wie lange die Luftlinie dauern würde — neben der geplanten Zeit auf dem Blatt. Bei einer
-        eingetragenen Fahrt ist es ihre eigene, bei einem Aufenthalt die seiner Anfahrt.
-        """
-        if schritt.art == "fahrt":
-            return schaetzung(self._punkte.get(_von_ort(lauf, schritt)),
-                              self._punkte.get(schritt.ortId), mittel_von(lauf, schritt))
-        weg = anfahrt(lauf, schritt, self._punkte)
-        if weg is None:
-            return None
-        return schaetzung(self._punkte.get(weg.von_ort_id),
-                          self._punkte.get(weg.nach_ort_id), weg.mittel)
+        """Wie lange die Luftlinie dauern würde — neben der geplanten Zeit auf dem Blatt."""
+        return _fahrzeit(lauf, schritt, self._punkte)
 
     def wohin(self, schritt: Schritt) -> str:
         """Wo man ist; bei einer Fahrt, wohin sie geht."""

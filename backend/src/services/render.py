@@ -41,7 +41,7 @@ def _mappe(request: Request) -> Arbeitsmappe:
 
 def _pdf(arbeitsmappe: Arbeitsmappe, filename: str) -> Response:
     try:
-        pdf = render(mit_katalog(mit_plan(arbeitsmappe)))
+        pdf = render(mit_katalog(mit_plan(arbeitsmappe, _ortspunkte(arbeitsmappe))))
     except RenderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",
@@ -125,4 +125,4 @@ def alarm_ableitung(alarm_id: str, request: Request) -> dict:
     alarm = next((eintrag for eintrag in mappe.alarme if eintrag.id == alarm_id), None)
     if alarm is None:
         raise HTTPException(status_code=404, detail="Alarm nicht in der Sitzung.")
-    return {"abgeleitet": ableitung(mappe, alarm)}
+    return {"abgeleitet": ableitung(mappe, alarm, _ortspunkte(mappe))}

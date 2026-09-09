@@ -18,6 +18,7 @@ MAPPE = {
         "fahrzeuge": [
             {"id": "f-lhf", "funkrufname": "LHF 6501.3", "ezp": "6", "status": "R2(A1)"},
             {"id": "f-mtf", "funkrufname": "MTF 6502.1"},
+            {"id": "f-rtw", "funkrufname": "RTW 6503.1"},
         ],
         "orte": [
             {"id": "o-nord", "name": "Wache Nord"},
@@ -59,6 +60,54 @@ MAPPE = {
 
 def mappe(**aenderung) -> Arbeitsmappe:
     return Arbeitsmappe.model_validate(MAPPE | aenderung)
+
+
+class GruppenTest(unittest.TestCase):
+    """
+    Zusammen auf einen Zettel kommt, wer zusammen alarmiert ist: wessen Zeiten sich überschneiden.
+    Zwei Einsätze nacheinander an derselben Lage sind zwei Zettel.
+    """
+
+    def zettel(self, *fenster: tuple[str, str, str]) -> list[Alarm]:
+        laeufe = [{"id": f"l-{nummer}", "fahrzeugId": fahrzeugId, "schritte": [
+            {"id": f"s-{nummer}", "sortierung": 0.0, "art": "aufenthalt",
+             "von": f"2026-09-19T{von}", "bis": f"2026-09-19T{bis}", "ortId": "o-kita",
+             "programmpunktId": "g-brand",
+             "besatzung": [{"id": f"b-{nummer}", "personId": "p-alex", "faehrt": True}]}]}
+            for nummer, (fahrzeugId, von, bis) in enumerate(fenster)]
+        mappe = Arbeitsmappe.model_validate(
+            MAPPE | {"planung": MAPPE["planung"] | {"laeufe": laeufe}})
+        return [alarm for alarm in mit_plan(mappe).alarme if alarm.id == "a-brand"]
+
+    def namen(self, alarm: Alarm) -> list[str]:
+        return [fahrzeug.funkrufname for fahrzeug in alarm.einsatzmittel[0].fahrzeuge]
+
+    def test_ueberschneidung_setzt_beide_auf_einen_zettel(self):
+        """Die Zeit gehört dem Blatt, die Nummer dem Einsatz: wer später losfährt, steht später
+        drauf und trägt trotzdem dieselbe Nummer."""
+        zettel = self.zettel(("f-lhf", "08:00", "10:00"), ("f-mtf", "09:00", "11:00"))
+        self.assertEqual(2, len(zettel))
+        self.assertEqual([["LHF 6501.3", "MTF 6502.1"]] * 2, [self.namen(z) for z in zettel])
+        self.assertEqual(["08:00", "09:00"], [z.einsatzZeit for z in zettel])
+        self.assertEqual(zettel[0].einsatzNr, zettel[1].einsatzNr)
+
+    def test_ohne_ueberschneidung_zwei_einsaetze(self):
+        zettel = self.zettel(("f-lhf", "08:00", "09:00"), ("f-mtf", "10:00", "11:00"))
+        self.assertEqual([["LHF 6501.3"], ["MTF 6502.1"]], [self.namen(z) for z in zettel])
+        self.assertEqual(["08:00", "10:00"], [z.einsatzZeit for z in zettel])
+        self.assertNotEqual(zettel[0].einsatzNr, zettel[1].einsatzNr)
+
+    def test_luecke_von_null_minuten_trennt_auch(self):
+        """Wer ankommt, wenn der andere weg ist, ist ein neuer Einsatz und kein Nachrücker."""
+        zettel = self.zettel(("f-lhf", "08:00", "09:00"), ("f-mtf", "09:00", "10:00"))
+        self.assertEqual([["LHF 6501.3"], ["MTF 6502.1"]], [self.namen(z) for z in zettel])
+
+    def test_die_ueberschneidung_traegt_weiter(self):
+        """A mit B und B mit C hält alle drei zusammen, auch wenn A und C sich nicht berühren."""
+        zettel = self.zettel(("f-lhf", "08:00", "09:00"), ("f-mtf", "08:30", "10:00"),
+                             ("f-rtw", "09:30", "11:00"))
+        self.assertEqual(3, len(zettel))
+        self.assertEqual({3}, {len(self.namen(z)) for z in zettel})
 
 
 class EinsatznummerTest(unittest.TestCase):

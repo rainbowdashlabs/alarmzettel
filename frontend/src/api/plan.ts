@@ -9,6 +9,8 @@ export interface Planblatt {
     einsatzZeit: string
     /** Aus der Uhrzeit gerechnet, sofern der Katalog Alarme pro Tag führt. */
     einsatzNr: string
+    /** Die geschätzte Fahrzeit dieses Fahrzeugs zur Lage, in Minuten. */
+    ezp: string
 }
 
 export interface Alarmableitung {

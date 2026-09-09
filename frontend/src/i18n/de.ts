@@ -244,8 +244,9 @@ export default {
     },
     ausPlan: {
         titel: 'Aus dem Ablaufplan',
-        erklaerung: 'Die Lage „{lage}“ zeigt auf diesen Alarm. Zeiten, Einsatzadresse und Aufgebot kommen von dort; gedruckt wird ein Blatt je Fahrzeug, jedes ab dessen eigener Anfahrt.',
+        erklaerung: 'Die Lage „{lage}“ zeigt auf diesen Alarm. Zeiten, Einsatzadresse, EZP und Aufgebot kommen von dort; gedruckt wird ein Blatt je Fahrzeug, jedes ab dessen eigener Anfahrt. Zusammen auf einem Zettel steht, wer zusammen an der Lage ist — wer erst kommt, wenn niemand mehr da ist, bekommt einen eigenen Einsatz.',
         staerke: 'Stärke {n}',
+        ezp: 'EZP {n} min',
         adresse: 'Die Adresse des Orts, an dem die Lage stattfindet.',
         ohneFahrzeug: 'An dieser Lage hängt noch kein Fahrzeug — gedruckt wird das Aufgebot, das unten steht.',
         aufgebot: 'Das Aufgebot kommt aus dem Ablaufplan: die Fahrzeuge, die an dieser Lage sind, mit der Stärke ihrer Besatzung.',
