@@ -1,6 +1,10 @@
 import sqlite3
 import tempfile
 import unittest
+
+from data.geo import punkt_aus_text, wgs84_zu_utm33
+from entities.alarm import Arbeitsmappe
+from services.render import _ortspunkte
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -150,3 +154,45 @@ class AdressenApiTest(unittest.TestCase):
         punkt = self.client.get("/api/adressen?strasse=Archenholdstraße&hnr=21&plz=10315").json()
         self.assertEqual("Friedrichsfelde", punkt["ort"])
         self.assertAlmostEqual(398470.239, punkt["ostwert"], places=3)
+
+
+class GeodatenTest(unittest.TestCase):
+    """
+    Ein an der Adresse gesetzter Punkt gilt vor dem Adressdienst. Gerechnet wird er in dieselben
+    amtlichen Koordinaten, die der Dienst liefert — sonst stimmte die Entfernung nicht.
+    """
+
+    PUNKTE = [
+        ("Junker-Jörg-Straße 36", 52.48439726, 13.52144944, 399598.791, 5815944.114),
+        ("Archenholdstraße 21", 52.50763155, 13.50404047, 398470.239, 5818552.633),
+        ("Platz der Republik 1", 52.51859372, 13.37551809, 389775.529, 5819960.354),
+    ]
+    """Was der Berliner Dienst zu diesen drei Adressen in beiden Systemen ausgibt."""
+
+    def test_vorwaerts_auf_die_amtlichen_werte(self):
+        """Unter einem Zentimeter — dieselbe Schranke, die der Browser einhalten muss."""
+        for was, breite, laenge, ostwert, nordwert in self.PUNKTE:
+            with self.subTest(was=was):
+                punkt = wgs84_zu_utm33(breite, laenge)
+                self.assertAlmostEqual(ostwert, punkt["ostwert"], delta=0.01)
+                self.assertAlmostEqual(nordwert, punkt["nordwert"], delta=0.01)
+
+    def test_ein_paar_wird_gelesen(self):
+        punkt = punkt_aus_text(" 52.48439726 , 13.52144944 ")
+        self.assertIsNotNone(punkt)
+        self.assertAlmostEqual(399598.791, punkt["ostwert"], delta=0.01)
+
+    def test_unlesbares_bleibt_ohne_punkt(self):
+        for text in ("", "Wiese hinterm Haus", "52.5", "91.0, 13.0", "52,5, 13,4, 7"):
+            with self.subTest(text=text):
+                self.assertIsNone(punkt_aus_text(text))
+
+    def test_der_gesetzte_punkt_gilt_vor_der_strasse(self):
+        """Sonst wäre die Karte nur Zierde: gerechnet würde weiter mit der Hausnummer."""
+        mappe = Arbeitsmappe.model_validate({
+            "version": 1, "alarme": [], "kataloge": {"orte": [
+                {"id": "o-wiese", "name": "Wiese", "adresse": {
+                    "strasse": "Archenholdstraße", "hnr": "21", "plz": "10315",
+                    "koordinaten": "52.48439726, 13.52144944"}}]}})
+        punkte = _ortspunkte(mappe)
+        self.assertAlmostEqual(399598.791, punkte["o-wiese"]["ostwert"], delta=0.01)

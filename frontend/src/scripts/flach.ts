@@ -17,7 +17,7 @@ function pfad(...teile: string[]): string {
     return teile.join(TRENNER)
 }
 
-const ADRESSFELDER = ['strasse', 'hnr', 'objekt', 'plz', 'ort'] as const
+const ADRESSFELDER = ['strasse', 'hnr', 'objekt', 'plz', 'ort', 'koordinaten'] as const
 const ALARM_UNTEROBJEKTE = ['id', 'sortierung', 'anfahrtsadresse', 'einsatzadresse', 'karte',
     'hinweise', 'einsatzmittel']
 

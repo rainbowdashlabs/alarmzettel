@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from data.ablaufplan import plandaten
 from services.adressen import adressen
 from data.alarmplan import ableitung, mit_plan
+from data.geo import punkt_aus_text
 from data.katalog import mit_katalog
 from data.typst import RenderError, plan_blattweise, render, render_plan
 from entities.alarm import Arbeitsmappe
@@ -67,11 +68,16 @@ def render_alarm(alarm_id: str, request: Request) -> Response:
 
 def _ortspunkte(mappe: Arbeitsmappe) -> dict:
     """
-    Die Koordinaten der Orte, soweit der Adressdienst sie kennt. Sie tragen die geschätzten
-    Fahrzeiten auf den Blättern; ohne Liste fehlt allein die Schätzung.
+    Die Koordinaten der Orte, soweit sie bekannt sind. Sie tragen die geschätzten Fahrzeiten auf
+    den Blättern; ohne Liste fehlt allein die Schätzung. Ein an der Adresse gesetzter Punkt gilt
+    vor dem Adressdienst — jemand hat ihn auf die Karte gesetzt, weil die Straße ihn nicht trifft.
     """
     punkte = {}
     for ort in mappe.kataloge.alle_orte():
+        gesetzt = punkt_aus_text(ort.adresse.koordinaten)
+        if gesetzt is not None:
+            punkte[ort.id] = gesetzt
+            continue
         gefunden = adressen.finden(ort.adresse.strasse, ort.adresse.hnr, ort.adresse.plz)
         if gefunden and gefunden.get("ostwert") is not None:
             punkte[ort.id] = {"ostwert": gefunden["ostwert"], "nordwert": gefunden["nordwert"]}

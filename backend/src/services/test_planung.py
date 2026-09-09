@@ -38,7 +38,7 @@ PLAN = {
 
 ORTE = [{"id": "o1", "sortierung": 0.0, "name": "Wache Nord",
          "adresse": {"strasse": "Junker-Jörg-Straße", "hnr": "36", "objekt": "",
-                     "plz": "10318", "ort": "Karlshorst"}}]
+                     "plz": "10318", "ort": "Karlshorst", "koordinaten": ""}}]
 
 MAPPE = {"version": 1, "alarme": [],
          "kataloge": {"orte": ORTE, **STAMM}, "planung": PLAN}

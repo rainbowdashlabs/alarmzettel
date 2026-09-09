@@ -63,6 +63,60 @@ export function utm33ZuWgs84(punkt: Punkt): Ortsmarke {
     }
 }
 
+/**
+ * Und dieselbe Projektion vorwärts: von der Marke, die jemand auf der Karte gesetzt hat, zu den
+ * Koordinaten, auf denen Entfernung und Polar-Koordinaten rechnen.
+ */
+export function wgs84ZuUtm33(marke: Ortsmarke): Punkt {
+    const e2 = F * (2 - F)
+    const eStrich2 = e2 / (1 - e2)
+    const breite = marke.breite * Math.PI / 180
+    const laenge = (marke.laenge - MITTELMERIDIAN) * Math.PI / 180
+
+    const sin = Math.sin(breite)
+    const cos = Math.cos(breite)
+    const tan = Math.tan(breite)
+    const n = A / Math.sqrt(1 - e2 * sin ** 2)
+    const t = tan ** 2
+    const c = eStrich2 * cos ** 2
+    const a1 = laenge * cos
+
+    const m = A * (
+        (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * breite
+        - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * breite)
+        + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * breite)
+        - (35 * e2 ** 3 / 3072) * Math.sin(6 * breite))
+
+    const ostwert = K0 * n * (
+        a1
+        + (1 - t + c) * a1 ** 3 / 6
+        + (5 - 18 * t + t ** 2 + 72 * c - 58 * eStrich2) * a1 ** 5 / 120
+    ) + OSTVERSATZ
+    const nordwert = K0 * (m + n * tan * (
+        a1 ** 2 / 2
+        + (5 - t + 9 * c + 4 * c ** 2) * a1 ** 4 / 24
+        + (61 - 58 * t + t ** 2 + 600 * c - 330 * eStrich2) * a1 ** 6 / 720))
+
+    return {ostwert, nordwert}
+}
+
+/**
+ * Ein Koordinatenpaar, wie es aus einer Karte kommt: „52.486300, 13.521500“. Leer oder unlesbar
+ * heißt, dass die Adresse selbst nachgeschlagen wird.
+ */
+export function markeAusText(text: string): Ortsmarke | null {
+    const teile = text.split(',').map(stueck => Number(stueck.trim()))
+    if (teile.length !== 2 || teile.some(wert => !Number.isFinite(wert))) return null
+    const [breite, laenge] = teile as [number, number]
+    if (Math.abs(breite) > 90 || Math.abs(laenge) > 180) return null
+    return {breite, laenge}
+}
+
+/** Wie ein Paar geschrieben wird: sechs Nachkommastellen sind gut zehn Zentimeter. */
+export function markeAlsText(marke: Ortsmarke): string {
+    return `${marke.breite.toFixed(6)}, ${marke.laenge.toFixed(6)}`
+}
+
 /** Der Mittelpunkt mehrerer Marken — worauf die Karte zeigt, wenn sie sich öffnet. */
 export function mitte(marken: Ortsmarke[]): Ortsmarke {
     if (!marken.length) return {breite: 52.52, laenge: 13.405}

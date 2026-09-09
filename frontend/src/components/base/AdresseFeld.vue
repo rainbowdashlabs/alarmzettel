@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, onBeforeUnmount, ref, watch} from 'vue'
+import {computed, defineAsyncComponent, onBeforeUnmount, ref, watch} from 'vue'
 import AuswahlFeld from './AuswahlFeld.vue'
 import TextFeld from './TextFeld.vue'
 import {t} from '../../i18n'
@@ -9,6 +9,16 @@ import type {Adresse} from '../../interfaces/Alarm'
 defineProps<{ titel: string }>()
 const emit = defineEmits<{ aufgeloest: [Adresspunkt] }>()
 const adresse = defineModel<Adresse>({required: true})
+
+/** Leaflet bringt seine eigene Last mit und wird erst geholt, wenn jemand die Karte aufmacht. */
+const PunktFenster = defineAsyncComponent(() => import('./PunktFenster.vue'))
+const kartewahl = ref(false)
+
+/** Ein auf der Karte gesetzter Punkt gilt vor der Straße. */
+function punktSetzen(wert: string) {
+  adresse.value.koordinaten = wert
+  kartewahl.value = false
+}
 
 const treffer = ref<Adressvorschlag[]>([])
 const vorschlaege = computed(() => treffer.value.map(eintrag => eintrag.beschriftung))
@@ -77,5 +87,19 @@ onBeforeUnmount(() => window.clearTimeout(warten))
       <TextFeld v-model="adresse.plz" :label="t('feld.plz')" @change="aufloesen"/>
       <TextFeld v-model="adresse.ort" :label="t('feld.ort')" breit/>
     </div>
+
+    <div class="flex items-center gap-2 flex-wrap mt-2">
+      <button type="button" class="knopf knopf-klein" @click="kartewahl = true">
+        <font-awesome-icon icon="fa-solid fa-location-dot"/>
+        {{ adresse.koordinaten ? t('adresse.punktAendern') : t('adresse.punktWaehlen') }}
+      </button>
+      <span v-if="adresse.koordinaten" class="tabular text-[13px] text-muted"
+            :title="t('adresse.punktGilt')">
+        {{ adresse.koordinaten }}
+      </span>
+    </div>
+
+    <PunktFenster v-if="kartewahl" :adresse="adresse" @setzen="punktSetzen"
+                  @schliessen="kartewahl = false"/>
   </div>
 </template>

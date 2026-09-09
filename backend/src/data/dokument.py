@@ -37,7 +37,7 @@ def teile(pfad: str) -> list[str]:
 
 def _adresse_felder(basis: str, adresse: dict) -> dict[str, Any]:
     return {_pfad(basis, feld): adresse.get(feld, "")
-            for feld in ("strasse", "hnr", "objekt", "plz", "ort")}
+            for feld in ("strasse", "hnr", "objekt", "plz", "ort", "koordinaten")}
 
 
 FAHRZEUGFELDER = ("funkrufname", "staerke", "ezp", "status", "plaetze", "fuehrerschein")

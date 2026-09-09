@@ -1,4 +1,5 @@
 import client from './http'
+import {markeAusText, wgs84ZuUtm33} from '../scripts/geo'
 import type {Adresse} from '../interfaces/Alarm'
 
 /**
@@ -72,6 +73,15 @@ export async function adresspunkt(strasse: string, hnr: string, plz = ''): Promi
     }
 }
 
+/**
+ * Der Punkt zu einer Adresse. Steht an ihr ein eigener, gilt der und es wird nichts
+ * nachgeschlagen: jemand hat ihn auf der Karte gesetzt, weil die Straße ihn nicht trifft.
+ */
 export function zuPunkt(adresse: Adresse): Promise<Adresspunkt | null> {
+    const marke = markeAusText(adresse.koordinaten ?? '')
+    if (marke) {
+        const punkt = wgs84ZuUtm33(marke)
+        return Promise.resolve({...punkt, plz: adresse.plz, ort: adresse.ort} as Adresspunkt)
+    }
     return adresspunkt(adresse.strasse, adresse.hnr, adresse.plz)
 }

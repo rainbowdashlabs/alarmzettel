@@ -9,12 +9,20 @@ export interface Eintrag {
     sortierung: number
 }
 
+/**
+ * Eine Anschrift, und wahlweise der Punkt dazu: `koordinaten` hält „52.486300, 13.521500“ in
+ * WGS 84, gesetzt auf der Karte. Steht dort etwas, gilt es und die Straße wird nicht
+ * nachgeschlagen — für den Hof hinter dem Haus, die Wiese ohne Hausnummer, den Treffpunkt im
+ * Wald.
+ */
 export interface Adresse {
     strasse: string
     hnr: string
     objekt: string
     plz: string
     ort: string
+    /** „52.486300, 13.521500“ in WGS 84, auf der Karte gesetzt. Leer: die Straße gilt. */
+    koordinaten: string
 }
 
 export interface Karte {
@@ -172,7 +180,7 @@ import {
 export const ARBEITSMAPPE_VERSION = 1
 
 export function leereAdresse(): Adresse {
-    return {strasse: '', hnr: '', objekt: '', plz: '', ort: ''}
+    return {strasse: '', hnr: '', objekt: '', plz: '', ort: '', koordinaten: ''}
 }
 
 /** New entries go to the end; `naechste` reads the highest sort key already in the list. */

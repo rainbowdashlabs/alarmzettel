@@ -26,7 +26,7 @@ async function laden(pfad) {
 
 const {bewegungsbild, bewegungstage, ereignisse, materialstand, standorte} =
     await laden('frontend/src/scripts/bewegungen.ts')
-const {utm33ZuWgs84} = await laden('frontend/src/scripts/geo.ts')
+const {utm33ZuWgs84, wgs84ZuUtm33} = await laden('frontend/src/scripts/geo.ts')
 
 const TAG = '2026-09-19'
 let nummer = 0
@@ -266,6 +266,14 @@ fall('UTM 33N wird zu denselben Punkten, die der Dienst in WGS 84 nennt', () =>
         const nord = (marke.breite - breite) * 111320
         const ost = (marke.laenge - laenge) * 111320 * Math.cos(breite * Math.PI / 180)
         return [`${was}: unter einem Zentimeter daneben`, Math.hypot(nord, ost) < 0.01, true]
+    }))
+
+fall('Und dieselbe Projektion vorwärts, zurück auf die amtlichen Werte', () =>
+    KOORDINATEN.map(([was, punkt, breite, laenge]) => {
+        const zurueck = wgs84ZuUtm33({breite, laenge})
+        const weite = Math.hypot(zurueck.ostwert - punkt.ostwert,
+                                 zurueck.nordwert - punkt.nordwert)
+        return [`${was}: unter einem Zentimeter daneben`, weite < 0.01, true]
     }))
 
 let fehler = 0

@@ -50,8 +50,16 @@ class Eintrag(Modell):
 
 
 class Adresse(BaseModel):
+    """
+    Eine Anschrift, und wahlweise der Punkt dazu: `koordinaten` hält „52.486300, 13.521500“ in
+    WGS 84, gesetzt auf der Karte. Steht dort etwas, gilt es und die Straße wird nicht
+    nachgeschlagen — für den Hof hinter dem Haus, die Wiese ohne Hausnummer, den Treffpunkt im
+    Wald.
+    """
+
     strasse: str = ""
     hnr: str = ""
     objekt: str = ""
     plz: str = ""
     ort: str = ""
+    koordinaten: str = ""
