@@ -85,6 +85,8 @@ interface Spurschritt {
     anfahrt: Anfahrt | null
     /** Wann diese Spur an ihrem Ort steht — nach der Anfahrt, sonst mit dem Beginn. */
     ankunft: string
+    /** Wann sie wieder weg ist. Eine Person, die abgeholt wird, geht vor dem Fahrzeug. */
+    bis: string
     begleitung: string[]
 }
 
@@ -149,7 +151,8 @@ function fahrzeugspuren(daten: Plandaten): Spur[] {
             const weg = anfahrt(daten, lauf, schritt)
             return {
                 schritt, vonOrtId: vonOrt(lauf, schritt), anfahrt: weg,
-                ankunft: weg?.bis ?? schritt.von, begleitung: besatzung(daten, schritt),
+                ankunft: weg?.bis ?? schritt.von, bis: schritt.bis,
+                begleitung: besatzung(daten, schritt),
             }
         }),
     }))
@@ -171,6 +174,7 @@ function personenspuren(daten: Plandaten): Spur[] {
                 vonOrtId: eintrag.vonOrtId,
                 anfahrt: faehrtMit ? weg : null,
                 ankunft: eintrag.ankunft,
+                bis: eintrag.bis,
                 begleitung: eintrag.lauf.fahrzeugId
                     ? [fahrzeugName(daten, eintrag.lauf.fahrzeugId)]
                     : [],
@@ -235,7 +239,7 @@ export function bewegungsbild(daten: Plandaten, datum: string, modus: Modus = 'f
             if (eintrag.schritt.art !== 'aufenthalt' || !amTag(eintrag)) continue
             stehend.push({spur, eintrag,
                           von: minuteAmTag(eintrag.ankunft, datum),
-                          bis: minuteAmTag(eintrag.schritt.bis, datum)})
+                          bis: minuteAmTag(eintrag.bis, datum)})
         }
     }
     stehend.sort((a, b) => a.von - b.von)

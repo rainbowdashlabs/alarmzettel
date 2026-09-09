@@ -20,8 +20,8 @@ const gebaut = await build({
     entryPoints: [resolve(WURZEL, 'frontend/src/scripts/ablauf.ts')],
     bundle: true, format: 'esm', write: false, platform: 'node',
 })
-const {anfahrt, darfFahren, lagensicht, lagenOrt, mitfahrer, ortssicht, personenplan, pruefen,
-    schaetzung} = await import(
+const {anfahrt, darfFahren, einsaetze, lagenOrt, mitfahrer, ortssicht,
+    personenplan, pruefen, schaetzung} = await import(
     'data:text/javascript;base64,' + Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 
 const TAG = '2026-09-19'
@@ -246,6 +246,62 @@ fall('Eine Lage an zwei Orten', () => {
     ]
 })
 
+fall('Wer abgeholt wird, ist ab da fort', () => {
+    const alex = [sitzt('p-alex', true)]
+    const lhf = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '12:00', 'o-sued',
+            {besatzung: [sitzt('p-alex'), sitzt('p-maria', true)], programmpunktId: 'g-brand'}),
+    ])
+    const mtf = lauf({fahrzeugId: 'f-mtf'}, [
+        schritt('aufenthalt', '09:00', '09:30', 'o-sued', {besatzung: alex}),
+        schritt('aufenthalt', '09:30', '11:00', 'o-nord', {besatzung: alex}),
+    ])
+    const gesetzt = daten({
+        personen: [person('p-alex', 'Alex'), person('p-maria', 'Maria')],
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')],
+        programmpunkte: [{id: 'g-brand', sortierung: 0, name: 'Brand', alarmId: ''}],
+        laeufe: [lhf, mtf],
+    })
+    const plan = personenplan(gesetzt, 'p-alex')
+    return [
+        ['Alex steht bis zur Abholung an der Lage',
+            `${plan[0].ankunft.slice(11)}–${plan[0].bis.slice(11)}`, '08:00–09:00'],
+        ['das Fahrzeug bleibt trotzdem bis zwölf',
+            ortssicht(gesetzt, 'o-sued')[0].bis.slice(11), '12:00'],
+        ['und das ist keine Doppelung', arten(pruefen(gesetzt)).join(','), ''],
+        ['Maria bleibt bis zum Ende',
+            personenplan(gesetzt, 'p-maria')[0].bis.slice(11), '12:00'],
+        ['der Einsatz endet, wenn das letzte Fahrzeug geht',
+            einsaetze(gesetzt).map(e => `${e.von.slice(11)}–${e.bis.slice(11)}`).join(','),
+            '08:00–12:00'],
+    ]
+})
+
+fall('Zwei Einsätze an derselben Lage', () => {
+    const punkt = {id: 'g-brand', sortierung: 0, name: 'Brand', alarmId: ''}
+    const frueh = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-sued', {programmpunktId: 'g-brand'}),
+    ])
+    const spaet = lauf({fahrzeugId: 'f-mtf'}, [
+        schritt('aufenthalt', '10:00', '11:00', 'o-sued', {programmpunktId: 'g-brand'}),
+    ])
+    const dazwischen = lauf({fahrzeugId: 'f-rtw'}, [
+        schritt('aufenthalt', '08:30', '10:30', 'o-sued', {programmpunktId: 'g-brand'}),
+    ])
+    const gesetzt = (laeufe) => daten({
+        programmpunkte: [punkt], laeufe,
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF'), fahrzeug('f-rtw', 'RTW')],
+    })
+    const zwei = einsaetze(gesetzt([frueh, spaet]))
+    const eins = einsaetze(gesetzt([frueh, dazwischen, spaet]))
+    return [
+        ['ohne Überschneidung sind es zwei', zwei.length, 2],
+        ['und jeder zählt für sich', zwei.map(e => e.nummer).join(','), '1,2'],
+        ['wer die Lücke überbrückt, hält sie zusammen', eins.length, 1],
+        ['mit allen dreien', eins[0].beteiligte.length, 3],
+    ]
+})
+
 fall('Die Ortssicht zeigt, wer gleichzeitig dasteht', () => {
     const lhf = lauf({fahrzeugId: 'f-lhf'}, [
         schritt('aufenthalt', '08:00', '09:00', 'o-sued', {besatzung: [sitzt('p-alex', true)]}),
@@ -357,21 +413,43 @@ fall('Wird sie abgeholt, ist es kein Zustieg ins Nichts', () => {
     return [['nichts gemeldet', arten(befunde).join(','), '']]
 })
 
+/**
+ * Sich zu überschneiden heißt umsteigen. Erst wer abgeholt wird, bevor sie angekommen ist, steht
+ * wirklich an zwei Orten.
+ */
 fall('Dieselbe Person zur selben Zeit in zwei Ketten', () => {
-    const lhf = lauf({fahrzeugId: 'f-lhf'}, [
-        schritt('aufenthalt', '08:00', '10:00', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
-    ])
-    const mtf = lauf({fahrzeugId: 'f-mtf'}, [
-        schritt('aufenthalt', '09:00', '11:00', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
-    ])
-    const befunde = pruefen(daten({
+    const wechsel = daten({
         personen: [person('p-alex', 'Alex')],
         fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')],
-        laeufe: [lhf, mtf],
-    }))
+        laeufe: [
+            lauf({fahrzeugId: 'f-lhf'}, [
+                schritt('aufenthalt', '08:00', '10:00', 'o-nord',
+                    {besatzung: [sitzt('p-alex', true)]})]),
+            lauf({fahrzeugId: 'f-mtf'}, [
+                schritt('aufenthalt', '09:00', '11:00', 'o-nord',
+                    {besatzung: [sitzt('p-alex', true)]})]),
+        ],
+    })
+    const zugleich = daten({
+        personen: [person('p-alex', 'Alex')],
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')],
+        laeufe: [
+            lauf({fahrzeugId: 'f-lhf'}, [
+                schritt('aufenthalt', '08:00', '10:00', 'o-nord',
+                    {besatzung: [sitzt('p-alex', true)]})]),
+            lauf({fahrzeugId: 'f-mtf'}, [
+                schritt('aufenthalt', '08:00', '11:00', 'o-sued',
+                    {besatzung: [sitzt('p-alex', true)]})]),
+        ],
+    })
+    const befunde = pruefen(zugleich)
     return [
-        ['gemeldet', befunde.filter(b => b.art === 'zweiOrte').length, 1],
-        ['mit Namen', befunde[0].werte.wer, 'Alex'],
+        ['ein Wechsel wird nicht gemeldet', arten(pruefen(wechsel)).join(','), ''],
+        ['und verkürzt ihre Zeit im ersten',
+            personenplan(wechsel, 'p-alex')[0].bis.slice(11), '09:00'],
+        ['zwei Ketten zugleich schon',
+            befunde.filter(b => b.art === 'zweiOrte').length, 1],
+        ['mit Namen', befunde.find(b => b.art === 'zweiOrte').werte.wer, 'Alex'],
     ]
 })
 
@@ -578,7 +656,7 @@ fall('Nacheinander verplantes Material ist keine Überbuchung', () => {
     return [['nichts gemeldet', arten(befunde).join(','), '']]
 })
 
-fall('Eine Lage sammelt ein, was auf sie zeigt', () => {
+fall('Ein Einsatz sammelt ein, was auf die Lage zeigt', () => {
     const punkt = {id: 'pp-brand', sortierung: 0, name: 'Brand', ortId: 'o-sued', alarmId: ''}
     const lhf = lauf({fahrzeugId: 'f-lhf'}, [
         schritt('aufenthalt', '08:00', '09:00', 'o-sued', {
@@ -593,18 +671,20 @@ fall('Eine Lage sammelt ein, was auf sie zeigt', () => {
     const mimen = lauf({personId: 'p-mimen'}, [
         schritt('aufenthalt', '07:45', '09:30', 'o-sued', {programmpunktId: 'pp-brand'}),
     ])
-    const sicht = lagensicht(daten({
+    const gefunden = einsaetze(daten({
         personen: [person('p-alex', 'Alex'), person('p-maria', 'Maria'),
                    person('p-mimen', 'Mimen', {anzahl: 4})],
         fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')],
         laeufe: [lhf, mtf, mimen], programmpunkte: [punkt],
-    }), punkt)
+    }))
     return [
+        ['ein Einsatz', gefunden.length, 1],
         ['läuft vom frühesten bis zum spätesten Schritt',
-            `${sicht.von.slice(11)}–${sicht.bis.slice(11)}`, '07:45–10:00'],
-        ['drei Ketten hängen daran', sicht.laeufe.length, 3],
+            `${gefunden[0].von.slice(11)}–${gefunden[0].bis.slice(11)}`, '07:45–10:00'],
+        ['drei Ketten hängen daran', gefunden[0].beteiligte.length, 3],
         ['und alle Beteiligten, jeder einmal',
-            sicht.personIds.join(','), 'p-alex,p-maria,p-mimen'],
+            [...gefunden[0].personIds].sort().join(','), 'p-alex,p-maria,p-mimen'],
+        ['er findet dort statt, wo seine Schritte stehen', gefunden[0].ortId, 'o-sued'],
     ]
 })
 

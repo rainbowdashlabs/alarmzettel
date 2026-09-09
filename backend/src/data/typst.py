@@ -82,7 +82,7 @@ def render_plan(daten: dict) -> bytes:
                     "ablaufplan.pdf", beilagen=_kennmuster)
 
 
-LEERER_PLAN = {"personen": [], "fahrzeuge": [], "gesamt": {"bloecke": []}, "bewegung": []}
+LEERER_PLAN = {"personen": [], "fahrzeuge": [], "gesamt": {"bloecke": []}}
 
 
 def _dateiname(name: str, art: str) -> str:
@@ -107,9 +107,8 @@ def plan_blattweise(daten: dict) -> list[tuple[str, dict]]:
              for blatt in daten["personen"]]
     teile += [(_dateiname(blatt["name"], "fahrzeug"), {**LEERER_PLAN, "fahrzeuge": [blatt]})
               for blatt in daten["fahrzeuge"]]
-    if daten["gesamt"]["bloecke"] or daten["bewegung"]:
-        teile.append(("gesamtplan.pdf", {**LEERER_PLAN, "gesamt": daten["gesamt"],
-                                         "bewegung": daten["bewegung"]}))
+    if daten["gesamt"]["bloecke"]:
+        teile.append(("gesamtplan.pdf", {**LEERER_PLAN, "gesamt": daten["gesamt"]}))
     return teile
 
 

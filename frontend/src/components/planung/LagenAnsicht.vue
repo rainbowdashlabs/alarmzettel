@@ -3,18 +3,18 @@ import {computed} from 'vue'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {lageName, mehrereTage, ortName, personName, plandaten} from '../../store/planung'
-import {lagensicht, pruefen} from '../../scripts/ablauf'
-import type {Befund} from '../../scripts/ablauf'
-import {tagVon, uhrzeit} from '../../scripts/zeit'
-
-/** Dieselbe Sache von der anderen Seite: die Lage, und was an ihr hängt. */
-const lagen = computed(() => arbeitsmappe.planung.programmpunkte
-    .map(punkt => lagensicht(plandaten(), punkt)))
+import {einsaetze, pruefen} from '../../scripts/ablauf'
+import type {Befund, Beteiligter} from '../../scripts/ablauf'
+import {dauer, tagVon, uhrzeit} from '../../scripts/zeit'
 
 /**
- * Was an einer Lage nicht stimmt. Ein Befund ohne Schritt und ohne Person hängt an der Lage
- * selbst — sonst stünde er nirgends, denn die Ketten zeigen nur, was an ihrem Schritt hängt.
+ * Wann welcher Einsatz läuft und wer dort ist. Eine Lage ist der Anlass, ein Einsatz das eine
+ * Mal, das sie läuft: zwei Fahrzeuge nacheinander an derselben Lage sind zwei Einsätze, und
+ * jeder steht hier für sich.
  */
+const liste = computed(() => einsaetze(plandaten()))
+
+/** Ein Befund ohne Schritt und ohne Person hängt an der Lage — sonst stünde er nirgends. */
 const befunde = computed(() => {
   const nachLage = new Map<string, Befund[]>()
   for (const befund of pruefen(plandaten())) {
@@ -30,47 +30,79 @@ function fahrzeugName(fahrzeugId: string): string {
       || t('ablauf.ohneName')
 }
 
+function wer(eintrag: Beteiligter): string {
+  return eintrag.lauf.fahrzeugId
+      ? fahrzeugName(eintrag.lauf.fahrzeugId)
+      : personName(eintrag.lauf.personId) || t('ablauf.ohneName')
+}
+
+function besatzung(eintrag: Beteiligter): string {
+  return eintrag.schritt.besatzung
+      .map(sitzt => personName(sitzt.personId))
+      .filter(Boolean)
+      .join(', ')
+}
+
 function alarmStichwort(alarmId: string): string {
   return arbeitsmappe.alarme.find(alarm => alarm.id === alarmId)?.stichwort ?? ''
+}
+
+function zeit(wann: string): string {
+  return (mehrereTage() ? `${tagVon(wann)} ` : '') + uhrzeit(wann)
 }
 </script>
 
 <template>
   <div class="grid gap-5">
-    <section v-for="sicht in lagen" :key="sicht.programmpunkt.id" class="abschnitt">
+    <p v-if="!liste.length" class="text-muted text-sm">{{ t('ablauf.keineLagen') }}</p>
+
+    <section v-for="einsatz in liste" :key="`${einsatz.programmpunkt.id}-${einsatz.nummer}`"
+             class="abschnitt">
       <div class="flex items-baseline gap-3 flex-wrap">
+        <span class="tabular text-lg">{{ zeit(einsatz.von) }}</span>
         <h2 class="abschnitt-titel">
-          {{ lageName(sicht.programmpunkt.id) || t('ablauf.ohneName') }}
+          {{ lageName(einsatz.programmpunkt.id) || t('ablauf.ohneName') }}
         </h2>
-        <span class="text-muted text-sm">{{ ortName(sicht.ortId) }}</span>
-        <span v-if="sicht.von" class="tabular text-sm">
-          <span v-if="mehrereTage() || tagVon(sicht.von) !== tagVon(sicht.bis)" class="text-muted">
-            {{ tagVon(sicht.von) }}
-          </span>
-          {{ uhrzeit(sicht.von) }}–{{ uhrzeit(sicht.bis) }}
+        <span v-if="einsatz.nummer > 1" class="label text-muted">
+          {{ t('ablauf.derWievielte', {n: einsatz.nummer}) }}
+        </span>
+        <span class="text-muted text-sm">{{ ortName(einsatz.ortId) }}</span>
+        <span class="grow"></span>
+        <span class="tabular text-sm text-muted">
+          {{ t('ablauf.einsatzZeiten', {
+            da: uhrzeit(einsatz.da), bis: uhrzeit(einsatz.bis),
+            n: dauer(einsatz.da, einsatz.bis) ?? 0}) }}
         </span>
       </div>
-      <p v-for="(befund, nummer) in befunde.get(sicht.programmpunkt.id)" :key="nummer"
+
+      <p v-if="einsatz.programmpunkt.alarmId" class="text-muted text-[13px] mt-1">
+        <font-awesome-icon icon="fa-solid fa-file-pdf" class="mr-1"/>
+        {{ alarmStichwort(einsatz.programmpunkt.alarmId) || t('ablauf.ohneName') }}
+      </p>
+
+      <table class="w-full text-sm mt-3">
+        <tbody>
+          <tr v-for="eintrag in einsatz.beteiligte" :key="eintrag.schritt.id"
+              class="border-t border-rule">
+            <td class="py-1 pr-3 font-bold whitespace-nowrap">{{ wer(eintrag) }}</td>
+            <td class="tabular py-1 pr-3 whitespace-nowrap">
+              {{ uhrzeit(eintrag.aufbruch) }}–{{ uhrzeit(eintrag.bis) }}
+            </td>
+            <td class="py-1 pr-3 text-muted">{{ besatzung(eintrag) }}</td>
+            <td class="py-1 text-muted text-[13px] whitespace-nowrap">
+              <span v-if="eintrag.lauf.fahrzeugId && !eintrag.aufgebot">
+                {{ t('ablauf.nurVorOrt') }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p v-for="(befund, nummer) in befunde.get(einsatz.programmpunkt.id)" :key="nummer"
          class="text-signal-ink text-[13px] mt-2">
         {{ t(`ablauf.befund.${befund.art}`, {
-          ...befund.werte, was: lageName(sicht.programmpunkt.id) || t('ablauf.ohneName')}) }}
+          ...befund.werte, was: lageName(einsatz.programmpunkt.id) || t('ablauf.ohneName')}) }}
       </p>
-      <div v-if="sicht.laeufe.length" class="grid gap-1 mt-2 text-sm">
-        <p>
-          <span class="label mr-2">{{ t('ablauf.fahrzeuge') }}</span>
-          {{ sicht.laeufe.filter(lauf => lauf.fahrzeugId)
-              .map(lauf => fahrzeugName(lauf.fahrzeugId)).join(', ') || '—' }}
-        </p>
-        <p>
-          <span class="label mr-2">{{ t('ablauf.beteiligte') }}</span>
-          {{ sicht.personIds.map(id => personName(id) || t('ablauf.ohneName')).join(', ') || '—' }}
-        </p>
-        <p v-if="sicht.programmpunkt.alarmId">
-          <span class="label mr-2">{{ t('ablauf.lageAlarm') }}</span>
-          {{ alarmStichwort(sicht.programmpunkt.alarmId) || t('ablauf.ohneName') }}
-        </p>
-      </div>
     </section>
-    <p v-if="!lagen.length" class="text-muted text-sm">{{ t('ablauf.keineLagen') }}</p>
   </div>
 </template>

@@ -87,7 +87,7 @@ Adressen
 Ablaufplan
   ablauf-pruefen        Personenplan, Ortssicht und die Pruefungen, ausserhalb des Browsers
   ablauf-bewegungen     Bewegungsbild, Stand zu einem Zeitpunkt und die Koordinaten der Karte
-  ablauf-vergleichen    Personenplan und Bewegungsbild aus beiden Sprachen, Zeile fuer Zeile
+  ablauf-vergleichen    Personenplan und Einsaetze aus beiden Sprachen, Zeile fuer Zeile
 
 Abfragebaum
   sna-build             Regenerate frontend/public/sna-tree.json. Downloads the open data
@@ -255,7 +255,7 @@ print(f'{laden.laden()} Adressen in {laden.datei}')" ;;
         run python tools/plan_vergleichen.py "$daten" > "$server"
         run node tools/plan_vergleichen.mjs "$daten" > "$browser"
         diff -u "$server" "$browser" &&
-            echo "$(wc -l < "$server") Zeilen Plan und Bewegungsbild, beide Seiten gleich"
+            echo "$(wc -l < "$server") Zeilen Personenplan und Einsätze, beide Seiten gleich"
         ;;
     adressen-stand) be; run python -c "
 from data.adressen import Adressen

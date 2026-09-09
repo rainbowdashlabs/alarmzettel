@@ -40,6 +40,8 @@ class Personenschritt:
     faehrt: bool
     von_ort_id: str
     ankunft: str
+    bis: str
+    """Wann sie wieder weg ist: holt ein anderes Fahrzeug sie ab, endet ihre Zeit dort."""
 
 
 def von_ort(lauf: Lauf, schritt: Schritt) -> str:
@@ -53,6 +55,18 @@ def von_ort(lauf: Lauf, schritt: Schritt) -> str:
 def mittel_von(lauf: Lauf, schritt: Schritt) -> str:
     """Womit dieser Schritt zurückgelegt wird. Eine Fahrzeugkette kennt nur das Fahrzeug."""
     return "fahrzeug" if lauf.fahrzeugId else schritt.mittel
+
+
+def aufbruch(lauf: Lauf, schritt: Schritt) -> str:
+    """
+    Wann für diesen Schritt aufgebrochen wird. Steht eine eingetragene Fahrt davor, die hierher
+    führt, ist es deren Beginn — sie ist die Anfahrt, und mit ihr fängt der Einsatz an.
+    """
+    stelle = lauf.schritte.index(schritt)
+    vorher = lauf.schritte[stelle - 1] if stelle > 0 else None
+    if vorher is not None and vorher.art == "fahrt" and vorher.ortId == schritt.ortId:
+        return vorher.von
+    return schritt.von
 
 
 def anfahrt(lauf: Lauf, schritt: Schritt, punkte: dict) -> Anfahrt | None:
@@ -121,6 +135,9 @@ def personenplan(planung: Planung, person_id: str, punkte: dict) -> list[Persone
 
     Die erzeugte Anfahrt fährt nur mit, wer vorher am Startort stand. Wer schon am Ziel wartet —
     der Mime, der auf das Fahrzeug wartet — steigt dort zu und fährt nicht mit.
+
+    Wer abgeholt wird, ist ab da fort — auch mitten aus einem Einsatz heraus. Das Fahrzeug bleibt
+    stehen, seine Zeit gilt weiter; die der Person endet mit dem Aufbruch des nächsten.
     """
     eintraege: list[tuple[int, Personenschritt]] = []
     for lauf in planung.laeufe:
@@ -132,7 +149,7 @@ def personenplan(planung: Planung, person_id: str, punkte: dict) -> list[Persone
                 continue
             eintraege.append((_minuten(schritt.von) or 0, Personenschritt(
                 lauf, schritt, bool(sitzt and sitzt.faehrt),
-                von_ort(lauf, schritt), ankunft(lauf, schritt, punkte))))
+                von_ort(lauf, schritt), ankunft(lauf, schritt, punkte), schritt.bis)))
     eintraege.sort(key=lambda eintrag: eintrag[0])
     plan = [eintrag for _, eintrag in eintraege]
     for stelle in range(1, len(plan)):
@@ -143,4 +160,11 @@ def personenplan(planung: Planung, person_id: str, punkte: dict) -> list[Persone
             plan[stelle].ankunft = plan[stelle].schritt.von
     if plan and anfahrt(plan[0].lauf, plan[0].schritt, punkte):
         plan[0].ankunft = plan[0].schritt.von
+    for stelle in range(len(plan) - 1):
+        naechster = plan[stelle + 1]
+        if naechster.lauf.id == plan[stelle].lauf.id:
+            continue
+        geht_los = aufbruch(naechster.lauf, naechster.schritt)
+        if (_minuten(geht_los) or 0) < (_minuten(plan[stelle].bis) or 0):
+            plan[stelle].bis = geht_los
     return plan

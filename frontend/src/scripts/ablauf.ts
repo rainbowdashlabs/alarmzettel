@@ -60,6 +60,11 @@ export interface Personenschritt {
      * stand, mit dem Beginn des Schritts.
      */
     ankunft: string
+    /**
+     * Wann sie wieder weg ist. Holt ein anderes Fahrzeug sie ab, während sie noch an einem
+     * Einsatz steht, endet ihre Zeit dort mit der Abholung — das Fahrzeug bleibt, sie nicht.
+     */
+    bis: string
 }
 
 /**
@@ -81,18 +86,6 @@ export interface Ortsbelegung {
     schritt: Schritt
     von: string
     bis: string
-    personIds: string[]
-}
-
-/** Eine Lage, wie sie aus den Schritten entsteht, die auf sie zeigen. */
-export interface Lagensicht {
-    programmpunkt: Programmpunkt
-    /** Wo sie stattfindet — der Ort ihrer Schritte. Leer, wenn keiner zeigt. */
-    ortId: string
-    /** Früheste Ankunft und spätestes Ende der beteiligten Schritte. Leer, wenn keiner zeigt. */
-    von: string
-    bis: string
-    laeufe: Lauf[]
     personIds: string[]
 }
 
@@ -133,15 +126,17 @@ function koepfe(daten: Plandaten, personId: string): number {
 }
 
 /**
- * Wie eine Lage heißt. Zeigt sie auf einen Alarm, ist dessen Stichwort ihr Name — zweimal
- * dasselbe zu pflegen hieße, es widersprüchlich pflegen zu können. Ohne Alarm zählt, was an ihr
- * steht: „Frühstück“ hat kein Stichwort.
+ * Wie eine Lage heißt: was an ihr steht, sonst das Stichwort ihres Alarms.
+ *
+ * Meist genügt das Stichwort, und dann bleibt die Bezeichnung leer — zweimal dasselbe zu pflegen
+ * hieße, es widersprüchlich pflegen zu können. Wo es aber wie „[FR] RD1NC REA. [ERSTHELFER]“
+ * aussieht, ist es im Plan schwer zu lesen; dann schreibt man einen Namen hin, und der gilt.
  */
 export function lagenName(daten: Plandaten, programmpunktId: string): string {
     const punkt = daten.planung.programmpunkte.find(eintrag => eintrag.id === programmpunktId)
     if (!punkt) return ''
     const stichwort = daten.alarme?.find(alarm => alarm.id === punkt.alarmId)?.stichwort
-    return stichwort?.trim() || punkt.name
+    return punkt.name.trim() || stichwort?.trim() || ''
 }
 
 /**
@@ -185,6 +180,15 @@ export function anfahrt(daten: Plandaten, lauf: Lauf, schritt: Schritt): Anfahrt
     }
 }
 
+/**
+ * Wann für diesen Schritt aufgebrochen wird. Steht eine eingetragene Fahrt davor, die hierher
+ * führt, ist es deren Beginn — sie ist die Anfahrt, und mit ihr fängt der Einsatz an.
+ */
+export function aufbruch(lauf: Lauf, schritt: Schritt): string {
+    const vorher = lauf.schritte[lauf.schritte.indexOf(schritt) - 1]
+    return vorher?.art === 'fahrt' && vorher.ortId === schritt.ortId ? vorher.von : schritt.von
+}
+
 /** Wann jemand an dem Ort dieses Schritts steht: nach der erzeugten Anfahrt, sonst sofort. */
 export function ankunft(daten: Plandaten, lauf: Lauf, schritt: Schritt): string {
     return anfahrt(daten, lauf, schritt)?.bis ?? schritt.von
@@ -213,6 +217,9 @@ function nachZeit<T extends { von: string }>(eintraege: T[]): T[] {
  * Die erzeugte Anfahrt fährt nur mit, wer vorher am Startort stand. Wer schon am Ziel wartet —
  * der Mime, der auf das Fahrzeug wartet — steigt dort zu, fährt nicht mit und ist mit dem
  * Beginn des Schritts da.
+ *
+ * Holt ein anderes Fahrzeug sie ab, ist sie ab dessen Aufbruch fort — auch mitten aus einem
+ * Einsatz heraus. Das Fahrzeug bleibt stehen, seine Zeit gilt weiter; ihre endet dort.
  */
 export function personenplan(daten: Plandaten, personId: string): Personenschritt[] {
     const eintraege: (Personenschritt & { von: string })[] = []
@@ -225,7 +232,7 @@ export function personenplan(daten: Plandaten, personId: string): Personenschrit
                 lauf, schritt, von: schritt.von,
                 faehrt: Boolean(sitzt?.faehrt),
                 vonOrtId: vonOrt(lauf, schritt), nachOrtId: schritt.ortId,
-                ankunft: ankunft(daten, lauf, schritt),
+                ankunft: ankunft(daten, lauf, schritt), bis: schritt.bis,
             })
         }
     }
@@ -237,6 +244,14 @@ export function personenplan(daten: Plandaten, personId: string): Personenschrit
             plan[stelle]!.vonOrtId = weg.vonOrtId
         } else {
             plan[stelle]!.ankunft = plan[stelle]!.schritt.von
+        }
+    }
+    for (let stelle = 0; stelle < plan.length - 1; stelle++) {
+        const naechster = plan[stelle + 1]!
+        if (naechster.lauf.id === plan[stelle]!.lauf.id) continue
+        const gehtLos = aufbruch(naechster.lauf, naechster.schritt)
+        if ((alsMinuten(gehtLos) ?? 0) < (alsMinuten(plan[stelle]!.bis) ?? 0)) {
+            plan[stelle]!.bis = gehtLos
         }
     }
     return plan
@@ -269,32 +284,104 @@ export function ortssicht(daten: Plandaten, ortId: string): Ortsbelegung[] {
     return nachZeit(belegungen)
 }
 
+/** Wer mit welchem Schritt an einem Einsatz hängt. */
+export interface Beteiligter {
+    lauf: Lauf
+    schritt: Schritt
+    /** Wann er aufbricht — bei einem Fahrzeug die Einsatzzeit seines Zettels. */
+    aufbruch: string
+    /** Das Zeitfenster des Schritts. Daran hängt, was zu einem Einsatz zusammengehört. */
+    von: string
+    /** Wann er da ist. */
+    da: string
+    bis: string
+    /** Er gehört zum Aufgebot. Wer nur Mimen bringt, ist dabei und nicht alarmiert. */
+    aufgebot: boolean
+    personIds: string[]
+}
+
 /**
- * Wann eine Lage läuft und wer an ihr hängt. Die Lage selbst trägt weder Zeiten noch Teilnehmer
- * — sie kann sich damit nicht selbst widersprechen, und zwei Fahrzeuge an derselben Lage teilen
- * sich einen Eintrag statt ihn zu verdoppeln.
+ * Ein Einsatz: eine Lage, einmal gelaufen. Zwei Fahrzeuge, die sich zeitlich überschneiden,
+ * gehören zu demselben; wer erst kommt, wenn niemand mehr da ist, fängt einen neuen an.
  */
-export function lagensicht(daten: Plandaten, punkt: Programmpunkt): Lagensicht {
-    const sicht: Lagensicht = {programmpunkt: punkt, ortId: '', von: '', bis: '', laeufe: [],
-        personIds: []}
-    for (const lauf of daten.planung.laeufe) {
-        for (const schritt of lauf.schritte) {
-            if (schritt.programmpunktId !== punkt.id) continue
-            if (!sicht.ortId && schritt.art === 'aufenthalt') sicht.ortId = schritt.ortId
-            const da = ankunft(daten, lauf, schritt)
-            if (!sicht.von || (alsMinuten(da) ?? 0) < (alsMinuten(sicht.von) ?? 0)) {
-                sicht.von = da
-            }
-            if (!sicht.bis || (alsMinuten(schritt.bis) ?? 0) > (alsMinuten(sicht.bis) ?? 0)) {
-                sicht.bis = schritt.bis
-            }
-            if (!sicht.laeufe.includes(lauf)) sicht.laeufe.push(lauf)
-            for (const personId of [lauf.personId, ...schritt.besatzung.map(p => p.personId)]) {
-                if (personId && !sicht.personIds.includes(personId)) sicht.personIds.push(personId)
+export interface Einsatz {
+    programmpunkt: Programmpunkt
+    /** Der wievielte Einsatz dieser Lage. Zwei nacheinander sind zwei. */
+    nummer: number
+    ortId: string
+    /** Früheste Abfahrt — die Einsatzzeit. */
+    von: string
+    /** Früheste Ankunft: ab hier geschieht am Ort etwas. */
+    da: string
+    bis: string
+    beteiligte: Beteiligter[]
+    personIds: string[]
+}
+
+/**
+ * Alle Einsätze des Plans, nach Zeit sortiert.
+ *
+ * Eine Lage ist der Anlass, ein Einsatz das eine Mal, das sie läuft: zusammen gehört, wessen
+ * Zeiten sich überschneiden. Ist zwischendurch niemand mehr da, ist der Einsatz zu Ende und der
+ * nächste fängt an — auch wenn beide auf dieselbe Lage zeigen. Dieselbe Regel entscheidet auf
+ * dem Server, wer zusammen auf einem Alarmzettel steht; `tools/plan_vergleichen` hält die beiden
+ * aneinander.
+ */
+export function einsaetze(daten: Plandaten): Einsatz[] {
+    const gefunden: Einsatz[] = []
+    for (const punkt of daten.planung.programmpunkte) {
+        const dabei: Beteiligter[] = []
+        for (const lauf of daten.planung.laeufe) {
+            for (const schritt of lauf.schritte) {
+                if (schritt.programmpunktId !== punkt.id) continue
+                dabei.push({
+                    lauf, schritt, aufbruch: aufbruch(lauf, schritt), von: schritt.von,
+                    da: ankunft(daten, lauf, schritt),
+                    bis: schritt.bis, aufgebot: schritt.aufgebot,
+                    personIds: [lauf.personId, ...schritt.besatzung.map(platz => platz.personId)]
+                        .filter(Boolean),
+                })
             }
         }
+        dabei.sort((a, b) => (alsMinuten(a.von) ?? 0) - (alsMinuten(b.von) ?? 0))
+
+        let ende: number | null = null
+        for (const eintrag of dabei) {
+            const beginnt = alsMinuten(eintrag.von) ?? 0
+            const letzter = gefunden[gefunden.length - 1]
+            if (ende === null || beginnt >= ende || letzter?.programmpunkt.id !== punkt.id) {
+                gefunden.push({
+                    programmpunkt: punkt,
+                    nummer: gefunden.filter(alt => alt.programmpunkt.id === punkt.id).length + 1,
+                    ortId: '', von: eintrag.aufbruch, da: eintrag.da,
+                    bis: eintrag.bis, beteiligte: [eintrag], personIds: [],
+                })
+            } else {
+                letzter.beteiligte.push(eintrag)
+                if ((alsMinuten(eintrag.aufbruch) ?? 0) < (alsMinuten(letzter.von) ?? 0)) {
+                    letzter.von = eintrag.aufbruch
+                }
+                if ((alsMinuten(eintrag.da) ?? 0) < (alsMinuten(letzter.da) ?? 0)) {
+                    letzter.da = eintrag.da
+                }
+                if ((alsMinuten(eintrag.bis) ?? 0) > (alsMinuten(letzter.bis) ?? 0)) {
+                    letzter.bis = eintrag.bis
+                }
+            }
+            const dazu = gefunden[gefunden.length - 1]!
+            // Wo der Einsatz stattfindet, sagt ein Aufenthalt; eine Fahrt nennt nur ihr Ziel.
+            if (!dazu.ortId && eintrag.schritt.art === 'aufenthalt') dazu.ortId = eintrag.schritt.ortId
+            ende = Math.max(ende ?? 0, alsMinuten(eintrag.bis) ?? 0)
+        }
     }
-    return sicht
+    for (const einsatz of gefunden) {
+        const wer = new Set<string>()
+        for (const eintrag of einsatz.beteiligte) {
+            for (const personId of eintrag.personIds) wer.add(personId)
+        }
+        einsatz.personIds = [...wer]
+    }
+    return gefunden.sort((a, b) => (alsMinuten(a.von) ?? 0) - (alsMinuten(b.von) ?? 0))
 }
 
 /**
@@ -426,22 +513,17 @@ function zustiegBefunde(daten: Plandaten, personId: string, plan: Personenschrit
 }
 
 /**
- * Dieselbe Person zur selben Zeit in zwei Ketten. Gemeldet wird je Schritt einmal und nicht je
- * Paar — zwei ganztägige Ketten ergäben sonst eine Wand aus derselben Meldung.
+ * Dieselbe Person zur selben Zeit in zwei Ketten.
+ *
+ * Sich zu überschneiden ist erlaubt und heißt umsteigen: wer abgeholt wird, ist ab dem Aufbruch
+ * des nächsten fort, und ihre Zeit im vorigen endet dort. Was nicht geht, bleibt übrig — sie
+ * wird abgeholt, bevor sie überhaupt angekommen ist. Dann war sie nie dort, und irgendwo steht
+ * sie zweimal.
  */
 function doppelBefunde(daten: Plandaten, personId: string, plan: Personenschritt[]): Befund[] {
-    const betroffen = new Set<string>()
-    for (let a = 0; a < plan.length; a++) {
-        for (let b = a + 1; b < plan.length; b++) {
-            const eins = plan[a]!, zwei = plan[b]!
-            if (eins.lauf.id === zwei.lauf.id) continue
-            if (!ueberschneidet(eins.schritt.von, eins.schritt.bis,
-                                zwei.schritt.von, zwei.schritt.bis)) continue
-            betroffen.add(zwei.schritt.id)
-        }
-    }
     return plan
-        .filter(eintrag => betroffen.has(eintrag.schritt.id))
+        .filter(eintrag => eintrag.bis !== eintrag.schritt.bis
+            && (alsMinuten(eintrag.bis) ?? 0) <= (alsMinuten(eintrag.ankunft) ?? 0))
         .map(eintrag => ({
             art: 'zweiOrte' as const, personId,
             laufId: eintrag.lauf.id, schrittId: eintrag.schritt.id,
@@ -455,7 +537,7 @@ function ausserhalbBefunde(wer: Person, plan: Personenschritt[]): Befund[] {
     return plan
         .filter(eintrag => !wer.verfuegbar.some(fenster =>
             (alsMinuten(fenster.von) ?? 0) <= (alsMinuten(eintrag.schritt.von) ?? 0) &&
-            (alsMinuten(fenster.bis) ?? 0) >= (alsMinuten(eintrag.schritt.bis) ?? 0)))
+            (alsMinuten(fenster.bis) ?? 0) >= (alsMinuten(eintrag.bis) ?? 0)))
         .map(eintrag => ({
             art: 'ausserhalb' as const, personId: wer.id,
             laufId: eintrag.lauf.id, schrittId: eintrag.schritt.id,

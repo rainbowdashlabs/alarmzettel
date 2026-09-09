@@ -122,12 +122,21 @@ class GesamtplanTest(unittest.TestCase):
         self.assertEqual(8, len(zeilen))
 
     def test_eine_zelle_sagt_was_gerade_laeuft(self):
-        zeilen = {zeile["zeit"]: zeile["zellen"]
+        zeilen = {zeile["zeit"]: [zelle["text"] for zelle in zeile["zellen"]]
                   for zeile in daten()["gesamt"]["bloecke"][0]["zeilen"]}
         self.assertEqual(["Wache Nord", "Brand im Kindergarten"], zeilen["08:00"])
         self.assertEqual(["→ Kindergarten", "Brand im Kindergarten"], zeilen["08:30"])
         self.assertEqual(["Brand im Kindergarten", "→ Wache Nord (zu Fuß)"], zeilen["09:15"])
         self.assertEqual(["Brand im Kindergarten", ""], zeilen["09:45"])
+
+    def test_die_zelle_sagt_auch_ihre_art(self):
+        """Daran hängt die Farbe auf dem Bogen: Einsatz, Fahrt oder bloßes Dastehen."""
+        zeilen = {zeile["zeit"]: [zelle["art"] for zelle in zeile["zellen"]]
+                  for zeile in daten()["gesamt"]["bloecke"][0]["zeilen"]}
+        self.assertEqual(["aufenthalt", "einsatz"], zeilen["08:00"])
+        self.assertEqual(["fahrt", "einsatz"], zeilen["08:30"])
+        self.assertEqual(["einsatz", "fahrt"], zeilen["09:15"])
+        self.assertEqual(["einsatz", ""], zeilen["09:45"])
 
 
 def kette(*schritte) -> dict:
@@ -161,7 +170,7 @@ class RasterTest(unittest.TestCase):
             {"art": "aufenthalt", "von": "2026-09-19T08:14", "bis": "2026-09-19T08:45",
              "ortId": "o-kita"},
         )[0]["zeilen"]
-        self.assertEqual(["→ Kindergarten"], zeilen[0]["zellen"])
+        self.assertEqual(["→ Kindergarten"], [zelle["text"] for zelle in zeilen[0]["zellen"]])
 
     def test_der_laengste_anteil_gewinnt_das_fenster(self):
         zeilen = self.bloecke(
@@ -170,8 +179,8 @@ class RasterTest(unittest.TestCase):
             {"art": "fahrt", "von": "2026-09-19T08:11", "bis": "2026-09-19T08:30",
              "ortId": "o-kita"},
         )[0]["zeilen"]
-        self.assertEqual(["Wache Nord"], zeilen[0]["zellen"])
-        self.assertEqual(["→ Kindergarten"], zeilen[1]["zellen"])
+        self.assertEqual(["Wache Nord"], [zelle["text"] for zelle in zeilen[0]["zellen"]])
+        self.assertEqual(["→ Kindergarten"], [zelle["text"] for zelle in zeilen[1]["zellen"]])
 
     def test_ueber_die_monatsgrenze_bleibt_es_eine_nacht(self):
         zeilen = self.bloecke(
@@ -189,8 +198,10 @@ class RasterTest(unittest.TestCase):
              "ortId": "o-kita"},
         )
         self.assertEqual(["2026-09-19", "2026-09-20"], [block["datum"] for block in bloecke])
-        self.assertEqual(["Wache Nord"], bloecke[0]["zeilen"][0]["zellen"])
-        self.assertEqual(["Kindergarten"], bloecke[1]["zeilen"][0]["zellen"])
+        self.assertEqual(["Wache Nord"],
+                         [zelle["text"] for zelle in bloecke[0]["zeilen"][0]["zellen"]])
+        self.assertEqual(["Kindergarten"],
+                         [zelle["text"] for zelle in bloecke[1]["zeilen"][0]["zellen"]])
 
     def test_eine_kette_die_mit_einer_fahrt_beginnt(self):
         """Ohne vorigen Schritt gibt es kein Woher; die Fahrt fängt an, wo sie hinführt."""
@@ -393,72 +404,6 @@ class AnfahrtTest(unittest.TestCase):
                               if zeile["art"] == "fahrt"])
         self.assertEqual(["06:00", "07:50"],
                          [zeile["von"] for zeile in blaetter["Mimen"]["zeilen"]])
-
-
-class BewegungTest(unittest.TestCase):
-    """Das Bild, das der Bildschirm auch zeichnet: Bänder, Reihen darin, Zeitfenster."""
-
-    def bild(self, mappe: dict, modus: str = "fahrzeuge") -> list[dict]:
-        return [eintrag for eintrag in plandaten(Arbeitsmappe.model_validate(mappe))["bewegung"]
-                if eintrag["modus"] == modus]
-
-    def test_jeder_ort_ein_band_in_der_reihenfolge_der_stammdaten(self):
-        bilder = self.bild(MAPPE)
-        self.assertEqual(1, len(bilder))
-        self.assertEqual(["Wache Nord", "Kindergarten"],
-                         [band["name"] for band in bilder[0]["baender"]])
-
-    def test_das_fenster_liegt_auf_vollen_stunden(self):
-        bild = self.bild(MAPPE)[0]
-        self.assertEqual((480, 600), (bild["von"], bild["bis"]))
-
-    def test_was_gleichzeitig_dasteht_bekommt_eigene_reihen(self):
-        """Die Mimen stehen ab acht am Kindergarten, das LHF kommt dazu — also zwei Reihen."""
-        bild = self.bild(MAPPE)[0]
-        kita = next(band for band in bild["baender"] if band["name"] == "Kindergarten")
-        self.assertEqual(2, kita["reihen"])
-        self.assertEqual([0, 1], sorted(balken["reihe"] for balken in bild["balken"]
-                                        if balken["ortId"] == "o-kita"))
-
-    def test_eine_fahrt_verbindet_die_reihen(self):
-        linie = next(eintrag for eintrag in self.bild(MAPPE)[0]["linien"]
-                     if eintrag["name"] == "LHF 6501.3")
-        self.assertEqual(("o-nord", "o-kita"), (linie["vonOrtId"], linie["nachOrtId"]))
-        self.assertEqual((0, 1), (linie["vonReihe"], linie["nachReihe"]))
-
-    def test_ein_ort_ohne_geschehen_bekommt_kein_band(self):
-        ohne = kette({"art": "aufenthalt", "von": "2026-09-19T08:00",
-                      "bis": "2026-09-19T09:00", "ortId": "o-nord"})
-        self.assertEqual(["Wache Nord"],
-                         [band["name"] for band in self.bild(ohne)[0]["baender"]])
-
-    def test_das_personenbild_erzaehlt_denselben_tag_je_person(self):
-        """Alex sitzt im LHF; im Personenbild ist er die Spur und das Fahrzeug die Begleitung."""
-        bild = self.bild(MAPPE, "personen")[0]
-        alex = [balken for balken in bild["balken"] if balken["name"] == "Alex"]
-        self.assertEqual(2, len(alex))
-        self.assertEqual([["LHF 6501.3"], ["LHF 6501.3"]],
-                         [balken["begleitung"] for balken in alex])
-        self.assertEqual(["Mimen"], [balken["name"] for balken in bild["balken"]
-                                     if balken["begleitung"] == []])
-
-    def test_jeder_tag_bekommt_sein_bild(self):
-        zwei = kette(
-            {"art": "aufenthalt", "von": "2026-09-19T08:00", "bis": "2026-09-19T09:00",
-             "ortId": "o-nord"},
-            {"art": "aufenthalt", "von": "2026-09-20T08:00", "bis": "2026-09-20T09:00",
-             "ortId": "o-kita"})
-        bilder = self.bild(zwei)
-        self.assertEqual(["2026-09-19", "2026-09-20"], [bild["datum"] for bild in bilder])
-        self.assertEqual(["Wache Nord", "Kindergarten"],
-                         [band["name"] for band in bilder[1]["baender"]])
-
-    def test_die_minuten_zaehlen_vom_tag_des_bildes(self):
-        """Über Mitternacht hinaus wird die Achse länger, nicht kürzer."""
-        nacht = kette({"art": "aufenthalt", "von": "2026-09-19T23:00",
-                       "bis": "2026-09-20T01:00", "ortId": "o-nord"})
-        bild = self.bild(nacht)[0]
-        self.assertEqual((1380, 1500), (bild["von"], bild["bis"]))
 
 
 class RenderTest(unittest.TestCase):

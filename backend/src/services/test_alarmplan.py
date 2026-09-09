@@ -326,10 +326,11 @@ class AbleitungTest(unittest.TestCase):
         self.assertIsNone(ableitung(gelesen, frei))
 
     def test_die_blaetter_stehen_mit_zeit_und_staerke(self):
+        """Die Lage trägt eine eigene Bezeichnung, und die gilt vor dem Stichwort."""
         gelesen = mappe()
         alarm = next(alarm for alarm in gelesen.alarme if alarm.id == "a-brand")
         gefunden = ableitung(gelesen, alarm)
-        self.assertEqual("Brand M", gefunden["lage"])
+        self.assertEqual("Brand im Kindergarten", gefunden["lage"])
         self.assertEqual("Archenholdstraße", gefunden["einsatzadresse"]["strasse"])
         self.assertEqual(
             [("LHF 6501.3", "5", "08:30"), ("MTF 6502.1", "1", "09:00")],

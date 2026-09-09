@@ -10,7 +10,7 @@ Ein Alarm, auf den keine Lage zeigt, verhält sich wie bisher; ohne eingeschalte
 sich überhaupt nichts.
 """
 
-from data.kette import fahrzeit, lagen_ort
+from data.kette import ankunft, fahrzeit, lagen_ort
 from data.planzeit import minuten as _minuten
 from entities.alarm import Alarm, Arbeitsmappe, Einsatzmittelgruppe, Fahrzeug
 from entities.planung import Lauf, Programmpunkt, Schritt
@@ -56,16 +56,13 @@ def _anfahrt(lauf: Lauf, stelle: int) -> str:
     return schritt.von
 
 
-def _erster_schritt(lauf: Lauf, punkt: Programmpunkt) -> tuple[int, Schritt] | None:
+def _schritte_an(lauf: Lauf, punkt: Programmpunkt) -> list[tuple[int, Schritt]]:
     """
-    Der Schritt, mit dem dieses Fahrzeug an der Lage ankommt — sofern es überhaupt zu ihr
-    gehört. Ein Fahrzeug, das nur Mimen hinfährt, steht am selben Ort und bleibt trotzdem außen
-    vor: es ist nicht alarmiert.
+    Die Schritte dieser Kette, die auf diese Lage zeigen — auch die ohne Aufgebot, und auch eine
+    Fahrt, die sie selbst trägt: dann ist ihr Beginn die Einsatzzeit.
     """
-    for stelle, schritt in enumerate(lauf.schritte):
-        if schritt.programmpunktId == punkt.id and schritt.aufgebot:
-            return stelle, schritt
-    return None
+    return [(stelle, schritt) for stelle, schritt in enumerate(lauf.schritte)
+            if schritt.programmpunktId == punkt.id]
 
 
 def _lage_zu(arbeitsmappe: Arbeitsmappe, alarm: Alarm) -> Programmpunkt | None:
@@ -84,39 +81,52 @@ def _beteiligte(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt,
     wie im Ablaufplan. Ohne Koordinaten bleibt der Wert, den der Katalog führt.
     """
     koepfe = {person.id: person.anzahl for person in arbeitsmappe.kataloge.personen}
+    namen = {person.id: person.name for person in arbeitsmappe.kataloge.personen}
     vorlagen = {fahrzeug.id: fahrzeug for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
     beteiligte = []
     for lauf in arbeitsmappe.planung.laeufe:
-        if not lauf.fahrzeugId:
-            continue
-        treffer = _erster_schritt(lauf, punkt)
-        if treffer is None:
-            continue
-        stelle, schritt = treffer
-        vorlage = vorlagen.get(lauf.fahrzeugId)
-        geschaetzt = fahrzeit(lauf, schritt, punkte or {})
-        beteiligte.append({
-            "vorlageId": lauf.fahrzeugId,
-            "funkrufname": vorlage.funkrufname if vorlage else "",
-            "staerke": str(sum(koepfe.get(platz.personId, 1) for platz in schritt.besatzung)),
-            "beginn": _anfahrt(lauf, stelle),
-            "ezp": "" if geschaetzt is None else str(geschaetzt),
-            "von": schritt.von,
-            "bis": schritt.bis,
-        })
+        for stelle, schritt in _schritte_an(lauf, punkt):
+            vorlage = vorlagen.get(lauf.fahrzeugId)
+            geschaetzt = fahrzeit(lauf, schritt, punkte or {})
+            beteiligte.append({
+                "vorlageId": lauf.fahrzeugId,
+                "funkrufname": vorlage.funkrufname if vorlage else "",
+                "staerke": str(sum(koepfe.get(platz.personId, 1) for platz in schritt.besatzung)),
+                "beginn": _anfahrt(lauf, stelle),
+                "ezp": "" if geschaetzt is None else str(geschaetzt),
+                "von": schritt.von,
+                "bis": schritt.bis,
+                "da": ankunft(lauf, schritt, punkte or {}),
+                "aufgebot": schritt.aufgebot and bool(lauf.fahrzeugId),
+                "name": vorlage.funkrufname if vorlage else namen.get(lauf.personId, ""),
+            })
     beteiligte.sort(key=lambda eintrag: eintrag["beginn"])
     return beteiligte
 
 
+def _alarmierte(gruppe: list[dict]) -> list[dict]:
+    """
+    Wer aus dieser Gruppe auf den Zettel kommt: die alarmierten Fahrzeuge, jedes einmal. Wer nur
+    Mimen bringt, steht am selben Ort und bleibt außen vor — er ist nicht alarmiert.
+    """
+    gesehen: dict[str, dict] = {}
+    for eintrag in gruppe:
+        if eintrag["aufgebot"] and eintrag["vorlageId"] not in gesehen:
+            gesehen[eintrag["vorlageId"]] = eintrag
+    return sorted(gesehen.values(), key=lambda eintrag: eintrag["beginn"])
+
+
 def _gruppen(beteiligte: list[dict]) -> list[list[dict]]:
     """
-    Wer zusammen auf einem Zettel steht.
+    Ein Einsatz ist die Lage, einmal gelaufen: zusammen gehört, wessen Zeiten sich überschneiden.
+    Ist zwischendurch niemand mehr da, ist der Einsatz zu Ende und der nächste fängt an — zwei
+    Alarme nacheinander am selben Ort sind zwei Alarme, auch wenn sie auf dieselbe Lage zeigen.
+    Die Überschneidung überträgt sich: A mit B und B mit C hält alle drei zusammen, auch wenn A
+    und C einander nicht mehr berühren.
 
-    Alarmiert ist zusammen, wer sich zeitlich überschneidet: solange noch jemand an der Lage
-    steht, gehört das nächste Fahrzeug zu demselben Einsatz. Ist zwischendurch niemand mehr da,
-    fängt ein neuer an — zwei Alarme nacheinander am selben Ort sind zwei Alarme, auch wenn sie
-    auf dieselbe Lage zeigen. Die Überschneidung überträgt sich: A mit B und B mit C hält alle
-    drei zusammen, auch wenn A und C einander nicht mehr berühren.
+    Gruppiert wird über alle, die an der Lage stehen, und nicht nur über die Alarmierten: sonst
+    fiele der Einsatz auseinander, sobald ihn ein Fahrzeug ohne Aufgebot überbrückt — und die
+    Übersicht im Browser, die dieselbe Regel rechnet, zeigte etwas anderes als der Zettel.
     """
     gruppen: list[list[dict]] = []
     ende = None
@@ -130,6 +140,35 @@ def _gruppen(beteiligte: list[dict]) -> list[list[dict]]:
     for gruppe in gruppen:
         gruppe.sort(key=lambda eintrag: eintrag["beginn"])
     return gruppen
+
+
+def einsaetze(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> list[dict]:
+    """
+    Alle Einsätze des Plans, nach Zeit sortiert: jede Lage so oft, wie sie läuft.
+
+    Dieselbe Übersicht rechnet der Browser in `frontend/src/scripts/ablauf.ts`;
+    `tools/plan_vergleichen` hält die beiden aneinander, denn davon hängt ab, wer zusammen auf
+    einem Zettel steht.
+    """
+    gefunden = []
+    for punkt in arbeitsmappe.planung.programmpunkte:
+        for nummer, gruppe in enumerate(_gruppen(_beteiligte(arbeitsmappe, punkt, punkte)), 1):
+            gefunden.append({
+                "programmpunktId": punkt.id,
+                "lage": punkt.name.strip() or _stichwort(arbeitsmappe, punkt),
+                "nummer": nummer,
+                "ortId": lagen_ort(arbeitsmappe.planung, punkt.id),
+                "von": min(eintrag["beginn"] for eintrag in gruppe),
+                "da": min(eintrag["da"] for eintrag in gruppe),
+                "bis": max(eintrag["bis"] for eintrag in gruppe),
+                "beteiligte": gruppe,
+            })
+    return sorted(gefunden, key=lambda einsatz: einsatz["von"])
+
+
+def _stichwort(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt) -> str:
+    alarm = next((eintrag for eintrag in arbeitsmappe.alarme if eintrag.id == punkt.alarmId), None)
+    return alarm.stichwort.strip() if alarm else ""
 
 
 def _einsatznummer(beteiligte: list[dict], pro_tag: int) -> str:
@@ -156,9 +195,11 @@ def ableitung(arbeitsmappe: Arbeitsmappe, alarm: Alarm, punkte: dict | None = No
     if punkt is None:
         return None
     adresse = _adresse(arbeitsmappe, punkt)
-    gruppen = _gruppen(_beteiligte(arbeitsmappe, punkt, punkte))
+    gruppen = [_alarmierte(gruppe)
+               for gruppe in _gruppen(_beteiligte(arbeitsmappe, punkt, punkte))]
+    gruppen = [gruppe for gruppe in gruppen if gruppe]
     return {
-        "lage": alarm.stichwort or punkt.name,
+        "lage": punkt.name.strip() or alarm.stichwort,
         "einsatzadresse": adresse.model_dump() if adresse else None,
         "blaetter": [{
             "funkrufname": eintrag["funkrufname"],
@@ -219,7 +260,16 @@ def mit_plan(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> Arbeitsm
             alarme.append(alarm.model_copy(
                 update={"einsatzadresse": adresse} if adresse is not None else {}))
             continue
+        gedruckt = False
         for gruppe in _gruppen(beteiligte):
-            nummer = _einsatznummer(gruppe, arbeitsmappe.kataloge.alarmeProTag)
-            alarme += [_blatt(alarm, punkt, gruppe, fuer, adresse, nummer) for fuer in gruppe]
+            alarmierte = _alarmierte(gruppe)
+            if not alarmierte:
+                continue
+            nummer = _einsatznummer(alarmierte, arbeitsmappe.kataloge.alarmeProTag)
+            alarme += [_blatt(alarm, punkt, alarmierte, fuer, adresse, nummer)
+                       for fuer in alarmierte]
+            gedruckt = True
+        if not gedruckt:
+            alarme.append(alarm.model_copy(
+                update={"einsatzadresse": adresse} if adresse is not None else {}))
     return arbeitsmappe.model_copy(update={"alarme": alarme})

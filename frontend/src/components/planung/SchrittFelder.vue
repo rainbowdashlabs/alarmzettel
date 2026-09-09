@@ -29,6 +29,12 @@ function meldung(befund: Befund): string {
 /** Die Fahrt, die vor diesem Aufenthalt von selbst entsteht. */
 const weg = computed(() => anfahrt(plandaten(), lauf, schritt))
 
+/** Das Stichwort des Alarms — es steht als Platzhalter dort, wo die Bezeichnung leer bleibt. */
+const stichwortDerLage = computed(() => {
+  const punkt = programmpunkt(schritt.programmpunktId)
+  return arbeitsmappe.alarme.find(alarm => alarm.id === punkt?.alarmId)?.stichwort ?? ''
+})
+
 const schaetzung = computed(() => fahrzeitSchaetzung(plandaten(), lauf, schritt))
 
 /** Wie viele Köpfe an Bord sind — „Mimen (4)“ zählt vier. */
@@ -174,9 +180,11 @@ function lageAnlegen() {
           {{ t('ablauf.imAufgebotHinweis') }}
         </span>
       </div>
-      <div v-if="!programmpunkt(schritt.programmpunktId)!.alarmId">
+      <div>
         <label class="feld-label">{{ t('ablauf.lageName') }}</label>
-        <input v-model="programmpunkt(schritt.programmpunktId)!.name" type="text" class="field"/>
+        <input v-model="programmpunkt(schritt.programmpunktId)!.name" type="text" class="field"
+               :placeholder="stichwortDerLage || t('ablauf.lageNamePlatzhalter')"
+               :title="t('ablauf.lageNameHinweis')"/>
       </div>
       <div>
         <label class="feld-label">{{ t('ablauf.lageAlarm') }}</label>

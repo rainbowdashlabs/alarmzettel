@@ -1,5 +1,5 @@
 """
-Druckt Personenplan und Bewegungsbild, wie der Server sie rechnet, zum Vergleich mit dem Browser.
+Druckt den Personenplan, wie der Server ihn rechnet, zum Vergleich mit dem Browser.
 
 Beides wird nirgends gepflegt, sondern aus den Ketten gerechnet — einmal im Browser für die
 Ansicht, einmal hier für das Blatt in der Hand. Laufen die beiden auseinander, widerspricht der
@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend" / "src"))
 
 from data.ablaufplan import plandaten  # noqa: E402
+from data.alarmplan import einsaetze  # noqa: E402
 from entities.alarm import Arbeitsmappe  # noqa: E402
 
 if len(sys.argv) < 2:
@@ -39,23 +40,10 @@ for blatt in daten["personen"]:
             str(zeile["geschaetzt"] if zeile["geschaetzt"] is not None else "-"),
         ]))
 
-for bild in daten["bewegung"]:
-    print(" | ".join(["FENSTER", bild["modus"], bild["datum"],
-                      str(bild["von"]), str(bild["bis"])]))
-    for band in bild["baender"]:
-        print(" | ".join(["BAND", bild["modus"], bild["datum"], band["name"],
-                          str(band["reihen"])]))
-    for balken in bild["balken"]:
-        print(" | ".join([
-            "BALKEN", bild["modus"], bild["datum"], balken["schrittId"], balken["ortId"],
-            str(balken["reihe"]),
-            str(balken["von"]), str(balken["bis"]), balken["name"],
-            ",".join(balken["begleitung"]), balken["lage"],
-        ]))
-    for linie in bild["linien"]:
-        print(" | ".join([
-            "LINIE", bild["modus"], bild["datum"], linie["schrittId"], linie["vonOrtId"],
-            str(linie["vonReihe"]),
-            linie["nachOrtId"], str(linie["nachReihe"]), str(linie["von"]), str(linie["bis"]),
-            linie["mittel"], linie["name"], ",".join(linie["begleitung"]),
-        ]))
+for einsatz in einsaetze(mappe, punkte):
+    print(" | ".join([
+        "EINSATZ", einsatz["lage"], str(einsatz["nummer"]), einsatz["ortId"],
+        einsatz["von"], einsatz["da"], einsatz["bis"],
+        ",".join(f"{eintrag['name']}{'' if eintrag['aufgebot'] else '*'}"
+                 for eintrag in einsatz["beteiligte"]),
+    ]))

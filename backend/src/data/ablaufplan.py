@@ -7,7 +7,6 @@ sie einmal, damit das Blatt in der Hand und die Ansicht am Schirm nicht auseinan
 können, und das Typst-Template legt nur noch aus, was hier steht.
 """
 
-from data.bewegungen import bewegungsbilder
 from data.karten import adresstext, karten
 from data.kette import (
     anfahrt, fahrzeit as _fahrzeit, mittel_von, mitfahrer, personenplan, von_ort as _von_ort)
@@ -36,7 +35,7 @@ class Plan:
         self.personen = arbeitsmappe.kataloge.personen
         self._personen = {person.id: person for person in self.personen}
         stichwoerter = {alarm.id: alarm.stichwort for alarm in arbeitsmappe.alarme}
-        self._lagen = {punkt.id: (stichwoerter.get(punkt.alarmId) or "").strip() or punkt.name
+        self._lagen = {punkt.id: punkt.name.strip() or (stichwoerter.get(punkt.alarmId) or "").strip()
                        for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
@@ -112,13 +111,16 @@ def _anfahrtszeile(plan: Plan, lauf: Lauf, schritt: Schritt,
     }
 
 
-def _zeile(plan: Plan, lauf: Lauf, schritt: Schritt, ankunft: str = "") -> dict:
-    """Die Zeile trägt das Datum der Zeit, die auf ihr steht — das der Ankunft, nicht des Aufbruchs."""
+def _zeile(plan: Plan, lauf: Lauf, schritt: Schritt, ankunft: str = "", bis: str = "") -> dict:
+    """
+    Die Zeile trägt das Datum der Zeit, die auf ihr steht — das der Ankunft, nicht des Aufbruchs.
+    Auf einem Personenblatt steht ihre eigene Zeit: wer abgeholt wird, ist vorher fort.
+    """
     da = ankunft or _ankunft(plan, lauf, schritt)
     return {
         "datum": _datum(da),
         "von": _uhrzeit(da),
-        "bis": _uhrzeit(schritt.bis),
+        "bis": _uhrzeit(bis or schritt.bis),
         "art": schritt.art, "mittel": mittel_von(lauf, schritt),
         "was": plan.wohin(schritt), "ort": plan.ort(schritt.ortId), "lage": plan.lage(schritt),
         "vonOrt": plan.ort(_von_ort(lauf, schritt)),
@@ -148,7 +150,7 @@ def _personenblatt(plan: Plan, person: Person) -> dict:
         if weg:
             zeilen.append({**weg, "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
                            "faehrt": eintrag.faehrt})
-        zeilen.append({**_zeile(plan, lauf, schritt, eintrag.ankunft),
+        zeilen.append({**_zeile(plan, lauf, schritt, eintrag.ankunft, eintrag.bis),
                        "fahrzeug": plan.fahrzeug(lauf.fahrzeugId),
                        "faehrt": eintrag.faehrt})
     return {"name": person.name, "anzahl": person.anzahl, "rollen": person.rollen,
@@ -200,12 +202,25 @@ def _spalte(plan: Plan, lauf: Lauf) -> dict:
             "art": "fahrzeug" if lauf.fahrzeugId else "person"}
 
 
-def _zelle(plan: Plan, lauf: Lauf, schritt: Schritt) -> str:
-    """Im Raster steht die Lage, wenn es eine gibt — sonst der Ort. So war die Tabelle gefüllt."""
-    text = plan.lage(schritt) if schritt.art != "fahrt" and plan.lage(schritt) else plan.wohin(schritt)
-    if lauf.fahrzeugId or schritt.art != "fahrt":
-        return text
-    return f"{text} ({'zu Fuß' if schritt.mittel == 'fuss' else 'eigene Anreise'})"
+def _zelle(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict:
+    """
+    Im Raster steht die Lage, wenn es eine gibt — sonst der Ort. So war die Tabelle gefüllt.
+
+    Die Art sagt dem Bogen, wie er die Zelle einfärbt: eine Fahrt sieht anders aus als ein
+    Aufenthalt, und ein Einsatz anders als das Warten dazwischen. Sonst müsste man jede Zelle
+    lesen, um zu sehen, was gerade läuft.
+    """
+    lage = plan.lage(schritt)
+    text = lage if schritt.art != "fahrt" and lage else plan.wohin(schritt)
+    if not lauf.fahrzeugId and schritt.art == "fahrt":
+        text = f"{text} ({'zu Fuß' if schritt.mittel == 'fuss' else 'eigene Anreise'})"
+    if schritt.art == "fahrt":
+        art = "fahrt"
+    elif lage:
+        art = "einsatz"
+    else:
+        art = "aufenthalt"
+    return {"text": text, "art": art}
 
 
 def _gesamtplan(plan: Plan) -> dict:
@@ -255,25 +270,25 @@ def _als_uhrzeit(minute: int) -> str:
     return f"{innerhalb // 60:02d}:{innerhalb % 60:02d}"
 
 
-def _zelle_zur_zeit(plan: Plan, lauf: Lauf, datum: str, minute: int) -> str:
+def _zelle_zur_zeit(plan: Plan, lauf: Lauf, datum: str, minute: int) -> dict:
     """
     Was in dieser Viertelstunde in dieser Spalte steht. Es zählt, was in das Fenster hineinragt,
     nicht nur was seinen Anfang überdeckt — sonst verschwände eine Fahrt von zehn Minuten, die
     zwischen zwei Rasterpunkten liegt, spurlos vom Bogen. Überlappen mehrere, gewinnt der
     längste Anteil.
     """
-    beste, laengster = "", 0
+    beste, laengster = {"text": "", "art": ""}, 0
     for schritt in lauf.schritte:
         if _datum(schritt.von) != datum:
             continue
-        for von, bis, text in _abschnitte(plan, lauf, schritt):
+        for von, bis, zelle in _abschnitte(plan, lauf, schritt):
             anteil = min(bis, minute + RASTER) - max(von, minute)
             if anteil > laengster:
-                beste, laengster = text, anteil
+                beste, laengster = zelle, anteil
     return beste
 
 
-def _abschnitte(plan: Plan, lauf: Lauf, schritt: Schritt) -> list[tuple[int, int, str]]:
+def _abschnitte(plan: Plan, lauf: Lauf, schritt: Schritt) -> list[tuple[int, int, dict]]:
     """
     Ein Schritt auf der Zeitachse. Ein Aufenthalt mit erzeugter Anfahrt zerfällt in zwei Stücke:
     erst die Fahrt, dann das Dasein — sonst stünde die Lage schon im Raster, während man noch
@@ -286,7 +301,8 @@ def _abschnitte(plan: Plan, lauf: Lauf, schritt: Schritt) -> list[tuple[int, int
     da = _minuten(weg.bis) if weg else None
     if da is None or da <= von or da >= bis:
         return [(von, bis, _zelle(plan, lauf, schritt))]
-    return [(von, da, f"→ {plan.ort(schritt.ortId)}"), (da, bis, _zelle(plan, lauf, schritt))]
+    anfahrt_zelle = {"text": f"→ {plan.ort(schritt.ortId)}", "art": "fahrt"}
+    return [(von, da, anfahrt_zelle), (da, bis, _zelle(plan, lauf, schritt))]
 
 
 def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
@@ -302,5 +318,4 @@ def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe
                       if lauf.fahrzeugId and lauf.schritte],
         "gesamt": _gesamtplan(plan),
-        "bewegung": bewegungsbilder(arbeitsmappe, punkte),
     }

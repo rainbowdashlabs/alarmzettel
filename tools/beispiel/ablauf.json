@@ -155,7 +155,8 @@
                 "anzahl": 4
               }
             ],
-            "fahrzeit": 0
+            "fahrzeit": 0,
+            "aufgebot": true
           },
           {
             "id": "s2",
@@ -183,7 +184,8 @@
                 "anzahl": 4
               }
             ],
-            "fahrzeit": 0
+            "fahrzeit": 0,
+            "aufgebot": true
           },
           {
             "id": "s3",
@@ -217,7 +219,8 @@
                 "anzahl": 1
               }
             ],
-            "fahrzeit": 0
+            "fahrzeit": 0,
+            "aufgebot": true
           },
           {
             "id": "s4",
@@ -238,7 +241,8 @@
             ],
             "notiz": "",
             "material": [],
-            "fahrzeit": 0
+            "fahrzeit": 0,
+            "aufgebot": true
           }
         ]
       },
@@ -265,7 +269,8 @@
               }
             ],
             "notiz": "",
-            "material": []
+            "material": [],
+            "aufgebot": true
           },
           {
             "id": "s5",
@@ -292,7 +297,8 @@
             ],
             "notiz": "",
             "material": [],
-            "fahrzeit": 0
+            "fahrzeit": 0,
+            "aufgebot": true
           }
         ]
       },
@@ -312,7 +318,8 @@
             "besatzung": [],
             "notiz": "",
             "material": [],
-            "fahrzeit": 0
+            "fahrzeit": 0,
+            "aufgebot": true
           },
           {
             "id": "s7",
@@ -326,7 +333,8 @@
             "besatzung": [],
             "notiz": "",
             "material": [],
-            "fahrzeit": 0
+            "fahrzeit": 0,
+            "aufgebot": true
           }
         ]
       }

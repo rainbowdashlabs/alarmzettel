@@ -152,92 +152,35 @@
   }
 }
 
-/// Zeit in Minuten seit Mitternacht, wie sie über dem Bewegungsbild steht.
-#let stundenmarke(minute) = {
-  let innerhalb = calc.rem(minute, 1440)
-  let stunde = calc.div-euclid(innerhalb, 60)
-  let rest = calc.rem(innerhalb, 60)
-  (if stunde < 10 { "0" } else { "" } + str(stunde) + ":"
-   + if rest < 10 { "0" } else { "" } + str(rest))
-}
-
-/// Die Gesamtansicht: jeder Ort ein Band, die Zeit nach rechts, jede Bewegung eine Linie
-/// zwischen zwei Bändern. Was sich bewegt, ist damit das Bild selbst und nicht eine Zeile in
-/// einer Tabelle.
-#let bewegungsblatt(bild) = {
-  let SPALTE = 34mm
-  let FLAECHE = 235mm
-  let REIHE = 7mm
-  let LUFT = 3mm
-  let KOPF = 6mm
-
-  let spanne = calc.max(bild.bis - bild.von, 1)
-  let x = minute => SPALTE + FLAECHE * (minute - bild.von) / spanne
-
-  let oben = (:)
-  let hoehe = KOPF
-  for band in bild.baender {
-    oben.insert(band.ortId, hoehe)
-    hoehe = hoehe + band.reihen * REIHE + LUFT
-  }
-  let mitte = (ortId, reihe) => oben.at(ortId) + reihe * REIHE + REIHE / 2
-
-  kopf("Bewegungsbild", bild.datum + " · " +
-       (if bild.modus == "personen" { "je Person" } else { "je Fahrzeug" }))
-  block(width: SPALTE + FLAECHE, height: hoehe, {
-    for minute in range(bild.von, bild.bis + 1, step: 60) {
-      place(dx: x(minute), dy: KOPF, line(end: (0mm, hoehe - KOPF), stroke: 0.4pt + luma(200)))
-      place(dx: x(minute) - 6mm, dy: 0mm,
-            box(width: 12mm, align(center, text(size: 7pt, fill: luma(110))[
-              #stundenmarke(minute)])))
-    }
-
-    for band in bild.baender {
-      place(dx: SPALTE, dy: oben.at(band.ortId),
-            rect(width: FLAECHE, height: band.reihen * REIHE, fill: luma(246), stroke: none))
-      place(dx: 0mm, dy: oben.at(band.ortId) + band.reihen * REIHE / 2 - 2mm,
-            box(width: SPALTE - 2mm, align(right, text(size: 8pt, weight: "bold")[
-              #band.name])))
-    }
-
-    for linie in bild.linien {
-      let x1 = x(linie.von)
-      let x2 = x(linie.bis)
-      let y1 = mitte(linie.vonOrtId, linie.vonReihe)
-      let y2 = mitte(linie.nachOrtId, linie.nachReihe)
-      place(dx: x1, dy: y1, line(
-        end: (x2 - x1, y2 - y1),
-        stroke: (paint: black, thickness: 0.8pt,
-                 dash: if linie.mittel == "fahrzeug" { none } else { "dashed" })))
-    }
-
-    for balken in bild.balken {
-      let x1 = x(balken.von)
-      let breite = calc.max(x(balken.bis) - x1, 2mm)
-      let wer = balken.begleitung.filter(name => name != "")
-      let text_ = balken.name + if wer.len() > 0 { " · " + wer.join(", ") } else { "" }
-      place(dx: x1, dy: mitte(balken.ortId, balken.reihe) - REIHE / 2 + 0.8mm,
-            rect(width: breite, height: REIHE - 1.6mm, radius: 1mm,
-                 fill: luma(228), stroke: 0.4pt + luma(140)))
-      place(dx: x1 + 1mm, dy: mitte(balken.ortId, balken.reihe) - 1.8mm,
-            box(width: FLAECHE, text(size: 7pt)[
-              #text_#if balken.lage != "" [ #text(fill: luma(90))[· #balken.lage]]]))
-    }
-  })
-}
+/// Was eine Zelle des Bogens für eine ist — daran hängt ihre Farbe.
+#let FLAECHE = (
+  einsatz: rgb("#f3cfcb"),
+  fahrt: rgb("#e6e6e6"),
+  aufenthalt: rgb("#f2f2f2"),
+)
 
 /// Der Bogen für die Wand: Zeit nach unten, je eine Spalte pro Kette.
+///
+/// Die Farbe sagt, was läuft: ein Einsatz steht im Signalton, eine Fahrt schraffiert dazwischen,
+/// ein Aufenthalt ohne Lage blass. Wo ein Block endet, trennt ein kräftiger Strich — so sieht
+/// man den Wechsel, ohne jede Zelle zu lesen.
 #let gesamtblock(block_) = {
   kopf("Gesamtplan", block_.datum)
   let zellen = ()
-  let vorher = block_.spalten.map(_ => "")
-  for zeile in block_.zeilen {
+  let vorher = block_.spalten.map(_ => (text: "", art: ""))
+  let zeilen = block_.zeilen
+  for (reihe, zeile) in zeilen.enumerate() {
     zellen.push(table.cell(fill: none, text(size: 8pt, fill: luma(110))[#zeile.zeit]))
     for (nummer, inhalt) in zeile.zellen.enumerate() {
-      let anfang = inhalt != "" and inhalt != vorher.at(nummer)
+      let davor = vorher.at(nummer)
+      let danach = if reihe + 1 < zeilen.len() { zeilen.at(reihe + 1).zellen.at(nummer) }
+                   else { (text: "", art: "") }
+      let anfang = inhalt.text != "" and inhalt.text != davor.text
+      let schluss = inhalt.text != "" and inhalt.text != danach.text
       zellen.push(table.cell(
-        fill: if inhalt == "" { none } else { BLOCK },
-        if anfang { text(size: 9pt)[#inhalt] } else { [] },
+        fill: FLAECHE.at(inhalt.art, default: none),
+        stroke: if schluss { (bottom: 1.2pt + luma(90)) } else { none },
+        if anfang { text(size: 9pt)[#inhalt.text] } else { [] },
       ))
     }
     vorher = zeile.zellen
@@ -264,10 +207,7 @@
   blatt
 }
 
-#let quer = (
-  data.gesamt.bloecke.map(block_ => gesamtblock(block_))
-    + data.bewegung.filter(bild => bild.baender.len() > 0).map(bild => bewegungsblatt(bild))
-)
+#let quer = data.gesamt.bloecke.map(block_ => gesamtblock(block_))
 
 #if quer.len() > 0 {
   if blaetter.len() > 0 { pagebreak() }

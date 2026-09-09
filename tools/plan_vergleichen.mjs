@@ -33,7 +33,7 @@ async function laden(pfad) {
         Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 }
 
-const {anfahrt, fahrzeitSchaetzung, lagenName, personenplan} =
+const {anfahrt, einsaetze, fahrzeitSchaetzung, lagenName, personenplan} =
     await laden('frontend/src/scripts/ablauf.ts')
 const {bewegungsbild, bewegungstage} = await laden('frontend/src/scripts/bewegungen.ts')
 
@@ -56,6 +56,9 @@ const namen = (liste, id, feld) => liste?.find(eintrag => eintrag.id === id)?.[f
 const ort = id => namen(orte, id, 'name')
 const lage = id => lagenName(daten, id)
 const fahrzeug = id => namen(mappe.kataloge?.fahrzeuge, id, 'funkrufname')
+const name = lauf => lauf.fahrzeugId
+    ? fahrzeug(lauf.fahrzeugId)
+    : namen(mappe.kataloge?.personen, lauf.personId, 'name')
 
 const zeile = (name, felder) => console.log(['PLAN', name, ...felder].join(' | '))
 
@@ -83,22 +86,11 @@ for (const person of mappe.kataloge?.personen ?? []) {
     }
 }
 
-for (const modus of ['fahrzeuge', 'personen']) {
-    for (const tag of bewegungstage(daten)) {
-        const bild = bewegungsbild(daten, tag, modus)
-        console.log(['FENSTER', bild.modus, bild.datum, bild.von, bild.bis].join(' | '))
-        for (const band of bild.baender) {
-            console.log(['BAND', bild.modus, bild.datum, band.name, band.reihen].join(' | '))
-        }
-        for (const balken of bild.balken) {
-            console.log(['BALKEN', bild.modus, bild.datum, balken.schrittId, balken.ortId,
-                         balken.reihe, balken.von, balken.bis, balken.name,
-                         balken.begleitung.join(','), balken.lage].join(' | '))
-        }
-        for (const linie of bild.linien) {
-            console.log(['LINIE', bild.modus, bild.datum, linie.schrittId, linie.vonOrtId,
-                         linie.vonReihe, linie.nachOrtId, linie.nachReihe, linie.von, linie.bis,
-                         linie.mittel, linie.name, linie.begleitung.join(',')].join(' | '))
-        }
-    }
+for (const einsatz of einsaetze(daten)) {
+    console.log([
+        'EINSATZ', lage(einsatz.programmpunkt.id), einsatz.nummer, einsatz.ortId,
+        einsatz.von, einsatz.da, einsatz.bis,
+        einsatz.beteiligte
+            .map(eintrag => `${name(eintrag.lauf)}${eintrag.aufgebot ? '' : '*'}`).join(','),
+    ].join(' | '))
 }
