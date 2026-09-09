@@ -8,7 +8,7 @@
  * Das Modul kennt weder Store noch Vue, damit dieselbe Rechnung die Oberfläche versorgt und in
  * `tools/ablauf_pruefen.mjs` außerhalb eines Browsers geprüft werden kann.
  */
-import type {Fahrzeugvorlage} from '../interfaces/Alarm'
+import type {Fahrzeugvorlage, Materialvorlage} from '../interfaces/Alarm'
 import type {Lauf, Ort, Person, Planung, Programmpunkt, Schritt} from '../interfaces/Planung'
 import type {Punkt} from './polar'
 import {entfernungKm} from './polar'
@@ -32,6 +32,8 @@ export interface Plandaten {
     fahrzeuge: Fahrzeugvorlage[]
     /** Die Orte des Katalogs, die Dienststelle voran. */
     orte: Ort[]
+    /** Was die Wache an Material führt — wonach die Standorte benannt werden. */
+    kataloge?: {material: Materialvorlage[]}
     punkte?: Record<string, Punkt>
 }
 

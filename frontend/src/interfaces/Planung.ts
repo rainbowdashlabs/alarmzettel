@@ -72,6 +72,14 @@ export interface Besatzung extends Eintrag {
 }
 
 /**
+ * Ein Stück Material, das in diesem Schritt dabei ist. Es hängt am Schritt wie die Besatzung —
+ * dadurch sagt der Plan von selbst, wo etwas liegt und womit es wohin gefahren wird.
+ */
+export interface Materialposten extends Eintrag {
+    materialId: string
+}
+
+/**
  * Ein Schritt einer Kette: entweder an einem Ort sein, oder zu einem fahren. Die Besatzung ist
  * die vollständige Liste für diesen Schritt, nicht die Änderung gegenüber dem vorigen — dadurch
  * ist jeder Schritt für sich lesbar und jede Prüfung eine Frage an einen einzelnen Schritt.
@@ -85,6 +93,8 @@ export interface Schritt extends Eintrag {
     /** Wo man ist, beziehungsweise wohin es geht. Woher, sagt der vorige Schritt. */
     ortId: string
     programmpunktId: string
+    /** Was sonst zu diesem Schritt zu sagen ist — für alles, wofür es kein Feld gibt. */
+    notiz: string
     /**
      * Ob dieses Fahrzeug zum Einsatzmittelaufgebot der Lage gehört. Wer nur Mimen hinbringt,
      * steht am Ort, ohne alarmiert zu sein — und bekommt weder einen Zettel noch eine Zeile
@@ -92,6 +102,7 @@ export interface Schritt extends Eintrag {
      */
     aufgebot: boolean
     besatzung: Besatzung[]
+    material: Materialposten[]
 }
 
 /** Die Kette eines Fahrzeugs oder einer Person. Genau eines von beiden ist gesetzt. */

@@ -56,6 +56,7 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
     kataloge.orte = (kataloge.orte?.length ? kataloge.orte : alteOrte ?? [])
         .map(ort => ({...ort, adresse: {...leereAdresse(), ...ort.adresse}}))
     kataloge.wacheName = kataloge.wacheName ?? ''
+    kataloge.material = kataloge.material ?? []
 
     return sortierungSetzen(katalogVerknuepfen(verweiseHerstellen({
         version: ARBEITSMAPPE_VERSION,
@@ -91,7 +92,9 @@ function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
         schritte: (lauf.schritte ?? []).map(schritt => ({
             ...schritt,
             aufgebot: typeof schritt.aufgebot === 'boolean' ? schritt.aufgebot : true,
+            notiz: schritt.notiz ?? '',
             besatzung: schritt.besatzung ?? [],
+            material: schritt.material ?? [],
         })),
     }))
     for (const liste of ['rollen', 'fahrerlaubnisse'] as const) {

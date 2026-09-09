@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import * as echarts from 'echarts/core'
 import {CustomChart} from 'echarts/charts'
 import {DataZoomComponent, GridComponent, TooltipComponent} from 'echarts/components'
 import {SVGRenderer} from 'echarts/renderers'
+import {faLocationDot, faPersonWalking, faTruck} from '@fortawesome/free-solid-svg-icons'
+import type {IconDefinition} from '@fortawesome/free-solid-svg-icons'
 import {t} from '../../i18n'
 import {activeTheme} from '../../theme'
 import type {Balken, Bewegungsbild, Linie} from '../../scripts/bewegungen'
@@ -19,6 +21,27 @@ const {bild} = defineProps<{ bild: Bewegungsbild }>()
 const gewaehlt = defineModel<string | null>('gewaehlt', {default: null})
 
 const REIHE = 30
+
+/**
+ * Die Zeichen aus demselben Satz, den die Oberfläche benutzt. Ein Balken und eine Linie sind
+ * zwei verschiedene Dinge, und das soll man sehen, ohne es sich aus der Form zu erschließen.
+ */
+const ZEICHEN = {
+  aufenthalt: faLocationDot.icon,
+  fahrzeug: faTruck.icon,
+  fuss: faPersonWalking.icon,
+}
+
+/** Ein Zeichen als Pfad, in ein Kästchen dieser Größe gelegt. */
+function zeichen(bild: IconDefinition['icon'], x: number, y: number, groesse: number,
+                 farbe: string) {
+  const [breite, hoehe, , , pfad] = bild
+  return {
+    type: 'path' as const,
+    shape: {pathData: String(pfad), x, y, width: groesse * (breite / hoehe), height: groesse},
+    style: {fill: farbe},
+  }
+}
 const behaelter = ref<HTMLElement>()
 let diagramm: echarts.ECharts | undefined
 let beobachter: ResizeObserver | undefined
@@ -27,6 +50,12 @@ let beobachter: ResizeObserver | undefined
 function farbe(name: string): string {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'
 }
+
+/** Auch die Legende folgt dem Thema — sie hängt am Wechsel, nicht am Zufall des Neuzeichnens. */
+const legendenfarben = computed(() => {
+    activeTheme()
+    return {stehend: farbe('--c-muted'), signal: farbe('--c-signal')}
+})
 
 /** Jede Reihe eines Bandes ist eine Spur der Kategorieachse; beschriftet wird die mittlere. */
 function spuren(): { beschriftung: string[], anfang: Map<string, number> } {
@@ -56,6 +85,12 @@ function beschriften(eintrag: Balken | Linie): string {
     return dazu.length ? `${eintrag.name} · ${dazu.join(', ')}` : eintrag.name
 }
 
+/** Material und Notiz stehen im Hinweis: auf dem Balken wäre dafür kein Platz. */
+function beiwerk(eintrag: Balken | Linie): string {
+    const teile = [eintrag.material.join(', '), eintrag.notiz].filter(Boolean)
+    return teile.length ? `<br><span style="opacity:.7">${teile.join(' · ')}</span>` : ''
+}
+
 function blass(spurId: string): number {
     return gewaehlt.value === null || gewaehlt.value === spurId ? 1 : 0.18
 }
@@ -65,7 +100,10 @@ function optionen() {
     const ink = farbe('--c-ink')
     const muted = farbe('--c-muted')
     const rule = farbe('--c-rule')
+    // Ein Aufenthalt steht ruhig in Tinte, eine Fahrt läuft im Signal — die beiden sollen sich
+    // auf den ersten Blick unterscheiden und nicht erst an ihrer Form.
     const signal = farbe('--c-signal')
+    const stehend = farbe('--c-muted')
     const spur = (ortId: string, reihe: number) => (anfang.get(ortId) ?? 0) + reihe
 
     return {
@@ -105,14 +143,40 @@ function optionen() {
                 }) => {
                     const von = api.coord([api.value(0), api.value(2)])
                     const nach = api.coord([api.value(1), api.value(3)])
+                    const mitFahrzeug = api.value(4) === 1
+                    const deckung = api.value(5)
+                    const winkel = Math.atan2(nach[1] - von[1], nach[0] - von[0])
+                    const spitze = 6
                     return {
-                        type: 'line',
-                        shape: {x1: von[0], y1: von[1], x2: nach[0], y2: nach[1]},
-                        style: {
-                            stroke: ink, lineWidth: 2,
-                            lineDash: api.value(4) === 1 ? undefined : [5, 4],
-                            opacity: api.value(5),
-                        },
+                        type: 'group',
+                        children: [
+                            {
+                                type: 'line',
+                                shape: {x1: von[0], y1: von[1], x2: nach[0], y2: nach[1]},
+                                style: {
+                                    stroke: signal, lineWidth: 2,
+                                    lineDash: mitFahrzeug ? undefined : [5, 4],
+                                    opacity: deckung,
+                                },
+                            },
+                            {
+                                type: 'polygon',
+                                shape: {points: [
+                                    [nach[0], nach[1]],
+                                    [nach[0] - spitze * Math.cos(winkel - 0.4),
+                                     nach[1] - spitze * Math.sin(winkel - 0.4)],
+                                    [nach[0] - spitze * Math.cos(winkel + 0.4),
+                                     nach[1] - spitze * Math.sin(winkel + 0.4)],
+                                ]},
+                                style: {fill: signal, opacity: deckung},
+                            },
+                            {
+                                ...zeichen(mitFahrzeug ? ZEICHEN.fahrzeug : ZEICHEN.fuss,
+                                           (von[0] + nach[0]) / 2 - 6,
+                                           (von[1] + nach[1]) / 2 - 12, 11, signal),
+                                style: {fill: signal, opacity: deckung},
+                            },
+                        ],
                     }
                 },
                 encode: {x: [0, 1], y: [2, 3]},
@@ -123,7 +187,8 @@ function optionen() {
                         linie.mittel === 'fahrzeug' ? 1 : 0, blass(linie.spurId),
                     ],
                     spurId: linie.spurId,
-                    hinweis: `${beschriften(linie)}<br>${uhr(linie.von)}–${uhr(linie.bis)}`,
+                    hinweis: `${beschriften(linie)}<br>${uhr(linie.von)}–${uhr(linie.bis)}` +
+                        beiwerk(linie),
                 })),
             },
             {
@@ -143,23 +208,31 @@ function optionen() {
                         {x: parameter.coordSys.x, y: parameter.coordSys.y,
                          width: parameter.coordSys.width, height: parameter.coordSys.height})
                     if (!kasten) return null
+                    const deckung = api.value(4)
+                    const platzFuerZeichen = kasten.width > 22
+                    const einzug = platzFuerZeichen ? 20 : 5
                     return {
                         type: 'group',
                         children: [
                             {
                                 type: 'rect',
                                 shape: {...kasten, r: 3},
-                                style: {fill: `${signal}2e`, stroke: signal, lineWidth: 1,
-                                        opacity: api.value(4)},
+                                style: {fill: `${stehend}33`, stroke: stehend, lineWidth: 1,
+                                        opacity: deckung},
                             },
+                            ...(platzFuerZeichen ? [{
+                                ...zeichen(ZEICHEN.aufenthalt, kasten.x + 6,
+                                           kasten.y + kasten.height / 2 - 5, 10, ink),
+                                style: {fill: ink, opacity: deckung},
+                            }] : []),
                             {
                                 type: 'text',
                                 style: {
-                                    x: kasten.x + 5, y: kasten.y + kasten.height / 2,
+                                    x: kasten.x + einzug, y: kasten.y + kasten.height / 2,
                                     text: String(api.value(3)), fill: ink, fontSize: 11,
                                     verticalAlign: 'middle',
-                                    width: Math.max(kasten.width - 10, 0), overflow: 'truncate',
-                                    opacity: api.value(4),
+                                    width: Math.max(kasten.width - einzug - 5, 0),
+                                    overflow: 'truncate', opacity: deckung,
                                 },
                             },
                         ],
@@ -175,7 +248,7 @@ function optionen() {
                     ],
                     spurId: balken.spurId,
                     hinweis: `${beschriften(balken)}<br>${uhr(balken.von)}–${uhr(balken.bis)}` +
-                        (balken.lage ? `<br>${balken.lage}` : ''),
+                        (balken.lage ? `<br>${balken.lage}` : '') + beiwerk(balken),
                 })),
             },
         ],
@@ -208,6 +281,28 @@ watch(() => [bild, gewaehlt.value, activeTheme()], () => zeichnen(), {deep: true
 
 <template>
   <div>
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-1 mb-2 text-[13px]">
+      <span class="flex items-center gap-2">
+        <span class="inline-block w-6 h-3 rounded-sm border"
+              :style="{background: `${legendenfarben.stehend}33`, borderColor: legendenfarben.stehend}"></span>
+        <font-awesome-icon icon="fa-solid fa-location-dot" class="text-muted"/>
+        {{ t('ablauf.legende.aufenthalt') }}
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="inline-block w-6 h-0 border-t-2"
+              :style="{borderColor: legendenfarben.signal}"></span>
+        <font-awesome-icon icon="fa-solid fa-truck" :style="{color: legendenfarben.signal}"/>
+        {{ t('ablauf.legende.fahrt') }}
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="inline-block w-6 h-0 border-t-2 border-dashed"
+              :style="{borderColor: legendenfarben.signal}"></span>
+        <font-awesome-icon icon="fa-solid fa-person-walking"
+                           :style="{color: legendenfarben.signal}"/>
+        {{ t('ablauf.legende.fussweg') }}
+      </span>
+    </div>
+
     <div ref="behaelter"
          :style="{height: `${bild.baender.reduce((summe, band) => summe + band.reihen, 0) * REIHE + 90}px`}"
          class="w-full"></div>

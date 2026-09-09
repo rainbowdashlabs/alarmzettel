@@ -8,6 +8,7 @@ fastapi = {extras = ["standard"], version = "*"}
 pydantic = "*"
 pydantic-settings = "*"
 python-multipart = "*"
+segno = "*"
 
 [dev-packages]
 

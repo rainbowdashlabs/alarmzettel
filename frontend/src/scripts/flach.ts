@@ -43,7 +43,7 @@ const PLANUNGSEINTRAEGE = {
 } as const
 
 const SCHRITTFELDER =
-    ['art', 'mittel', 'von', 'bis', 'ortId', 'programmpunktId', 'aufgebot'] as const
+    ['art', 'mittel', 'von', 'bis', 'ortId', 'programmpunktId', 'aufgebot', 'notiz'] as const
 
 type Eintragsdaten = Record<string, unknown> & { id: string, sortierung?: number }
 
@@ -99,6 +99,10 @@ function planungsfelder(werte: Flachbild, planung: Planung) {
                         eintragsfelder(pfad(sbasis, 'besatzung', sitzt.id), werte, sitzt,
                                        ['personId', 'faehrt'], rang)
                     })
+                    ;((schritt.material ?? []) as Eintragsdaten[]).forEach((stueck, rang) => {
+                        eintragsfelder(pfad(sbasis, 'material', stueck.id), werte, stueck,
+                                       ['materialId'], rang)
+                    })
                 })
             }
         })
@@ -153,6 +157,9 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
     }
     for (const eintrag of mappe.kataloge.stichwoerter) {
         werte[pfad('kataloge', 'stichwoerter', eintrag.id, 'text')] = eintrag.text ?? ''
+    }
+    for (const stueck of mappe.kataloge.material ?? []) {
+        werte[pfad('kataloge', 'material', stueck.id, 'name')] = stueck.name ?? ''
     }
     for (const vorlage of mappe.kataloge.fahrzeuge) {
         const vbasis = pfad('kataloge', 'fahrzeuge', vorlage.id)
@@ -211,6 +218,9 @@ function planungLesen(planung: Record<string, unknown>, rest: string[], wert: un
         const schritt = (schritte[tiefer[1]!] ??= {id: tiefer[1]})
         if (tiefer.length === 3) {
             schritt[tiefer[2]!] = wert
+        } else if (tiefer[2] === 'material' && tiefer.length === 5) {
+            const material = (schritt._material ??= {}) as Sammlung
+            ;(material[tiefer[3]!] ??= {id: tiefer[3]})[tiefer[4]!] = wert
         } else if (tiefer[2] === 'besatzung' && tiefer.length === 5) {
             const besatzung = (schritt._besatzung ??= {}) as Sammlung
             ;(besatzung[tiefer[3]!] ??= {id: tiefer[3]})[tiefer[4]!] = wert
@@ -229,6 +239,7 @@ export function rund(werte: Flachbild): unknown {
         status: [] as string[], trupp: [] as string[],
         fahrzeuge: {} as Record<string, Record<string, unknown>>,
         orte: {} as Record<string, Record<string, unknown>>,
+        material: {} as Record<string, Record<string, unknown>>,
         arbeitsgruppe: '', wache: {} as Record<string, unknown>, wacheName: '',
     }
 
@@ -252,7 +263,8 @@ export function rund(werte: Flachbild): unknown {
                 (kataloge['wache'] as Record<string, unknown>)[teile[2]!] = wert
             } else if (liste === 'status' || liste === 'trupp') {
                 (kataloge[liste] as string[]).push(teile[2]!)
-            } else if ((liste === 'stichwoerter' || liste === 'fahrzeuge') && teile.length === 4) {
+            } else if ((liste === 'stichwoerter' || liste === 'fahrzeuge' || liste === 'material')
+                       && teile.length === 4) {
                 const eintraege = kataloge[liste] as Record<string, Record<string, unknown>>
                 ;(eintraege[teile[2]!] ??= {id: teile[2]})[teile[3]!] = wert
             } else if (liste === 'orte' && teile.length >= 4) {
@@ -318,6 +330,8 @@ export function rund(werte: Flachbild): unknown {
         kataloge['fahrzeuge'] as Record<string, Record<string, unknown>>)
     kataloge['stichwoerter'] = nachText('text')(
         kataloge['stichwoerter'] as Record<string, Record<string, unknown>>)
+    kataloge['material'] = nachText('name')(
+        kataloge['material'] as Record<string, Record<string, unknown>>)
     for (const liste of ['status', 'trupp'] as const) {
         (kataloge[liste] as string[]).sort()
     }
@@ -336,6 +350,8 @@ export function rund(werte: Flachbild): unknown {
         for (const schritt of schritte) {
             schritt.besatzung = nachSortierung((schritt._besatzung ?? {}) as Sammlung)
             delete schritt._besatzung
+            schritt.material = nachSortierung((schritt._material ?? {}) as Sammlung)
+            delete schritt._material
         }
         lauf.schritte = schritte
         delete lauf._schritte

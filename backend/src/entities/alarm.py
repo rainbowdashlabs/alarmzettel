@@ -7,7 +7,7 @@ from entities.planung import DIENSTSTELLE, Ort, Planung
 
 __all__ = ["Adresse", "Eintrag", "Karte", "Fahrzeug", "Einsatzmittelgruppe", "HinweisText",
            "HinweisCode", "Hinweis", "Alarm", "Fahrzeugvorlage", "Stichwortvorlage", "Kataloge",
-           "Arbeitsmappe", "Planung", "Ort", "DIENSTSTELLE"]
+           "Arbeitsmappe", "Planung", "Ort", "Materialvorlage", "DIENSTSTELLE"]
 
 
 class Karte(BaseModel):
@@ -109,6 +109,16 @@ class Fahrzeugvorlage(BaseModel):
     fuehrerschein: str = ""
 
 
+class Materialvorlage(BaseModel):
+    """
+    Ein Stück Material, wie die Wache es führt. Ein Schritt zeigt darauf, damit ein Umbenennen
+    jeden Plan erreicht, der es dabeihat.
+    """
+
+    id: str = Field(default_factory=_kennung)
+    name: str = ""
+
+
 class Stichwortvorlage(BaseModel):
     """A Stichwort is only its text, so the id is the whole reason an Alarm can follow a rename."""
 
@@ -128,6 +138,8 @@ class Kataloge(BaseModel):
     steht er hier neben den Fahrzeugen und nicht im Plan.
     """
     orte: list[Ort] = []
+    """Was die Wache an Material führt. Neu Geschriebenes kommt von selbst dazu."""
+    material: list[Materialvorlage] = []
     """One fixed value for the whole working set; every new Alarm starts with it."""
     arbeitsgruppe: str = ""
     """The station the sheets are written for; the Polar-Koordinaten are measured from it."""

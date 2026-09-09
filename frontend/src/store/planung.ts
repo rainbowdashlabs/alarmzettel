@@ -17,7 +17,8 @@ import type {Punkt} from '../scripts/polar'
 import {tagVon, verschieben} from '../scripts/zeit'
 import {DIENSTSTELLE} from '../interfaces/Planung'
 import type {
-    Besatzung, Lauf, Mittel, Ort, Person, Programmpunkt, Schritt, Tag, Verfuegbarkeit,
+    Besatzung, Lauf, Materialposten, Mittel, Ort, Person, Programmpunkt, Schritt, Tag,
+    Verfuegbarkeit,
 } from '../interfaces/Planung'
 
 /**
@@ -54,6 +55,7 @@ export function plandaten(): Plandaten {
         planung: arbeitsmappe.planung,
         fahrzeuge: arbeitsmappe.kataloge.fahrzeuge,
         orte: alleOrte(),
+        kataloge: {material: arbeitsmappe.kataloge.material},
         punkte: ortsPunkte,
     }
 }
@@ -156,9 +158,12 @@ export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30):
         art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss',
         von: beginn, bis: verschieben(beginn, minuten),
         ortId: vorher?.ortId ?? alleOrte()[0]?.id ?? '',
-        programmpunktId: '', aufgebot: true,
+        programmpunktId: '', aufgebot: true, notiz: '',
         besatzung: (vorher?.besatzung ?? []).map(sitzt => ({
             ...sitzt, id: crypto.randomUUID(),
+        })),
+        material: (vorher?.material ?? []).map(stueck => ({
+            ...stueck, id: crypto.randomUUID(),
         })),
     }
     lauf.schritte.push(schritt)
@@ -207,6 +212,36 @@ export function fahrerSetzen(lauf: Lauf, schritt: Schritt, personId: string) {
     const vorher = gewaehlt.faehrt
     for (const sitzt of schritt.besatzung) sitzt.faehrt = false
     gewaehlt.faehrt = !vorher
+}
+
+/**
+ * Material an einen Schritt hängen. Ein Name, den der Katalog noch nicht kennt, kommt dort dazu
+ * — so wie ein neu geschriebenes Stichwort oder ein neuer Funkrufname.
+ */
+export function materialSichern(name: string): string {
+    const sauber = name.trim()
+    if (!sauber) return ''
+    const vorhanden = arbeitsmappe.kataloge.material
+        .find(stueck => stueck.name.trim().toLowerCase() === sauber.toLowerCase())
+    if (vorhanden) return vorhanden.id
+    const stueck = {id: crypto.randomUUID(), name: sauber}
+    arbeitsmappe.kataloge.material.push(stueck)
+    return stueck.id
+}
+
+export function materialHinzufuegen(schritt: Schritt, materialId: string): Materialposten | undefined {
+    if (!materialId || schritt.material.some(stueck => stueck.materialId === materialId)) {
+        return undefined
+    }
+    const posten: Materialposten = {
+        id: crypto.randomUUID(), sortierung: naechste(schritt.material), materialId,
+    }
+    schritt.material.push(posten)
+    return posten
+}
+
+export function materialName(materialId: string): string {
+    return arbeitsmappe.kataloge.material.find(stueck => stueck.id === materialId)?.name ?? ''
 }
 
 export function programmpunktAnlegen(ortId: string): Programmpunkt {

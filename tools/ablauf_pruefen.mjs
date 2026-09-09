@@ -55,7 +55,7 @@ function schritt(art, von, bis, ortId, felder = {}) {
     return {
         id: kennung('s'), sortierung: 0, art, mittel: 'fahrzeug',
         von: `${TAG}T${von}`, bis: `${TAG}T${bis}`, ortId, programmpunktId: '',
-        besatzung: [], ...felder,
+        aufgebot: true, notiz: '', besatzung: [], material: [], ...felder,
     }
 }
 

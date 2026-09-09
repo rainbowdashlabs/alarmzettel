@@ -74,6 +74,15 @@ class Besatzung(Eintrag):
     faehrt: bool = False
 
 
+class Materialposten(Eintrag):
+    """
+    Ein Stück Material, das in diesem Schritt dabei ist. Es hängt am Schritt wie die Besatzung —
+    dadurch sagt der Plan von selbst, wo etwas liegt und womit es wohin gefahren wird.
+    """
+
+    materialId: str = ""
+
+
 class Schritt(Eintrag):
     """
     Entweder an einem Ort sein oder zu einem fahren. Die Besatzung ist die vollständige Liste für
@@ -88,12 +97,15 @@ class Schritt(Eintrag):
     """Wo man ist, beziehungsweise wohin es geht. Woher, sagt der vorige Schritt."""
     ortId: str = ""
     programmpunktId: str = ""
+    """Was sonst zu diesem Schritt zu sagen ist — für alles, wofür es kein Feld gibt."""
+    notiz: str = ""
     """
     Ob dieses Fahrzeug zum Einsatzmittelaufgebot der Lage gehört. Wer nur Mimen hinbringt, steht
     am Ort, ohne alarmiert zu sein — und bekommt weder einen Zettel noch eine Zeile darauf.
     """
     aufgebot: bool = True
     besatzung: list[Besatzung] = []
+    material: list[Materialposten] = []
 
 
 class Lauf(Eintrag):

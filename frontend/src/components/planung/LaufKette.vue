@@ -4,8 +4,8 @@ import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
-  alleOrte, darfFahren, mehrereTage, personName, plandaten, programmpunkt, programmpunktAnlegen,
-  schrittAnhaengen,
+  alleOrte, darfFahren, materialHinzufuegen, materialName, materialSichern, mehrereTage,
+  personName, plandaten, programmpunkt, programmpunktAnlegen, schrittAnhaengen,
 } from '../../store/planung'
 import {pruefen} from '../../scripts/ablauf'
 import type {Befund} from '../../scripts/ablauf'
@@ -89,6 +89,13 @@ function beginnGesetzt(schritt: Schritt) {
   nachziehen(lauf, schritt)
 }
 
+/** Ein Name, den es noch nicht gibt, wird angelegt; einer aus der Liste wird nur ausgewählt. */
+function materialGewaehlt(schritt: Schritt, feld: HTMLInputElement) {
+  const materialId = materialSichern(feld.value)
+  if (materialId) materialHinzufuegen(schritt, materialId)
+  feld.value = ''
+}
+
 function lageAnlegen(schritt: Schritt) {
   schritt.programmpunktId = programmpunktAnlegen(schritt.ortId).id
 }
@@ -96,6 +103,10 @@ function lageAnlegen(schritt: Schritt) {
 
 <template>
   <div class="grid gap-2">
+    <datalist id="materialliste">
+      <option v-for="stueck in arbeitsmappe.kataloge.material" :key="stueck.id"
+              :value="stueck.name"/>
+    </datalist>
     <div v-for="(schritt, stelle) in lauf.schritte" :key="schritt.id"
          class="border border-rule rounded p-3 bg-page grid gap-2">
       <div class="flex items-center gap-2 flex-wrap">
@@ -205,6 +216,35 @@ function lageAnlegen(schritt: Schritt) {
             <option v-for="person in arbeitsmappe.planung.personen" :key="person.id"
                     :value="person.id">{{ person.name || t('ablauf.ohneName') }}</option>
           </select>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <span class="feld-label">{{ t('ablauf.material') }}</span>
+          <div class="flex flex-wrap gap-2 items-center">
+            <span v-for="stueck in schritt.material" :key="stueck.id" class="flex">
+              <span class="knopf knopf-klein rounded-r-none cursor-default">
+                <font-awesome-icon icon="fa-solid fa-box" class="text-muted"/>
+                {{ materialName(stueck.materialId) || t('ablauf.ohneName') }}
+              </span>
+              <button type="button" class="knopf knopf-klein rounded-l-none border-l-0 px-2"
+                      :title="t('ablauf.materialEntfernen',
+                                {was: materialName(stueck.materialId)})"
+                      @click="entfernen(schritt.material, stueck)">
+                <font-awesome-icon icon="fa-solid fa-xmark"/>
+              </button>
+            </span>
+            <input type="text" class="field w-auto" list="materialliste"
+                   :placeholder="t('ablauf.materialDazu')"
+                   @change="materialGewaehlt(schritt, $event.target as HTMLInputElement)"/>
+          </div>
+        </div>
+
+        <div>
+          <label class="feld-label">{{ t('ablauf.notiz') }}</label>
+          <input v-model="schritt.notiz" type="text" class="field"
+                 :placeholder="t('ablauf.notizPlatzhalter')"/>
         </div>
       </div>
 

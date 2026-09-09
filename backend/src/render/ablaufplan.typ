@@ -42,6 +42,51 @@
 
 #let leerer_hinweis(text_) = text(size: 10pt, fill: luma(120), style: "italic")[#text_]
 
+/// Die Orte des Blattes mit Adresse und den beiden Kennmustern.
+///
+/// Der Zettel soll für sich allein genügen: wer ihn in die Hand gedrückt bekommt, hat keine
+/// zweite Liste dabei und tippt keine Adresse ab, sondern hält das Telefon davor.
+#let orte_block(orte) = {
+  if orte.len() == 0 { return }
+  v(8pt)
+  text(size: 8pt, weight: "bold", fill: luma(90))[#upper("Orte")]
+  v(3pt)
+  line(length: 100%, stroke: RULE)
+  for ort in orte {
+    v(4pt)
+    grid(
+      columns: (1fr, auto, auto),
+      column-gutter: 8pt,
+      align: (left + horizon, center, center),
+      [
+        #text(weight: "bold")[#ort.name] \
+        #text(size: 9pt, fill: luma(70))[#ort.adresse]
+      ],
+      if "apple" in ort and ort.apple in data.kennmuster [
+        #align(center)[
+          #image(data.kennmuster.at(ort.apple), width: 16mm)
+          #text(size: 7pt, fill: luma(110))[Karten]
+        ]
+      ] else [],
+      if "google" in ort and ort.google in data.kennmuster [
+        #align(center)[
+          #image(data.kennmuster.at(ort.google), width: 16mm)
+          #text(size: 7pt, fill: luma(110))[Maps]
+        ]
+      ] else [],
+    )
+  }
+}
+
+/// Material und Notiz einer Zeile, untereinander — beides gehört auf den Zettel, sonst weiß es
+/// nur der, der geplant hat.
+#let beiwerk(zeile) = {
+  let teile = ()
+  if zeile.material.len() > 0 { teile.push(text(size: 9pt)[#zeile.material.join(", ")]) }
+  if zeile.notiz != "" { teile.push(text(size: 9pt, fill: luma(70))[#zeile.notiz]) }
+  teile.join(linebreak())
+}
+
 /// Ein Blatt je Person — der Zettel, den man morgens in die Hand gedrückt bekommt.
 #let personenblatt(person) = {
   let neben = (
@@ -53,16 +98,18 @@
     leerer_hinweis("Noch nirgends eingeteilt.")
   } else {
     tabelle(
-      (auto, auto, 1fr, auto, auto),
-      ("Tag", "Zeit", "Wohin", "Lage", "Fahrzeug"),
+      (auto, auto, 1fr, auto, auto, 1fr),
+      ("Tag", "Zeit", "Wohin", "Lage", "Fahrzeug", "Material und Notiz"),
       mit_tagen(person.zeilen).map(((zeile, tag)) => (
         text(size: 9pt, fill: luma(110))[#tag],
         text(weight: "bold")[#zeitspanne(zeile)],
         [#zeile.was],
         text(fill: luma(70))[#zeile.lage],
         [#zeile.fahrzeug#if zeile.faehrt [ #text(weight: "bold")[· fährt]]],
+        beiwerk(zeile),
       )),
     )
+    orte_block(person.orte)
   }
 }
 
@@ -73,8 +120,8 @@
     leerer_hinweis("Nichts geplant.")
   } else {
     tabelle(
-      (auto, auto, 1fr, auto, 1fr),
-      ("Tag", "Zeit", "Wohin", "Lage", "Besatzung"),
+      (auto, auto, 1fr, auto, 1fr, 1fr),
+      ("Tag", "Zeit", "Wohin", "Lage", "Besatzung", "Material und Notiz"),
       mit_tagen(fahrzeug.zeilen).map(((zeile, tag)) => (
         text(size: 9pt, fill: luma(110))[#tag],
         text(weight: "bold")[#zeitspanne(zeile)],
@@ -84,8 +131,10 @@
           let name = sitzt.name + if sitzt.anzahl > 1 { " (" + str(sitzt.anzahl) + ")" } else { "" }
           if sitzt.faehrt { text(weight: "bold")[#name] } else { [#name] }
         }).join(", "),
+        beiwerk(zeile),
       )),
     )
+    orte_block(fahrzeug.orte)
   }
 }
 

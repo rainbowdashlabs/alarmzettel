@@ -45,6 +45,8 @@ export interface Balken {
      */
     begleitung: string[]
     lage: string
+    material: string[]
+    notiz: string
 }
 
 /** Eine Fahrt: die Linie, die ein Band verlässt und in einem anderen ankommt. */
@@ -60,6 +62,8 @@ export interface Linie {
     mittel: Schritt['mittel']
     name: string
     begleitung: string[]
+    material: string[]
+    notiz: string
 }
 
 export interface Bewegungsbild {
@@ -78,6 +82,13 @@ interface Spurschritt {
     schritt: Schritt
     vonOrtId: string
     begleitung: string[]
+}
+
+function materialnamen(daten: Plandaten, schritt: Schritt): string[] {
+    return schritt.material
+        .map(posten => daten.kataloge?.material
+            ?.find(stueck => stueck.id === posten.materialId)?.name ?? '')
+        .filter(Boolean)
 }
 
 interface Spur {
@@ -222,6 +233,8 @@ export function bewegungsbild(daten: Plandaten, datum: string,
             begleitung: anwesend.eintrag.begleitung,
             lage: daten.planung.programmpunkte
                 .find(punkt => punkt.id === anwesend.eintrag.schritt.programmpunktId)?.name ?? '',
+            material: materialnamen(daten, anwesend.eintrag.schritt),
+            notiz: anwesend.eintrag.schritt.notiz,
         })
     }
 
@@ -239,6 +252,8 @@ export function bewegungsbild(daten: Plandaten, datum: string,
             bis: minuteAmTag(eintrag.schritt.bis, datum),
             mittel: eintrag.schritt.mittel, name: spur.name,
             begleitung: eintrag.begleitung,
+            material: materialnamen(daten, eintrag.schritt),
+            notiz: eintrag.schritt.notiz,
         }
     })
 
@@ -307,6 +322,49 @@ export function standorte(daten: Plandaten, zeitpunkt: string): Standort[] {
             lage: daten.planung.programmpunkte
                 .find(punkt => punkt.id === schritt.programmpunktId)?.name ?? '',
         })
+    }
+    return gefunden
+}
+
+/** Wo ein Stück Material zu einem Zeitpunkt liegt. */
+export interface Materialstand {
+    materialId: string
+    name: string
+    /** Der Ort, an dem es liegt. Leer, solange es unterwegs ist. */
+    ortId: string
+    unterwegs: Unterwegs | null
+    /** Womit es unterwegs ist oder wer es dabeihat. */
+    traeger: string
+}
+
+/**
+ * Wo das Material gerade ist. Es hängt an den Schritten wie die Besatzung, also sagt der Plan es
+ * von selbst — und wenn es fährt, sagt er auch, womit und wohin.
+ */
+export function materialstand(daten: Plandaten, zeitpunkt: string): Materialstand[] {
+    const jetzt = alsMinuten(zeitpunkt)
+    if (jetzt === null) return []
+    const gefunden: Materialstand[] = []
+    for (const stueck of daten.kataloge?.material ?? []) {
+        for (const lauf of daten.planung.laeufe) {
+            const schritt = lauf.schritte.find(kandidat =>
+                kandidat.material.some(posten => posten.materialId === stueck.id) &&
+                (alsMinuten(kandidat.von) ?? 0) <= jetzt && jetzt < (alsMinuten(kandidat.bis) ?? 0))
+            if (!schritt) continue
+            const von = alsMinuten(schritt.von) ?? 0
+            const bis = alsMinuten(schritt.bis) ?? von + 1
+            gefunden.push({
+                materialId: stueck.id, name: stueck.name,
+                ortId: schritt.art === 'fahrt' ? '' : schritt.ortId,
+                unterwegs: schritt.art !== 'fahrt' ? null : {
+                    vonOrtId: vonOrt(lauf, schritt), nachOrtId: schritt.ortId,
+                    anteil: bis > von ? (jetzt - von) / (bis - von) : 0,
+                    mittel: schritt.mittel,
+                },
+                traeger: laufName(daten, lauf),
+            })
+            break
+        }
     }
     return gefunden
 }

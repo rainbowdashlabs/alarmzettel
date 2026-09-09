@@ -101,6 +101,15 @@ export interface Fahrzeugvorlage {
     fuehrerschein: string
 }
 
+/**
+ * Ein Stück Material, wie die Wache es führt. Ein Schritt zeigt darauf, damit ein Umbenennen
+ * jeden Plan erreicht, der es dabeihat.
+ */
+export interface Materialvorlage {
+    id: string
+    name: string
+}
+
 /** A Stichwort is only its text, so the id is the whole reason an Alarm can follow a rename. */
 export interface Stichwortvorlage {
     id: string
@@ -117,6 +126,8 @@ export interface Kataloge {
      * deshalb steht er hier neben den Fahrzeugen und nicht im Plan.
      */
     orte: Ort[]
+    /** Was die Wache an Material führt. Neu Geschriebenes kommt von selbst dazu. */
+    material: Materialvorlage[]
     /** One fixed value for the whole working set; every new Alarm starts with it. */
     arbeitsgruppe: string
     /** The station the sheets are written for. The Polar-Koordinaten are measured from it. */
@@ -224,6 +235,7 @@ export function leereArbeitsmappe(): Arbeitsmappe {
         planung: leerePlanung(),
         kataloge: {
             stichwoerter: stichwortvorlagen(), fahrzeuge: [], status: [], trupp: [], orte: [],
+            material: [],
             arbeitsgruppe: '', wache: leereAdresse(), wacheName: '',
         },
     }

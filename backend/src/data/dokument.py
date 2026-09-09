@@ -53,7 +53,8 @@ PLANUNGSEINTRAEGE = {
     "laeufe": ("fahrzeugId", "personId"),
 }
 
-SCHRITTFELDER = ("art", "mittel", "von", "bis", "ortId", "programmpunktId", "aufgebot")
+SCHRITTFELDER = ("art", "mittel", "von", "bis", "ortId", "programmpunktId", "aufgebot",
+                 "notiz")
 
 VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False}
 """
@@ -103,6 +104,9 @@ def _planungsfelder(planung: dict) -> dict[str, Any]:
                     for rang, sitzt in enumerate(schritt.get("besatzung", [])):
                         werte.update(_eintragsfelder(_pfad(sbasis, "besatzung", sitzt["id"]),
                                                      sitzt, ("personId", "faehrt"), rang))
+                    for rang, stueck in enumerate(schritt.get("material", [])):
+                        werte.update(_eintragsfelder(_pfad(sbasis, "material", stueck["id"]),
+                                                     stueck, ("materialId",), rang))
     return werte
 
 
@@ -158,6 +162,8 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
         eintrag = {"id": eintrag, "text": eintrag} if isinstance(eintrag, str) else eintrag
         kennung = eintrag.get("id") or eintrag.get("text", "")
         werte[_pfad("kataloge", "stichwoerter", kennung, "text")] = eintrag.get("text", "")
+    for stueck in kataloge.get("material", []):
+        werte[_pfad("kataloge", "material", stueck["id"], "name")] = stueck.get("name", "")
     for vorlage in kataloge.get("fahrzeuge", []):
         vbasis = _pfad("kataloge", "fahrzeuge", vorlage.get("id") or vorlage.get("funkrufname", ""))
         for feld in FAHRZEUGFELDER:
@@ -223,6 +229,9 @@ def _planung_lesen(planung: dict, rest: list[str], wert: Any) -> None:
         schritt = eintrag.setdefault("_schritte", {}).setdefault(tiefer[1], {"id": tiefer[1]})
         if len(tiefer) == 3:
             schritt[tiefer[2]] = wert
+        elif tiefer[2] == "material" and len(tiefer) == 5:
+            schritt.setdefault("_material", {}).setdefault(
+                tiefer[3], {"id": tiefer[3]})[tiefer[4]] = wert
         elif tiefer[2] == "besatzung" and len(tiefer) == 5:
             schritt.setdefault("_besatzung", {}).setdefault(
                 tiefer[3], {"id": tiefer[3]})[tiefer[4]] = wert
@@ -237,7 +246,7 @@ def rund(werte: dict[str, Any]) -> dict:
     """Builds the working set back out of the flat map, in sort-key order."""
     alarme: dict[str, dict] = {}
     kataloge: dict[str, Any] = {"stichwoerter": {}, "status": [], "trupp": [], "fahrzeuge": {},
-                                "orte": {}, "arbeitsgruppe": "", "wache": {}}
+                                "orte": {}, "material": {}, "arbeitsgruppe": "", "wache": {}}
     planung: dict[str, Any] = {"aktiv": False, "rollen": [], "fahrerlaubnisse": [],
                                **{liste: {} for liste in PLANUNGSEINTRAEGE}}
 
@@ -260,8 +269,8 @@ def rund(werte: dict[str, Any]) -> dict:
                 kataloge[stueck[1]].append(stueck[2])
             elif stueck[1] == "stichwoerter" and len(stueck) == 4:
                 kataloge["stichwoerter"].setdefault(stueck[2], {"id": stueck[2]})[stueck[3]] = wert
-            elif stueck[1] == "fahrzeuge" and len(stueck) == 4:
-                kataloge["fahrzeuge"].setdefault(stueck[2], {"id": stueck[2]})[stueck[3]] = wert
+            elif stueck[1] in ("fahrzeuge", "material") and len(stueck) == 4:
+                kataloge[stueck[1]].setdefault(stueck[2], {"id": stueck[2]})[stueck[3]] = wert
             elif stueck[1] == "orte" and len(stueck) >= 4:
                 ort = kataloge["orte"].setdefault(stueck[2], {"id": stueck[2], "adresse": {}})
                 if stueck[3] == "adresse" and len(stueck) == 5:
@@ -306,6 +315,8 @@ def rund(werte: dict[str, Any]) -> dict:
                                    key=lambda v: (v.get("funkrufname", ""), v["id"]))
     kataloge["stichwoerter"] = sorted(kataloge["stichwoerter"].values(),
                                       key=lambda e: (e.get("text", ""), e["id"]))
+    kataloge["material"] = sorted(kataloge["material"].values(),
+                                  key=lambda e: (e.get("name", ""), e["id"]))
     for liste in ("status", "trupp"):
         kataloge[liste].sort()
     kataloge["orte"] = geordnet(kataloge["orte"])
@@ -318,6 +329,7 @@ def rund(werte: dict[str, Any]) -> dict:
         schritte = geordnet(lauf.pop("_schritte", {}))
         for schritt in schritte:
             schritt["besatzung"] = geordnet(schritt.pop("_besatzung", {}))
+            schritt["material"] = geordnet(schritt.pop("_material", {}))
         lauf["schritte"] = schritte
     for liste in PLANUNGSLISTEN:
         planung[liste].sort()

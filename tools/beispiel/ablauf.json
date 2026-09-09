@@ -49,7 +49,17 @@
         }
       }
     ],
-    "wacheName": "Wache Nord"
+    "wacheName": "Wache Nord",
+    "material": [
+      {
+        "id": "m-puppe",
+        "name": "Übungspuppe"
+      },
+      {
+        "id": "m-nebel",
+        "name": "Nebelmaschine"
+      }
+    ]
   },
   "planung": {
     "aktiv": true,
@@ -141,6 +151,14 @@
                 "personId": "p-maria",
                 "faehrt": false
               }
+            ],
+            "notiz": "",
+            "material": [
+              {
+                "id": "mp1",
+                "sortierung": 0,
+                "materialId": "m-puppe"
+              }
             ]
           },
           {
@@ -164,6 +182,14 @@
                 "sortierung": 1,
                 "personId": "p-maria",
                 "faehrt": false
+              }
+            ],
+            "notiz": "",
+            "material": [
+              {
+                "id": "mp2",
+                "sortierung": 0,
+                "materialId": "m-puppe"
               }
             ]
           },
@@ -189,6 +215,19 @@
                 "personId": "p-mimen",
                 "faehrt": false
               }
+            ],
+            "notiz": "Nebel erst auf Zeichen",
+            "material": [
+              {
+                "id": "mp3",
+                "sortierung": 0,
+                "materialId": "m-puppe"
+              },
+              {
+                "id": "mn1",
+                "sortierung": 1,
+                "materialId": "m-nebel"
+              }
             ]
           },
           {
@@ -207,7 +246,9 @@
                 "personId": "p-maria",
                 "faehrt": true
               }
-            ]
+            ],
+            "notiz": "",
+            "material": []
           }
         ]
       },
@@ -231,7 +272,9 @@
                 "personId": "p-maria",
                 "faehrt": true
               }
-            ]
+            ],
+            "notiz": "",
+            "material": []
           }
         ]
       },
@@ -248,7 +291,9 @@
             "bis": "2026-09-19T08:39",
             "ortId": "o-kita",
             "programmpunktId": "",
-            "besatzung": []
+            "besatzung": [],
+            "notiz": "",
+            "material": []
           },
           {
             "id": "s7",
@@ -259,7 +304,9 @@
             "bis": "2026-09-19T10:45",
             "ortId": "o-nord",
             "programmpunktId": "",
-            "besatzung": []
+            "besatzung": [],
+            "notiz": "",
+            "material": []
           }
         ]
       }

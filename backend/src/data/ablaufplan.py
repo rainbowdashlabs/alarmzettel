@@ -8,6 +8,7 @@ können, und das Typst-Template legt nur noch aus, was hier steht.
 """
 
 from data.bewegungen import bewegungsbilder
+from data.karten import adresstext, karten
 from data.planzeit import minuten as _minuten, tag as _datum, uhrzeit as _uhrzeit
 from entities.alarm import Arbeitsmappe
 from entities.planung import Lauf, Person, Planung, Schritt
@@ -37,6 +38,8 @@ class Plan:
         self._lagen = {punkt.id: punkt.name for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
+        self._material = {stueck.id: stueck.name for stueck in arbeitsmappe.kataloge.material}
+        self._adressen = {ort.id: ort for ort in arbeitsmappe.kataloge.alle_orte()}
 
     def ort(self, ort_id: str) -> str:
         return self._orte.get(ort_id, "")
@@ -56,6 +59,16 @@ class Plan:
         person = self.person(lauf.personId)
         return person.name if person else ""
 
+    def material(self, schritt: Schritt) -> list[str]:
+        return [self._material.get(stueck.materialId, "") for stueck in schritt.material]
+
+    def ort_mit_adresse(self, ort_id: str) -> dict | None:
+        """Ein Ort, wie er auf dem Blatt steht: Name, Adresse und der Weg dorthin."""
+        ort = self._adressen.get(ort_id)
+        if ort is None:
+            return None
+        return {"name": ort.name, "adresse": adresstext(ort.adresse), **karten(ort.adresse)}
+
     def wohin(self, schritt: Schritt) -> str:
         """Wo man ist; bei einer Fahrt, wohin sie geht."""
         ort = self.ort(schritt.ortId)
@@ -68,6 +81,9 @@ def _zeile(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict:
         "art": schritt.art, "mittel": schritt.mittel,
         "was": plan.wohin(schritt), "ort": plan.ort(schritt.ortId), "lage": plan.lage(schritt),
         "vonOrt": plan.ort(_von_ort(lauf, schritt)),
+        "material": [name for name in plan.material(schritt) if name],
+        "notiz": schritt.notiz,
+        "_orte": [ort_id for ort_id in (_von_ort(lauf, schritt), schritt.ortId) if ort_id],
     }
 
 
@@ -92,7 +108,7 @@ def _personenblatt(plan: Plan, person: Person) -> dict:
     for zeile in zeilen:
         del zeile["_sortierung"]
     return {"name": person.name, "anzahl": person.anzahl, "rollen": person.rollen,
-            "zeilen": zeilen}
+            "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
 
 
 def _fahrzeugblatt(plan: Plan, lauf: Lauf) -> dict:
@@ -106,7 +122,21 @@ def _fahrzeugblatt(plan: Plan, lauf: Lauf) -> dict:
                 besatzung.append({"name": person.name, "anzahl": person.anzahl,
                                   "faehrt": platz.faehrt})
         zeilen.append({**_zeile(plan, lauf, schritt), "besatzung": besatzung})
-    return {"name": plan.name(lauf), "zeilen": zeilen}
+    return {"name": plan.name(lauf), "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
+
+
+def _orte_des_blattes(plan: Plan, zeilen: list[dict]) -> list[dict]:
+    """
+    Die Orte, die auf diesem Blatt vorkommen — mit Adresse, damit der Zettel für sich allein
+    genügt. Wer ihn in die Hand gedrückt bekommt, hat keine zweite Liste dabei.
+    """
+    gesehen: list[str] = []
+    for zeile in zeilen:
+        for ort_id in zeile.pop("_orte", []):
+            if ort_id not in gesehen:
+                gesehen.append(ort_id)
+    orte = [plan.ort_mit_adresse(ort_id) for ort_id in gesehen]
+    return [ort for ort in orte if ort and ort["name"]]
 
 
 def _spalte(plan: Plan, lauf: Lauf) -> dict:

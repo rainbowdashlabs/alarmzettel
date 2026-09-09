@@ -6,7 +6,9 @@ import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
 import {ortAnlegen} from '../store/planung'
 import {truppText} from '../scripts/staerke'
-import type {Fahrzeugvorlage, Kataloge, Stichwortvorlage} from '../interfaces/Alarm'
+import type {
+  Fahrzeugvorlage, Kataloge, Materialvorlage, Stichwortvorlage,
+} from '../interfaces/Alarm'
 import type {Ort} from '../interfaces/Planung'
 
 type Wortliste = Extract<keyof Kataloge, 'status' | 'trupp'>
@@ -17,6 +19,19 @@ const listen: { schluessel: Wortliste, titel: string }[] = [
 ]
 
 const stichwort = ref('')
+const materialname = ref('')
+
+function materialHinzufuegen() {
+  const name = materialname.value.trim()
+  if (!name || arbeitsmappe.kataloge.material.some(stueck => stueck.name === name)) return
+  arbeitsmappe.kataloge.material.push({id: crypto.randomUUID(), name})
+  materialname.value = ''
+}
+
+function materialEntfernen(stueck: Materialvorlage) {
+  const stelle = arbeitsmappe.kataloge.material.indexOf(stueck)
+  if (stelle >= 0) arbeitsmappe.kataloge.material.splice(stelle, 1)
+}
 
 function ortEntfernen(ort: Ort) {
   const stelle = arbeitsmappe.kataloge.orte.indexOf(ort)
@@ -206,6 +221,33 @@ function truppVorschau(staerke: string): string {
           <p v-if="truppVorschau(fahrzeug.staerke)" class="tabular text-[13px] text-muted md:col-span-2">
             {{ truppVorschau(fahrzeug.staerke) }}
           </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="abschnitt">
+      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <h2 class="abschnitt-titel mb-0">{{ t('kataloge.material') }}</h2>
+      </div>
+      <p class="text-muted text-[13px] mb-3">{{ t('kataloge.materialHinweis') }}</p>
+      <form class="flex gap-2 mb-3" @submit.prevent="materialHinzufuegen">
+        <input v-model="materialname" type="text" class="field"
+               :placeholder="t('kataloge.materialPlatzhalter')"/>
+        <button type="submit" class="knopf shrink-0">
+          <font-awesome-icon icon="fa-solid fa-plus"/>
+        </button>
+      </form>
+      <p v-if="!arbeitsmappe.kataloge.material.length" class="text-muted text-sm">
+        {{ t('kataloge.keinMaterial') }}
+      </p>
+      <div class="grid gap-2">
+        <div v-for="stueck in arbeitsmappe.kataloge.material" :key="stueck.id"
+             class="flex gap-2 items-center">
+          <input v-model="stueck.name" type="text" class="field"/>
+          <button type="button" class="knopf knopf-klein knopf-gefahr shrink-0"
+                  @click="materialEntfernen(stueck)">
+            <font-awesome-icon icon="fa-solid fa-trash"/>
+          </button>
         </div>
       </div>
     </section>

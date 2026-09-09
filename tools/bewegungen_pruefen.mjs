@@ -24,7 +24,7 @@ async function laden(pfad) {
         Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 }
 
-const {bewegungsbild, bewegungstage, ereignisse, standorte} =
+const {bewegungsbild, bewegungstage, ereignisse, materialstand, standorte} =
     await laden('frontend/src/scripts/bewegungen.ts')
 const {utm33ZuWgs84} = await laden('frontend/src/scripts/geo.ts')
 
@@ -46,7 +46,7 @@ function schritt(art, von, bis, ortId, felder = {}) {
     return {
         id: kennung('s'), sortierung: 0, art, mittel: 'fahrzeug',
         von: `${vonTag}T${vonZeit}`, bis: `${bisTag}T${bisZeit}`, ortId, programmpunktId: '',
-        besatzung: [], ...felder,
+        aufgebot: true, notiz: '', besatzung: [], material: [], ...felder,
     }
 }
 
@@ -55,7 +55,10 @@ const lauf = (fuer, schritte) => ({
     fahrzeugId: fuer.fahrzeugId ?? '', personId: fuer.personId ?? '', schritte,
 })
 
-function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [], orte} = {}) {
+const posten = (materialId) => ({id: kennung('m'), sortierung: 0, materialId})
+
+function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [], orte,
+                material = []} = {}) {
     return {
         planung: {
             aktiv: true, tage: [], personen, rollen: [], fahrerlaubnisse: [],
@@ -63,6 +66,7 @@ function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [],
         },
         fahrzeuge,
         orte: orte ?? [ort('o-nord', 'Wache Nord'), ort('o-sued', 'Kindergarten')],
+        kataloge: {material},
     }
 }
 
@@ -219,6 +223,31 @@ fall('Die nächsten Ereignisse stehen in der Reihenfolge, in der sie eintreten',
         ['und die Lage trägt ihren Namen', kommend[2].lage, 'Brand'],
         ['was schon läuft, steht nicht mehr an',
             ereignisse(gesetzt, `${TAG}T09:00`).length, 0],
+    ]
+})
+
+fall('Material liegt irgendwo oder ist unterwegs — der Plan sagt es von selbst', () => {
+    const kette = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '08:30', 'o-nord', {material: [posten('m-puppe')]}),
+        schritt('fahrt', '08:30', '08:50', 'o-sued', {material: [posten('m-puppe')]}),
+        schritt('aufenthalt', '08:50', '10:00', 'o-sued', {material: [posten('m-puppe')]}),
+    ])
+    const gesetzt = daten({
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF')], laeufe: [kette],
+        material: [{id: 'm-puppe', name: 'Übungspuppe'}, {id: 'm-nebel', name: 'Nebelmaschine'}],
+    })
+    const liegend = materialstand(gesetzt, `${TAG}T08:10`)
+    const fahrend = materialstand(gesetzt, `${TAG}T08:40`)
+    return [
+        ['um 08:10 liegt die Puppe an der Wache', liegend[0].ortId, 'o-nord'],
+        ['und nichts ist unterwegs', liegend[0].unterwegs, null],
+        ['um 08:40 fährt sie mit dem LHF', fahrend[0].traeger, 'LHF'],
+        ['auf halber Strecke zum Kindergarten',
+            `${fahrend[0].unterwegs.anteil} → ${fahrend[0].unterwegs.nachOrtId}`, '0.5 → o-sued'],
+        ['die Nebelmaschine ist nirgends eingeplant und taucht nicht auf',
+            liegend.map(stand => stand.name).join(), 'Übungspuppe'],
+        ['vor dem ersten Schritt liegt nichts',
+            materialstand(gesetzt, `${TAG}T07:00`).length, 0],
     ]
 })
 

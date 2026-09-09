@@ -7,6 +7,7 @@ let
     pydantic-settings
     python-multipart
     httpx
+    segno
   ]);
 in
 pkgs.mkShell

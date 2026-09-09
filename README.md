@@ -53,8 +53,15 @@ screen are the ones printed on the slip.
   the exception: only someone holding the vehicle's licence class can take it. Handing it over
   is always allowed, so a driver from an older plan is never stuck — and the check still reports
   one.
+- **Material and notes** — every step carries what is being taken along and whatever else needs
+  saying. Material lives in the catalogue like the vehicles, and a name written while planning
+  joins it by itself. Because it hangs on the step, the plan answers where a thing is lying and
+  what is carrying it where, without a second list to keep.
 - **Plan output** — the person plan, the view of a place and the view of a Lage on screen, and a
-  PDF with one sheet per person, one per vehicle and a landscape overall plan.
+  PDF with one sheet per person, one per vehicle and a landscape overall plan. A sheet stands on
+  its own: the schedule, the material and notes for every row, and the addresses of the places it
+  visits, each with a QR code for Apple Maps and Google Maps, so nobody has to type an address in
+  the rain.
 - **The movement picture** — the whole plan in one image: every place is a horizontal band, time
   runs to the right, a stay is a bar in its band and a journey a line crossing from one band to
   the next. It tells the day either per vehicle or per person — the same computation over

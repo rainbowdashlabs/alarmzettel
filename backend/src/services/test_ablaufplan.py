@@ -4,6 +4,7 @@ import unittest
 from data.ablaufplan import SPALTEN_JE_BLATT, plandaten
 from data.typst import RenderError, render_plan
 from entities.alarm import Arbeitsmappe
+from entities.planung import Materialposten
 from web.settings import settings
 
 MAPPE = {
@@ -15,7 +16,9 @@ MAPPE = {
             {"id": "f-mtf", "funkrufname": "MTF 6502.1", "plaetze": "8", "fuehrerschein": "B"},
         ],
         "orte": [{"id": "o-nord", "name": "Wache Nord"},
-                 {"id": "o-kita", "name": "Kindergarten"}],
+                 {"id": "o-kita", "name": "Kindergarten",
+                  "adresse": {"strasse": "Archenholdstraße", "hnr": "21", "plz": "10315",
+                              "ort": "Berlin"}}],
     },
     "planung": {
         "aktiv": True,
@@ -211,6 +214,42 @@ class BlattbreiteTest(unittest.TestCase):
         bloecke = plandaten(mappe)["gesamt"]["bloecke"]
         self.assertEqual([SPALTEN_JE_BLATT, 2], [len(block["spalten"]) for block in bloecke])
         self.assertEqual(["2026-09-19", "2026-09-19"], [block["datum"] for block in bloecke])
+
+
+class ZettelTest(unittest.TestCase):
+    """
+    Ein Blatt muss für sich allein genügen: wer es in die Hand gedrückt bekommt, hat weder die
+    Ortsliste noch den Materialschein dabei.
+    """
+
+    def blatt(self, name: str) -> dict:
+        return next(blatt for blatt in daten()["personen"] if blatt["name"] == name)
+
+    def test_die_orte_des_blattes_tragen_ihre_adresse(self):
+        orte = self.blatt("Alex")["orte"]
+        self.assertEqual(["Wache Nord", "Kindergarten"], [ort["name"] for ort in orte])
+        kita = orte[1]
+        self.assertEqual("Archenholdstraße 21, 10315 Berlin", kita["adresse"])
+        self.assertIn("maps.apple.com", kita["apple"])
+        self.assertIn("Archenholdstra%C3%9Fe%2021", kita["google"])
+
+    def test_ohne_adresse_gibt_es_keinen_kartenlink(self):
+        """Die Wache Nord hat in diesen Daten keine Adresse — dann steht auch kein Weg dorthin."""
+        wache = self.blatt("Alex")["orte"][0]
+        self.assertEqual("", wache["adresse"])
+        self.assertNotIn("apple", wache)
+
+    def test_material_und_notiz_stehen_in_der_zeile(self):
+        mappe = Arbeitsmappe.model_validate(MAPPE | {
+            "kataloge": MAPPE["kataloge"] | {"material": [{"id": "m1", "name": "Übungspuppe"}]}})
+        for lauf in mappe.planung.laeufe:
+            if lauf.fahrzeugId == "f-lhf":
+                lauf.schritte[0].material = [Materialposten(id="x", materialId="m1")]
+                lauf.schritte[0].notiz = "Schlüssel nicht vergessen"
+        zeile = next(blatt for blatt in plandaten(mappe)["personen"]
+                     if blatt["name"] == "Alex")["zeilen"][0]
+        self.assertEqual(["Übungspuppe"], zeile["material"])
+        self.assertEqual("Schlüssel nicht vergessen", zeile["notiz"])
 
 
 class BewegungTest(unittest.TestCase):

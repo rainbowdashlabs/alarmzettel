@@ -17,14 +17,16 @@ PLAN = {
                 "schritte": [
                     {"id": "s1", "sortierung": 0.0, "art": "aufenthalt", "mittel": "fahrzeug",
                      "von": "2026-09-19T06:30", "bis": "2026-09-19T07:45", "ortId": "o1",
-                     "programmpunktId": "", "aufgebot": True,
+                     "programmpunktId": "", "aufgebot": True, "notiz": "Fahrzeugcheck",
                      "besatzung": [{"id": "b1", "sortierung": 0.0, "personId": "p1",
-                                    "faehrt": True}]},
+                                    "faehrt": True}],
+                     "material": [{"id": "m1", "sortierung": 0.0, "materialId": "mat1"}]},
                     {"id": "s2", "sortierung": 1.0, "art": "fahrt", "mittel": "fahrzeug",
                      "von": "2026-09-19T07:45", "bis": "2026-09-19T08:00", "ortId": "o1",
-                     "programmpunktId": "g1", "aufgebot": False,
+                     "programmpunktId": "g1", "aufgebot": False, "notiz": "",
                      "besatzung": [{"id": "b2", "sortierung": 0.0, "personId": "p1",
-                                    "faehrt": False}]}]}],
+                                    "faehrt": False}],
+                     "material": []}]}],
 }
 
 ORTE = [{"id": "o1", "sortierung": 0.0, "name": "Wache Nord",

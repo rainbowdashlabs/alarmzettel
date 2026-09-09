@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import {t} from '../../i18n'
 import {arbeitsmappe} from '../../store/arbeitsmappe'
 import {alleOrte, ortsPunkte, plandaten, punkteLaden} from '../../store/planung'
-import {bewegungstage, ereignisse, standorte} from '../../scripts/bewegungen'
+import {bewegungstage, ereignisse, materialstand, standorte} from '../../scripts/bewegungen'
 import type {Standort} from '../../scripts/bewegungen'
 import {mitte, utm33ZuWgs84} from '../../scripts/geo'
 import type {Ortsmarke} from '../../scripts/geo'
@@ -44,6 +44,7 @@ const fenster = computed(() => {
 
 const stand = computed(() => standorte(plandaten(), zeitpunkt.value))
 const naechste = computed(() => ereignisse(plandaten(), zeitpunkt.value, 8))
+const material = computed(() => materialstand(plandaten(), zeitpunkt.value))
 
 function ortName(ortId: string): string {
   return alleOrte().find(ort => ort.id === ortId)?.name ?? ''
@@ -204,6 +205,20 @@ watch(tage, liste => { if (!liste.includes(tag.value) && liste.length) tag.value
           </div>
           <div v-if="ereignis.lage" class="text-[13px] text-muted">{{ ereignis.lage }}</div>
         </div>
+
+        <template v-if="material.length">
+          <h3 class="label mt-3">{{ t('ablauf.material') }}</h3>
+          <div v-for="stand in material" :key="stand.materialId" class="text-sm">
+            <font-awesome-icon icon="fa-solid fa-box" class="text-muted mr-1"/>
+            {{ stand.name }}
+            <span class="text-muted">
+              {{ stand.unterwegs
+                ? t('ablauf.materialUnterwegs', {womit: stand.traeger,
+                                                 wohin: ortName(stand.unterwegs.nachOrtId)})
+                : t('ablauf.materialAn', {wo: ortName(stand.ortId)}) }}
+            </span>
+          </div>
+        </template>
       </div>
     </div>
 
