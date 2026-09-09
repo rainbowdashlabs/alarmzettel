@@ -24,7 +24,7 @@ const materialname = ref('')
 function materialHinzufuegen() {
   const name = materialname.value.trim()
   if (!name || arbeitsmappe.kataloge.material.some(stueck => stueck.name === name)) return
-  arbeitsmappe.kataloge.material.push({id: crypto.randomUUID(), name})
+  arbeitsmappe.kataloge.material.push({id: crypto.randomUUID(), name, bestand: 0})
   materialname.value = ''
 }
 
@@ -244,6 +244,9 @@ function truppVorschau(staerke: string): string {
         <div v-for="stueck in arbeitsmappe.kataloge.material" :key="stueck.id"
              class="flex gap-2 items-center">
           <input v-model="stueck.name" type="text" class="field"/>
+          <input v-model.number="stueck.bestand" type="number" min="0" step="1"
+                 class="field field-menge shrink-0 tabular" :title="t('kataloge.bestand')"
+                 :placeholder="t('kataloge.bestandPlatzhalter')"/>
           <button type="button" class="knopf knopf-klein knopf-gefahr shrink-0"
                   @click="materialEntfernen(stueck)">
             <font-awesome-icon icon="fa-solid fa-trash"/>

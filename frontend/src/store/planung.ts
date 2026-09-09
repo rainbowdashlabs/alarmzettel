@@ -224,7 +224,7 @@ export function materialSichern(name: string): string {
     const vorhanden = arbeitsmappe.kataloge.material
         .find(stueck => stueck.name.trim().toLowerCase() === sauber.toLowerCase())
     if (vorhanden) return vorhanden.id
-    const stueck = {id: crypto.randomUUID(), name: sauber}
+    const stueck = {id: crypto.randomUUID(), name: sauber, bestand: 0}
     arbeitsmappe.kataloge.material.push(stueck)
     return stueck.id
 }

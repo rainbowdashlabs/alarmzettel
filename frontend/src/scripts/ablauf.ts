@@ -70,7 +70,7 @@ export interface Lagensicht {
 
 export type Befundart =
     'zuVoll' | 'ohneErlaubnis' | 'ohneFahrer' | 'zweiFahrer' | 'zustiegInsNichts'
-    | 'zweiOrte' | 'ausserhalb' | 'zuKnapp' | 'lageLeer' | 'ueberschneidung'
+    | 'zweiOrte' | 'ausserhalb' | 'zuKnapp' | 'lageLeer' | 'ueberschneidung' | 'zuVielMaterial'
 
 /**
  * Ein Fund. Nichts davon blockiert die Eingabe: ein Plan darf zwischendurch unfertig sein, und
@@ -322,6 +322,40 @@ function ausserhalbBefunde(wer: Person, plan: Personenschritt[]): Befund[] {
         }))
 }
 
+/**
+ * Mehr Material verplant, als es gibt.
+ *
+ * Gezählt wird über die Zeit und nicht über einen Schritt: vier Puppen sind zweimal gleichzeitig
+ * eingeplant acht. Geprüft wird an jedem Zeitpunkt, an dem sich etwas ändert — dazwischen kann
+ * die Summe nicht steigen. Ohne erfassten Bestand wird nicht gezählt.
+ */
+function materialBefunde(daten: Plandaten): Befund[] {
+    const befunde: Befund[] = []
+    for (const stueck of daten.kataloge?.material ?? []) {
+        if (!stueck.bestand) continue
+        const belegungen = daten.planung.laeufe.flatMap(lauf => lauf.schritte.flatMap(schritt =>
+            schritt.material
+                .filter(posten => posten.materialId === stueck.id)
+                .map(posten => ({
+                    laufId: lauf.id, schrittId: schritt.id, anzahl: posten.anzahl,
+                    von: alsMinuten(schritt.von) ?? 0, bis: alsMinuten(schritt.bis) ?? 0,
+                }))))
+        for (const beginn of belegungen.map(belegung => belegung.von)) {
+            const gleichzeitig = belegungen.filter(
+                belegung => belegung.von <= beginn && beginn < belegung.bis)
+            const summe = gleichzeitig.reduce((zahl, belegung) => zahl + belegung.anzahl, 0)
+            if (summe <= stueck.bestand) continue
+            for (const belegung of gleichzeitig) {
+                befunde.push({
+                    art: 'zuVielMaterial', laufId: belegung.laufId, schrittId: belegung.schrittId,
+                    werte: {was: stueck.name, verplant: summe, bestand: stueck.bestand},
+                })
+            }
+        }
+    }
+    return befunde
+}
+
 /** Alle Prüfungen über den ganzen Plan. */
 export function pruefen(daten: Plandaten): Befund[] {
     const befunde: Befund[] = []
@@ -335,6 +369,7 @@ export function pruefen(daten: Plandaten): Befund[] {
         befunde.push(...doppelBefunde(daten, wer.id, plan))
         befunde.push(...ausserhalbBefunde(wer, plan))
     }
+    befunde.push(...materialBefunde(daten))
     const benutzt = new Set(daten.planung.laeufe
         .flatMap(lauf => lauf.schritte.map(schritt => schritt.programmpunktId)))
     for (const punkt of daten.planung.programmpunkte) {

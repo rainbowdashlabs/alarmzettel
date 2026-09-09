@@ -117,6 +117,11 @@ class Materialvorlage(BaseModel):
 
     id: str = Field(default_factory=_kennung)
     name: str = ""
+    """
+    Wie viel davon überhaupt da ist. Null heißt nicht erfasst — dann wird auch nicht gezählt,
+    ob der Plan mehr verplant, als es gibt.
+    """
+    bestand: int = 0
 
 
 class Stichwortvorlage(BaseModel):

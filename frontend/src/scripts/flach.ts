@@ -160,6 +160,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
     }
     for (const stueck of mappe.kataloge.material ?? []) {
         werte[pfad('kataloge', 'material', stueck.id, 'name')] = stueck.name ?? ''
+        werte[pfad('kataloge', 'material', stueck.id, 'bestand')] = stueck.bestand ?? 0
     }
     for (const vorlage of mappe.kataloge.fahrzeuge) {
         const vbasis = pfad('kataloge', 'fahrzeuge', vorlage.id)

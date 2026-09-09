@@ -70,7 +70,11 @@ function lauf(fuer, schritte) {
     }
 }
 
-function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [], orte = []} = {}) {
+const posten = (materialId, anzahl = 1) =>
+    ({id: kennung('m'), sortierung: 0, materialId, anzahl})
+
+function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [], orte = [],
+                material = []} = {}) {
     return {
         planung: {
             aktiv: true, tage: [{id: 't', sortierung: 0, datum: TAG, name: ''}],
@@ -78,6 +82,7 @@ function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [],
         },
         fahrzeuge,
         orte: orte.length ? orte : [ort('o-nord', 'Wache Nord'), ort('o-sued', 'Kindergarten')],
+        kataloge: {material},
         punkte: PUNKTE,
     }
 }
@@ -382,6 +387,42 @@ fall('Über die eigene Anreise wird nichts geschätzt', () => {
     ])
     const befunde = pruefen(daten({personen: [person('p-maria', 'Maria')], laeufe: [eigen]}))
     return [['keine Warnung über zu knapp', arten(befunde).join(','), '']]
+})
+
+fall('Mehr Material verplant, als es gibt', () => {
+    const eins = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '10:00', 'o-nord', {material: [posten('m-puppe', 3)]}),
+    ])
+    const zwei = lauf({fahrzeugId: 'f-mtf'}, [
+        schritt('aufenthalt', '09:00', '11:00', 'o-sued', {material: [posten('m-puppe', 3)]}),
+    ])
+    const gesetzt = (bestand) => daten({
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')],
+        laeufe: [eins, zwei], material: [{id: 'm-puppe', name: 'Übungspuppe', bestand}],
+    })
+    const bei = (bestand) => pruefen(gesetzt(bestand)).filter(b => b.art === 'zuVielMaterial')
+    const gemeldet = bei(4)
+    return [
+        ['drei plus drei bei vier Stück wird gemeldet', gemeldet.length, 2],
+        ['mit Zahl und Bestand',
+            `${gemeldet[0].werte.verplant}/${gemeldet[0].werte.bestand}`, '6/4'],
+        ['bei sechs Stück ist es in Ordnung', bei(6).length, 0],
+        ['ohne erfassten Bestand wird nicht gezählt', bei(0).length, 0],
+    ]
+})
+
+fall('Nacheinander verplantes Material ist keine Überbuchung', () => {
+    const eins = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '09:00', 'o-nord', {material: [posten('m-puppe', 4)]}),
+    ])
+    const zwei = lauf({fahrzeugId: 'f-mtf'}, [
+        schritt('aufenthalt', '09:00', '10:00', 'o-sued', {material: [posten('m-puppe', 4)]}),
+    ])
+    const befunde = pruefen(daten({
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF'), fahrzeug('f-mtf', 'MTF')], laeufe: [eins, zwei],
+        material: [{id: 'm-puppe', name: 'Übungspuppe', bestand: 4}],
+    }))
+    return [['nichts gemeldet', arten(befunde).join(','), '']]
 })
 
 fall('Eine Lage sammelt ein, was auf sie zeigt', () => {

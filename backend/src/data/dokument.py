@@ -164,6 +164,7 @@ def flach(arbeitsmappe: dict) -> dict[str, Any]:
         werte[_pfad("kataloge", "stichwoerter", kennung, "text")] = eintrag.get("text", "")
     for stueck in kataloge.get("material", []):
         werte[_pfad("kataloge", "material", stueck["id"], "name")] = stueck.get("name", "")
+        werte[_pfad("kataloge", "material", stueck["id"], "bestand")] = stueck.get("bestand", 0)
     for vorlage in kataloge.get("fahrzeuge", []):
         vbasis = _pfad("kataloge", "fahrzeuge", vorlage.get("id") or vorlage.get("funkrufname", ""))
         for feld in FAHRZEUGFELDER:

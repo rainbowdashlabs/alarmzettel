@@ -108,6 +108,11 @@ export interface Fahrzeugvorlage {
 export interface Materialvorlage {
     id: string
     name: string
+    /**
+     * Wie viel davon überhaupt da ist. Null heißt nicht erfasst — dann wird auch nicht gezählt,
+     * ob der Plan mehr verplant, als es gibt.
+     */
+    bestand: number
 }
 
 /** A Stichwort is only its text, so the id is the whole reason an Alarm can follow a rename. */
