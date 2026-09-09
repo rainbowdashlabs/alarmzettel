@@ -258,6 +258,12 @@ textarea.field {
 }
 
 /* Ein Knopf, der nicht geht, muss auch danach aussehen: sonst klickt man ins Leere. */
+/* Ein Feld für eine kleine Zahl. `.field` ist unlayered und schlägt sonst jede Breitenangabe. */
+.field-menge {
+    width: 4.5rem;
+    text-align: right;
+}
+
 .knopf:disabled,
 .knopf:disabled:hover {
     opacity: 0.4;

@@ -94,7 +94,9 @@ function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
             aufgebot: typeof schritt.aufgebot === 'boolean' ? schritt.aufgebot : true,
             notiz: schritt.notiz ?? '',
             besatzung: schritt.besatzung ?? [],
-            material: schritt.material ?? [],
+            material: (schritt.material ?? []).map(posten => ({
+                ...posten, anzahl: Number(posten.anzahl) || 1,
+            })),
         })),
     }))
     for (const liste of ['rollen', 'fahrerlaubnisse'] as const) {

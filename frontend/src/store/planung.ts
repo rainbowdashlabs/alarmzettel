@@ -234,7 +234,7 @@ export function materialHinzufuegen(schritt: Schritt, materialId: string): Mater
         return undefined
     }
     const posten: Materialposten = {
-        id: crypto.randomUUID(), sortierung: naechste(schritt.material), materialId,
+        id: crypto.randomUUID(), sortierung: naechste(schritt.material), materialId, anzahl: 1,
     }
     schritt.material.push(posten)
     return posten

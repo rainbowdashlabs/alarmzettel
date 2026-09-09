@@ -56,11 +56,11 @@ PLANUNGSEINTRAEGE = {
 SCHRITTFELDER = ("art", "mittel", "von", "bis", "ortId", "programmpunktId", "aufgebot",
                  "notiz")
 
-VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False}
+VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False, "anzahl": 1}
 """
 Was ein Feld bedeutet, das eine ältere Arbeitsmappe noch gar nicht kannte. Für Text ist das der
-leere String; ein Wahrheitswert braucht seine eigene Vorgabe, sonst käme ein leerer String zurück,
-den das Modell nicht als Ja oder Nein lesen kann.
+leere String; ein Wahrheitswert und eine Anzahl brauchen ihre eigene Vorgabe, sonst käme ein
+leerer String zurück, den das Modell weder als Ja oder Nein noch als Zahl lesen kann.
 """
 
 
@@ -106,7 +106,7 @@ def _planungsfelder(planung: dict) -> dict[str, Any]:
                                                      sitzt, ("personId", "faehrt"), rang))
                     for rang, stueck in enumerate(schritt.get("material", [])):
                         werte.update(_eintragsfelder(_pfad(sbasis, "material", stueck["id"]),
-                                                     stueck, ("materialId",), rang))
+                                                     stueck, ("materialId", "anzahl"), rang))
     return werte
 
 

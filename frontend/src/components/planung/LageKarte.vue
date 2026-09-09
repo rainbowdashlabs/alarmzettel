@@ -210,6 +210,7 @@ watch(tage, liste => { if (!liste.includes(tag.value) && liste.length) tag.value
           <h3 class="label mt-3">{{ t('ablauf.material') }}</h3>
           <div v-for="stand in material" :key="stand.materialId" class="text-sm">
             <font-awesome-icon icon="fa-solid fa-box" class="text-muted mr-1"/>
+            <span v-if="stand.anzahl > 1" class="tabular">{{ t('ablauf.materialMenge', {n: stand.anzahl}) }}</span>
             {{ stand.name }}
             <span class="text-muted">
               {{ stand.unterwegs

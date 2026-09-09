@@ -157,7 +157,8 @@
               {
                 "id": "mp1",
                 "sortierung": 0,
-                "materialId": "m-puppe"
+                "materialId": "m-puppe",
+                "anzahl": 4
               }
             ]
           },
@@ -189,7 +190,8 @@
               {
                 "id": "mp2",
                 "sortierung": 0,
-                "materialId": "m-puppe"
+                "materialId": "m-puppe",
+                "anzahl": 4
               }
             ]
           },
@@ -221,12 +223,14 @@
               {
                 "id": "mp3",
                 "sortierung": 0,
-                "materialId": "m-puppe"
+                "materialId": "m-puppe",
+                "anzahl": 4
               },
               {
                 "id": "mn1",
                 "sortierung": 1,
-                "materialId": "m-nebel"
+                "materialId": "m-nebel",
+                "anzahl": 1
               }
             ]
           },

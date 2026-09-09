@@ -77,6 +77,8 @@ export interface Besatzung extends Eintrag {
  */
 export interface Materialposten extends Eintrag {
     materialId: string
+    /** Wie viele Stück davon. Eins, solange niemand etwas anderes sagt. */
+    anzahl: number
 }
 
 /**

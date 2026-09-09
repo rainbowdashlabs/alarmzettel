@@ -54,8 +54,8 @@ screen are the ones printed on the slip.
   the exception: only someone holding the vehicle's licence class can take it. Handing it over
   is always allowed, so a driver from an older plan is never stuck — and the check still reports
   one.
-- **Material and notes** — every step carries what is being taken along and whatever else needs
-  saying. Material lives in the catalogue like the vehicles, and a name written while planning
+- **Material and notes** — every step carries what is being taken along, in what number, and
+  whatever else needs saying. Material lives in the catalogue like the vehicles, and a name written while planning
   joins it by itself. Because it hangs on the step, the plan answers where a thing is lying and
   what is carrying it where, without a second list to keep.
 - **Plan output** — the person plan, the view of a place and the view of a Lage on screen, and a

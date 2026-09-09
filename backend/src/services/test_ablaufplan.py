@@ -239,17 +239,25 @@ class ZettelTest(unittest.TestCase):
         self.assertEqual("", wache["adresse"])
         self.assertNotIn("apple", wache)
 
-    def test_material_und_notiz_stehen_in_der_zeile(self):
+    def zeile_mit_material(self, posten: list[Materialposten]) -> dict:
         mappe = Arbeitsmappe.model_validate(MAPPE | {
             "kataloge": MAPPE["kataloge"] | {"material": [{"id": "m1", "name": "Übungspuppe"}]}})
         for lauf in mappe.planung.laeufe:
             if lauf.fahrzeugId == "f-lhf":
-                lauf.schritte[0].material = [Materialposten(id="x", materialId="m1")]
+                lauf.schritte[0].material = posten
                 lauf.schritte[0].notiz = "Schlüssel nicht vergessen"
-        zeile = next(blatt for blatt in plandaten(mappe)["personen"]
-                     if blatt["name"] == "Alex")["zeilen"][0]
+        return next(blatt for blatt in plandaten(mappe)["personen"]
+                    if blatt["name"] == "Alex")["zeilen"][0]
+
+    def test_material_und_notiz_stehen_in_der_zeile(self):
+        zeile = self.zeile_mit_material([Materialposten(id="x", materialId="m1")])
         self.assertEqual(["Übungspuppe"], zeile["material"])
         self.assertEqual("Schlüssel nicht vergessen", zeile["notiz"])
+
+    def test_eine_menge_steht_vor_dem_namen(self):
+        """Ein Stück nennt nur seinen Namen; mehrere sagen, wie viele."""
+        zeile = self.zeile_mit_material([Materialposten(id="x", materialId="m1", anzahl=4)])
+        self.assertEqual(["4 × Übungspuppe"], zeile["material"])
 
 
 class FahrzeitTest(unittest.TestCase):

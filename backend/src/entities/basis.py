@@ -30,17 +30,17 @@ class Eintrag(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _leere_wahrheitswerte(cls, werte: Any) -> Any:
+    def _leere_werte(cls, werte: Any) -> Any:
         """
-        Ein leerer String, wo ein Ja oder Nein stehen sollte, ist kein Wert, sondern ein Feld,
-        das es zu der Zeit noch nicht gab: der Flattener schrieb für alles Unbekannte "". Solche
-        Felder bekommen ihre Vorgabe, statt eine Arbeitsmappe unlesbar zu machen, die vor der
-        Erweiterung angelegt wurde.
+        Ein leerer String, wo eine Zahl oder ein Ja oder Nein stehen sollte, ist kein Wert,
+        sondern ein Feld, das es zu der Zeit noch nicht gab: der Flattener schrieb für alles
+        Unbekannte "". Solche Felder bekommen ihre Vorgabe, statt eine Arbeitsmappe unlesbar zu
+        machen, die vor der Erweiterung angelegt wurde.
         """
         if not isinstance(werte, dict):
             return werte
         leer = [name for name, feld in cls.model_fields.items()
-                if feld.annotation is bool and werte.get(name) == ""]
+                if feld.annotation in (bool, int, float) and werte.get(name) == ""]
         return {name: wert for name, wert in werte.items() if name not in leer} if leer else werte
 
 

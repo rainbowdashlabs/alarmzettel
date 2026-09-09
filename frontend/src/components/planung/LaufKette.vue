@@ -240,7 +240,10 @@ function lageAnlegen(schritt: Schritt) {
           <span class="feld-label">{{ t('ablauf.material') }}</span>
           <div class="flex flex-wrap gap-2 items-center">
             <span v-for="stueck in schritt.material" :key="stueck.id" class="flex">
-              <span class="knopf knopf-klein rounded-r-none cursor-default">
+              <input v-model.number="stueck.anzahl" type="number" min="1" step="1"
+                     class="field field-menge rounded-r-none tabular"
+                     :title="t('ablauf.materialAnzahl')"/>
+              <span class="knopf knopf-klein rounded-none border-l-0 cursor-default">
                 <font-awesome-icon icon="fa-solid fa-box" class="text-muted"/>
                 {{ materialName(stueck.materialId) || t('ablauf.ohneName') }}
               </span>

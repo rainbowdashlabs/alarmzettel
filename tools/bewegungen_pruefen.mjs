@@ -55,7 +55,7 @@ const lauf = (fuer, schritte) => ({
     fahrzeugId: fuer.fahrzeugId ?? '', personId: fuer.personId ?? '', schritte,
 })
 
-const posten = (materialId) => ({id: kennung('m'), sortierung: 0, materialId})
+const posten = (materialId, anzahl = 1) => ({id: kennung('m'), sortierung: 0, materialId, anzahl})
 
 function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [], orte,
                 material = []} = {}) {
@@ -228,9 +228,9 @@ fall('Die nächsten Ereignisse stehen in der Reihenfolge, in der sie eintreten',
 
 fall('Material liegt irgendwo oder ist unterwegs — der Plan sagt es von selbst', () => {
     const kette = lauf({fahrzeugId: 'f-lhf'}, [
-        schritt('aufenthalt', '08:00', '08:30', 'o-nord', {material: [posten('m-puppe')]}),
-        schritt('fahrt', '08:30', '08:50', 'o-sued', {material: [posten('m-puppe')]}),
-        schritt('aufenthalt', '08:50', '10:00', 'o-sued', {material: [posten('m-puppe')]}),
+        schritt('aufenthalt', '08:00', '08:30', 'o-nord', {material: [posten('m-puppe', 4)]}),
+        schritt('fahrt', '08:30', '08:50', 'o-sued', {material: [posten('m-puppe', 4)]}),
+        schritt('aufenthalt', '08:50', '10:00', 'o-sued', {material: [posten('m-puppe', 4)]}),
     ])
     const gesetzt = daten({
         fahrzeuge: [fahrzeug('f-lhf', 'LHF')], laeufe: [kette],
@@ -240,6 +240,7 @@ fall('Material liegt irgendwo oder ist unterwegs — der Plan sagt es von selbst
     const fahrend = materialstand(gesetzt, `${TAG}T08:40`)
     return [
         ['um 08:10 liegt die Puppe an der Wache', liegend[0].ortId, 'o-nord'],
+        ['und zwar vier Stück', liegend[0].anzahl, 4],
         ['und nichts ist unterwegs', liegend[0].unterwegs, null],
         ['um 08:40 fährt sie mit dem LHF', fahrend[0].traeger, 'LHF'],
         ['auf halber Strecke zum Kindergarten',

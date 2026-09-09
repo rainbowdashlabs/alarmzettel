@@ -258,6 +258,7 @@ export default {
         schaetzungHinweis: 'Luftlinie mal 3 min je Kilometer im Fahrzeug, 15 min zu Fuß. Ein Vorschlag — die Luftlinie kennt weder Spree noch Baustelle.',
         material: 'Material',
         materialDazu: 'Material dazu …',
+        materialAnzahl: 'Wie viele Stück',
         materialEntfernen: '{was} aus diesem Schritt nehmen',
         notiz: 'Notiz',
         notizPlatzhalter: 'Was sonst noch zu sagen ist',
@@ -302,6 +303,7 @@ export default {
         istAn: 'ist an',
         materialAn: 'liegt an {wo}',
         materialUnterwegs: 'unterwegs mit {womit} nach {wohin}',
+        materialMenge: '{n} ×',
         befund: {
             zuVoll: '{koepfe} Köpfe auf {plaetze} Plätzen.',
             ohneFahrer: 'Diese Fahrt hat keinen Fahrer.',

@@ -62,7 +62,12 @@ class Plan:
         return person.name if person else ""
 
     def material(self, schritt: Schritt) -> list[str]:
-        return [self._material.get(stueck.materialId, "") for stueck in schritt.material]
+        """Die Menge steht davor, wo es mehr als eines ist — sonst nur der Name."""
+        namen = []
+        for stueck in schritt.material:
+            name = self._material.get(stueck.materialId, "")
+            namen.append(f"{stueck.anzahl} × {name}" if name and stueck.anzahl > 1 else name)
+        return namen
 
     def ort_mit_adresse(self, ort_id: str) -> dict | None:
         """Ein Ort, wie er auf dem Blatt steht: Name, Adresse und der Weg dorthin."""

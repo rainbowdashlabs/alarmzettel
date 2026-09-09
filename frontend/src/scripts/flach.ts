@@ -49,10 +49,10 @@ type Eintragsdaten = Record<string, unknown> & { id: string, sortierung?: number
 
 /**
  * Was ein Feld bedeutet, das eine ältere Arbeitsmappe noch gar nicht kannte. Für Text ist das der
- * leere String; ein Wahrheitswert braucht seine eigene Vorgabe, sonst käme ein leerer String
- * zurück, den das Modell nicht als Ja oder Nein lesen kann.
+ * leere String; ein Wahrheitswert und eine Anzahl brauchen ihre eigene Vorgabe, sonst käme ein
+ * leerer String zurück, den das Modell weder als Ja oder Nein noch als Zahl lesen kann.
  */
-const VORGABEN: Record<string, unknown> = {aufgebot: true, faehrt: false}
+const VORGABEN: Record<string, unknown> = {aufgebot: true, faehrt: false, anzahl: 1}
 
 function eintragsfelder(basis: string, werte: Flachbild, eintrag: Eintragsdaten,
                         felder: readonly string[], stelle: number) {
@@ -101,7 +101,7 @@ function planungsfelder(werte: Flachbild, planung: Planung) {
                     })
                     ;((schritt.material ?? []) as Eintragsdaten[]).forEach((stueck, rang) => {
                         eintragsfelder(pfad(sbasis, 'material', stueck.id), werte, stueck,
-                                       ['materialId'], rang)
+                                       ['materialId', 'anzahl'], rang)
                     })
                 })
             }

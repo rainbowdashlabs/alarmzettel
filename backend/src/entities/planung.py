@@ -81,6 +81,8 @@ class Materialposten(Eintrag):
     """
 
     materialId: str = ""
+    """Wie viele Stück davon. Eins, solange niemand etwas anderes sagt."""
+    anzahl: int = 1
 
 
 class Schritt(Eintrag):

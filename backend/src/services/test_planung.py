@@ -20,7 +20,8 @@ PLAN = {
                      "programmpunktId": "", "aufgebot": True, "notiz": "Fahrzeugcheck",
                      "besatzung": [{"id": "b1", "sortierung": 0.0, "personId": "p1",
                                     "faehrt": True}],
-                     "material": [{"id": "m1", "sortierung": 0.0, "materialId": "mat1"}]},
+                     "material": [{"id": "m1", "sortierung": 0.0, "materialId": "mat1",
+                                   "anzahl": 4}]},
                     {"id": "s2", "sortierung": 1.0, "art": "fahrt", "mittel": "fahrzeug",
                      "von": "2026-09-19T07:45", "bis": "2026-09-19T08:00", "ortId": "o1",
                      "programmpunktId": "g1", "aufgebot": False, "notiz": "",
@@ -60,8 +61,12 @@ class VorgabeTest(unittest.TestCase):
         """
         from entities.planung import Schritt
 
+        from entities.planung import Materialposten
+
         self.assertIs(True, Schritt.model_validate({"aufgebot": ""}).aufgebot)
         self.assertIs(False, Schritt.model_validate({"aufgebot": False}).aufgebot)
+        self.assertEqual(1, Materialposten.model_validate({"anzahl": ""}).anzahl)
+        self.assertEqual(4, Materialposten.model_validate({"anzahl": 4}).anzahl)
 
     def test_ein_alter_schritt_gehoert_zum_aufgebot(self):
         alt = {"version": 1, "alarme": [], "kataloge": {}, "planung": {

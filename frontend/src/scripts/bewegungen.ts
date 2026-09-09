@@ -84,10 +84,14 @@ interface Spurschritt {
     begleitung: string[]
 }
 
+/** Die Menge steht davor, wo es mehr als eines ist — sonst nur der Name. */
 function materialnamen(daten: Plandaten, schritt: Schritt): string[] {
     return schritt.material
-        .map(posten => daten.kataloge?.material
-            ?.find(stueck => stueck.id === posten.materialId)?.name ?? '')
+        .map(posten => {
+            const name = daten.kataloge?.material
+                ?.find(stueck => stueck.id === posten.materialId)?.name ?? ''
+            return name && posten.anzahl > 1 ? `${posten.anzahl} × ${name}` : name
+        })
         .filter(Boolean)
 }
 
@@ -330,6 +334,7 @@ export function standorte(daten: Plandaten, zeitpunkt: string): Standort[] {
 export interface Materialstand {
     materialId: string
     name: string
+    anzahl: number
     /** Der Ort, an dem es liegt. Leer, solange es unterwegs ist. */
     ortId: string
     unterwegs: Unterwegs | null
@@ -351,10 +356,11 @@ export function materialstand(daten: Plandaten, zeitpunkt: string): Materialstan
                 kandidat.material.some(posten => posten.materialId === stueck.id) &&
                 (alsMinuten(kandidat.von) ?? 0) <= jetzt && jetzt < (alsMinuten(kandidat.bis) ?? 0))
             if (!schritt) continue
+            const posten = schritt.material.find(eintrag => eintrag.materialId === stueck.id)
             const von = alsMinuten(schritt.von) ?? 0
             const bis = alsMinuten(schritt.bis) ?? von + 1
             gefunden.push({
-                materialId: stueck.id, name: stueck.name,
+                materialId: stueck.id, name: stueck.name, anzahl: posten?.anzahl ?? 1,
                 ortId: schritt.art === 'fahrt' ? '' : schritt.ortId,
                 unterwegs: schritt.art !== 'fahrt' ? null : {
                     vonOrtId: vonOrt(lauf, schritt), nachOrtId: schritt.ortId,
