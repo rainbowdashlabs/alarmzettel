@@ -13,16 +13,28 @@ import {alsMinuten, uhrzeit} from '../../scripts/zeit'
 
 /**
  * Die Karte für den Ausführungstag: alle Orte, und darauf, wo jede Kette gerade ist. Der
- * Schieber verschiebt den dargestellten Zeitpunkt, „Jetzt“ hängt ihn an die Uhr — damit lässt
- * sich der Tag durchfahren, bevor er läuft, und mitverfolgen, während er läuft.
+ * Schieber verschiebt den dargestellten Zeitpunkt minutenweise, „Jetzt“ hängt ihn an die Uhr —
+ * damit lässt sich der Tag durchfahren, bevor er läuft, und mitverfolgen, während er läuft.
+ *
+ * Ob die Karte der Uhr folgt, merkt sich der Browser: am Ausführungstag will man sie aufschlagen
+ * und die Lage sehen, nicht erst einen Knopf suchen.
  */
-const TAKT = 30000
+const TAKT = 10000
+
+const SPEICHER = 'alarmplaner_karte_folgt'
 
 const tage = computed(() => bewegungstage(plandaten()))
 const tag = ref('')
 const minute = ref(8 * 60)
-const folgt = ref(false)
+const folgt = ref(localStorage.getItem(SPEICHER) === 'ja')
 let uhr: ReturnType<typeof setInterval> | undefined
+
+/** Der heutige Tag, wie die Uhr an der Wand ihn zählt — nicht der, den UTC gerade hat. */
+function heutigerTag(): string {
+  const jetzt = new Date()
+  return `${jetzt.getFullYear()}-${String(jetzt.getMonth() + 1).padStart(2, '0')}-` +
+      String(jetzt.getDate()).padStart(2, '0')
+}
 
 const zeitpunkt = computed(() =>
     `${tag.value}T${String(Math.floor(minute.value / 60)).padStart(2, '0')}:` +
@@ -35,10 +47,13 @@ const fenster = computed(() => {
       .flatMap(schritt => [alsMinuten(schritt.von), alsMinuten(schritt.bis)])
       .filter((wert): wert is number => wert !== null)
   const mitternacht = alsMinuten(`${tag.value}T00:00`) ?? 0
-  if (!zeiten.length) return {von: 6 * 60, bis: 22 * 60}
+  // Der gezeigte Zeitpunkt gehört immer ins Fenster: sonst stünde der Schieber am Anschlag,
+  // während die Karte die Uhrzeit zeigt, und beide sagten Verschiedenes.
+  const gezeigt = minute.value
+  if (!zeiten.length) return {von: Math.min(6 * 60, gezeigt), bis: Math.max(22 * 60, gezeigt)}
   return {
-    von: Math.floor((Math.min(...zeiten) - mitternacht) / 60) * 60,
-    bis: Math.ceil((Math.max(...zeiten) - mitternacht) / 60) * 60,
+    von: Math.min(Math.floor((Math.min(...zeiten) - mitternacht) / 60) * 60, gezeigt),
+    bis: Math.max(Math.ceil((Math.max(...zeiten) - mitternacht) / 60) * 60, gezeigt),
   }
 })
 
@@ -75,15 +90,20 @@ let bewegungsschicht: L.LayerGroup | undefined
 
 function jetztSetzen() {
   const heute = new Date()
-  const stunden = heute.getHours() * 60 + heute.getMinutes()
-  if (tage.value.includes(heute.toISOString().slice(0, 10))) {
-    tag.value = heute.toISOString().slice(0, 10)
-  }
-  minute.value = stunden
+  if (tage.value.includes(heutigerTag())) tag.value = heutigerTag()
+  minute.value = heute.getHours() * 60 + heute.getMinutes()
+}
+
+/** Wer selbst am Schieber zieht, will nicht, dass die Uhr ihn gleich wieder wegzieht. */
+function folgenBeenden() {
+  if (!folgt.value) return
+  folgt.value = false
+  localStorage.setItem(SPEICHER, 'nein')
 }
 
 function folgenUmschalten() {
   folgt.value = !folgt.value
+  localStorage.setItem(SPEICHER, folgt.value ? 'ja' : 'nein')
   if (folgt.value) jetztSetzen()
 }
 
@@ -139,8 +159,9 @@ function bewegungZeichnen() {
 }
 
 onMounted(async () => {
-  tag.value = tage.value[0] ?? new Date().toISOString().slice(0, 10)
+  tag.value = tage.value[0] ?? heutigerTag()
   minute.value = fenster.value.von
+  if (folgt.value) jetztSetzen()
   await punkteLaden()
   if (!behaelter.value) return
   karte = L.map(behaelter.value, {attributionControl: true, zoomControl: true})
@@ -181,8 +202,8 @@ watch(tage, liste => { if (!liste.includes(tag.value) && liste.length) tag.value
       </button>
     </div>
 
-    <input v-model.number="minute" type="range" :min="fenster.von" :max="fenster.bis" step="5"
-           class="w-full mb-3" @input="folgt = false"/>
+    <input v-model.number="minute" type="range" :min="fenster.von" :max="fenster.bis" step="1"
+           class="w-full mb-3" @input="folgenBeenden"/>
 
     <div class="grid lg:grid-cols-[1fr_280px] gap-4 items-start">
       <div ref="behaelter" class="h-[60vh] min-h-80 rounded border border-rule"></div>
