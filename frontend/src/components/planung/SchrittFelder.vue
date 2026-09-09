@@ -160,11 +160,20 @@ function lageAnlegen() {
 
     <div v-if="schritt.programmpunktId && programmpunkt(schritt.programmpunktId)"
          class="grid md:grid-cols-2 gap-2">
-      <label v-if="lauf.fahrzeugId" class="flex items-center gap-2 text-sm md:col-span-2">
-        <input v-model="schritt.aufgebot" type="checkbox"/>
-        {{ t('ablauf.imAufgebot') }}
-        <span class="text-muted text-[13px]">{{ t('ablauf.imAufgebotHinweis') }}</span>
-      </label>
+      <div v-if="lauf.fahrzeugId" class="flex items-center gap-3 flex-wrap md:col-span-2">
+        <div>
+          <span class="feld-label">{{ t('ablauf.imAufgebot') }}</span>
+          <div class="janein w-24">
+            <button type="button" :class="schritt.aufgebot ? 'ist-gewaehlt' : ''"
+                    :title="t('feld.ja')" @click="schritt.aufgebot = true">J</button>
+            <button type="button" :class="schritt.aufgebot ? '' : 'ist-gewaehlt'"
+                    :title="t('feld.nein')" @click="schritt.aufgebot = false">N</button>
+          </div>
+        </div>
+        <span class="text-muted text-[13px] self-end pb-2">
+          {{ t('ablauf.imAufgebotHinweis') }}
+        </span>
+      </div>
       <div v-if="!programmpunkt(schritt.programmpunktId)!.alarmId">
         <label class="feld-label">{{ t('ablauf.lageName') }}</label>
         <input v-model="programmpunkt(schritt.programmpunktId)!.name" type="text" class="field"/>

@@ -32,13 +32,46 @@ const ZEICHEN = {
   fuss: faPersonWalking.icon,
 }
 
-/** Ein Zeichen als Pfad, in ein Kästchen dieser Größe gelegt. */
+interface Koordinatensystem {
+    x: number
+    y: number
+    width: number
+    height: number
+}
+
+/**
+ * Die Mitte des Stücks, das von einer Fahrt im Fenster liegt. Beim Hineinzoomen liegt die Mitte
+ * der ganzen Strecke oft weit außerhalb — das Zeichen wäre dann weg, obwohl die Linie zu sehen
+ * ist. Liegt gar nichts im Fenster, gibt es auch kein Zeichen.
+ */
+function sichtbareMitte(von: [number, number], nach: [number, number],
+                        feld: Koordinatensystem): [number, number] | null {
+    const links = feld.x, rechts = feld.x + feld.width
+    const [a, b] = von[0] <= nach[0] ? [von, nach] : [nach, von]
+    const anfang = Math.max(a[0], links)
+    const ende = Math.min(b[0], rechts)
+    if (ende < anfang) return null
+    const x = (anfang + ende) / 2
+    const strecke = b[0] - a[0]
+    const anteil = strecke === 0 ? 0.5 : (x - a[0]) / strecke
+    return [x, a[1] + (b[1] - a[1]) * anteil]
+}
+
+/**
+ * Ein Zeichen als Pfad, in ein Kästchen dieser Größe gelegt.
+ *
+ * Die Stelle steckt in der Verschiebung des Elements und nicht in `shape.x`: ein Pfad aus
+ * `pathData` wird einmal gebaut, und eine geänderte Form rechnet ihn nicht neu — beim Zoomen
+ * blieben die Zeichen sonst stehen, während die Balken darunter weiterwandern.
+ */
 function zeichen(bild: IconDefinition['icon'], x: number, y: number, groesse: number,
                  farbe: string) {
   const [breite, hoehe, , , pfad] = bild
   return {
     type: 'path' as const,
-    shape: {pathData: String(pfad), x, y, width: groesse * (breite / hoehe), height: groesse},
+    x, y,
+    shape: {pathData: String(pfad), x: 0, y: 0,
+            width: groesse * (breite / hoehe), height: groesse},
     style: {fill: farbe},
   }
 }
@@ -128,16 +161,18 @@ function optionen() {
             splitLine: {show: false},
             axisLabel: {color: ink, fontWeight: 'bold', width: 120, overflow: 'truncate'},
         },
+        // `weakFilter` hält, was in das Fenster hineinragt: ein Balken, der davor beginnt,
+        // verschwände sonst ganz, statt an der Kante abgeschnitten zu werden.
         dataZoom: [
-            {type: 'inside', xAxisIndex: 0},
-            {type: 'slider', xAxisIndex: 0, height: 20, bottom: 12,
+            {type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter'},
+            {type: 'slider', xAxisIndex: 0, height: 20, bottom: 12, filterMode: 'weakFilter',
              borderColor: rule, fillerColor: `${signal}22`, handleStyle: {color: signal},
              textStyle: {color: muted}},
         ],
         series: [
             {
-                type: 'custom', name: 'fahrten',
-                renderItem: (_: unknown, api: {
+                type: 'custom', name: 'fahrten', clip: true,
+                renderItem: (parameter: {coordSys: Koordinatensystem}, api: {
                     value: (stelle: number) => number
                     coord: (werte: number[]) => [number, number]
                 }) => {
@@ -147,6 +182,7 @@ function optionen() {
                     const deckung = api.value(5)
                     const winkel = Math.atan2(nach[1] - von[1], nach[0] - von[0])
                     const spitze = 6
+                    const mitte = sichtbareMitte(von, nach, parameter.coordSys)
                     return {
                         type: 'group',
                         children: [
@@ -170,12 +206,11 @@ function optionen() {
                                 ]},
                                 style: {fill: signal, opacity: deckung},
                             },
-                            {
+                            ...(mitte ? [{
                                 ...zeichen(mitFahrzeug ? ZEICHEN.fahrzeug : ZEICHEN.fuss,
-                                           (von[0] + nach[0]) / 2 - 6,
-                                           (von[1] + nach[1]) / 2 - 12, 11, signal),
+                                           mitte[0] - 6, mitte[1] - 12, 11, signal),
                                 style: {fill: signal, opacity: deckung},
-                            },
+                            }] : []),
                         ],
                     }
                 },
@@ -192,8 +227,8 @@ function optionen() {
                 })),
             },
             {
-                type: 'custom', name: 'aufenthalte',
-                renderItem: (parameter: {coordSys: {x: number, y: number, width: number, height: number}},
+                type: 'custom', name: 'aufenthalte', clip: true,
+                renderItem: (parameter: {coordSys: Koordinatensystem},
                              api: {
                                  value: (stelle: number) => number
                                  coord: (werte: number[]) => [number, number]
@@ -211,12 +246,19 @@ function optionen() {
                     const deckung = api.value(4)
                     const platzFuerZeichen = kasten.width > 22
                     const einzug = platzFuerZeichen ? 20 : 5
+                    // Eine Ecke ist rund, wo der Aufenthalt wirklich anfängt oder aufhört, und
+                    // eckig, wo er nur vom Fensterrand abgeschnitten ist — so sieht man, dass er
+                    // weitergeht, ohne dass ihm etwas hinzugefügt würde.
+                    const linksAb = kasten.x > anfangs[0] + 0.5
+                    const rechtsAb = kasten.x + kasten.width < endes[0] - 0.5
+                    const ecken = [linksAb ? 0 : 3, rechtsAb ? 0 : 3,
+                                   rechtsAb ? 0 : 3, linksAb ? 0 : 3]
                     return {
                         type: 'group',
                         children: [
                             {
                                 type: 'rect',
-                                shape: {...kasten, r: 3},
+                                shape: {...kasten, r: ecken},
                                 style: {fill: `${stehend}33`, stroke: stehend, lineWidth: 1,
                                         opacity: deckung},
                             },

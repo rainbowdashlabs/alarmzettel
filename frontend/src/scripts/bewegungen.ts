@@ -202,18 +202,31 @@ interface Anwesenheit {
     bis: number
 }
 
+/** Wer an diesem Tag überhaupt vorkommt — die Auswahl, die der Bildschirm anbietet. */
+export function bewegungsspuren(daten: Plandaten, datum: string,
+                                modus: Modus = 'fahrzeuge'): {id: string, name: string}[] {
+    const spuren = modus === 'personen' ? personenspuren(daten) : fahrzeugspuren(daten)
+    return spuren
+        .filter(spur => spur.schritte.some(eintrag => tagVon(eintrag.schritt.von) === datum))
+        .map(spur => ({id: spur.id, name: spur.name}))
+}
+
 /**
  * Das Bild eines Tages. Ein Ort bekommt ein Band, sobald jemand dort steht oder dorthin fährt;
  * Orte, an denen an diesem Tag nichts geschieht, tauchen nicht auf.
+ *
+ * `nur` blendet Spuren aus, bevor angeordnet wird — sonst blieben leere Bänder stehen. Der
+ * Ausdruck kennt es nicht: auf Papier steht immer der ganze Tag.
  *
  * Gefahren wird auf zweierlei Weise: als eingetragene Fahrt und als die Anfahrt, die zwischen
  * zwei Aufenthalten von selbst entsteht. Für das Bild ist beides dieselbe Linie — die
  * eingetragene endet im nächsten Schritt, die erzeugte in ihrem eigenen, denn sie gehört zu dem
  * Aufenthalt, zu dem sie führt.
  */
-export function bewegungsbild(daten: Plandaten, datum: string,
-                              modus: Modus = 'fahrzeuge'): Bewegungsbild {
-    const spuren = modus === 'personen' ? personenspuren(daten) : fahrzeugspuren(daten)
+export function bewegungsbild(daten: Plandaten, datum: string, modus: Modus = 'fahrzeuge',
+                              nur?: ReadonlySet<string>): Bewegungsbild {
+    const alle = modus === 'personen' ? personenspuren(daten) : fahrzeugspuren(daten)
+    const spuren = nur ? alle.filter(spur => nur.has(spur.id)) : alle
     const amTag = (eintrag: Spurschritt) => tagVon(eintrag.schritt.von) === datum
 
     const stehend: Anwesenheit[] = []

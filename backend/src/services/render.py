@@ -18,6 +18,7 @@ from data.ablaufplan import plandaten
 from services.adressen import adressen
 from data.alarmplan import ableitung, mit_plan
 from data.geo import punkt_aus_text
+from data.polar import polar_koordinaten
 from data.katalog import mit_katalog
 from data.typst import RenderError, plan_blattweise, render, render_plan
 from entities.alarm import Arbeitsmappe
@@ -40,9 +41,43 @@ def _mappe(request: Request) -> Arbeitsmappe:
     return Arbeitsmappe.model_validate(inhalt)
 
 
+def _punkt_zu(adresse) -> dict | None:
+    """
+    Der Punkt einer Adresse: der an ihr gesetzte, sonst der des Adressdienstes. Ein gesetzter gilt
+    vor der Straße — jemand hat ihn auf die Karte gesetzt, weil sie ihn nicht trifft.
+    """
+    gesetzt = punkt_aus_text(adresse.koordinaten)
+    if gesetzt is not None:
+        return gesetzt
+    gefunden = adressen.finden(adresse.strasse, adresse.hnr, adresse.plz)
+    if gefunden and gefunden.get("ostwert") is not None:
+        return {"ostwert": gefunden["ostwert"], "nordwert": gefunden["nordwert"]}
+    return None
+
+
+def _mit_polar(mappe: Arbeitsmappe) -> Arbeitsmappe:
+    """
+    Die Polar-Koordinaten, wo keine stehen. Bisher entstanden sie nur, während jemand eine
+    Adresse im Editor auflöste — ein Alarm, dessen Einsatzadresse aus dem Plan kommt oder der
+    importiert wurde, ging ohne sie in den Druck. Ein eingetragener Wert bleibt stehen.
+    """
+    wache = _punkt_zu(mappe.kataloge.wache)
+    if wache is None:
+        return mappe
+    alarme = []
+    for alarm in mappe.alarme:
+        ziel = None if alarm.karte.polarKoordinaten.strip() else _punkt_zu(alarm.einsatzadresse)
+        if ziel is None:
+            alarme.append(alarm)
+            continue
+        alarme.append(alarm.model_copy(update={"karte": alarm.karte.model_copy(
+            update={"polarKoordinaten": polar_koordinaten(wache, ziel)})}))
+    return mappe.model_copy(update={"alarme": alarme})
+
+
 def _pdf(arbeitsmappe: Arbeitsmappe, filename: str) -> Response:
     try:
-        pdf = render(mit_katalog(mit_plan(arbeitsmappe, _ortspunkte(arbeitsmappe))))
+        pdf = render(_mit_polar(mit_katalog(mit_plan(arbeitsmappe, _ortspunkte(arbeitsmappe)))))
     except RenderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",
@@ -75,13 +110,9 @@ def _ortspunkte(mappe: Arbeitsmappe) -> dict:
     """
     punkte = {}
     for ort in mappe.kataloge.alle_orte():
-        gesetzt = punkt_aus_text(ort.adresse.koordinaten)
-        if gesetzt is not None:
-            punkte[ort.id] = gesetzt
-            continue
-        gefunden = adressen.finden(ort.adresse.strasse, ort.adresse.hnr, ort.adresse.plz)
-        if gefunden and gefunden.get("ostwert") is not None:
-            punkte[ort.id] = {"ostwert": gefunden["ostwert"], "nordwert": gefunden["nordwert"]}
+        punkt = _punkt_zu(ort.adresse)
+        if punkt is not None:
+            punkte[ort.id] = punkt
     return punkte
 
 

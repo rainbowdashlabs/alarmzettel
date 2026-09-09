@@ -272,6 +272,12 @@ textarea.field {
     text-align: right;
 }
 
+/* Ein Knopf, der etwas ausgeschaltet hat: sichtbar, aber zurückgenommen. */
+.knopf.ist-aus {
+    opacity: 0.55;
+    text-decoration: line-through;
+}
+
 /* Ein Knopf, der nicht geht, muss auch danach aussehen: sonst klickt man ins Leere. */
 .knopf:disabled,
 .knopf:disabled:hover {
