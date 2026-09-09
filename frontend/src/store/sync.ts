@@ -162,6 +162,11 @@ function anlegen(bild: Flachbild, aenderungen: Aenderung[]): Flachbild {
  * the round trip is the difference between that and now, and it has to survive: without it, an
  * incoming change would wipe out whatever someone is in the middle of writing. Everything else
  * comes from the shadow, which is the merged truth.
+ *
+ * Gebaut wird nur, wenn der Server etwas mitgeschickt hat. Der Aufbau ersetzt jedes Objekt der
+ * Arbeitsmappe durch ein neues, und alles, was daran hängt, hält das für eine Änderung — die
+ * Vorschau etwa renderte den Zettel danach im Sekundentakt neu, obwohl niemand etwas getippt
+ * hatte. Ohne eingehende Änderung steht ohnehin schon alles im Dokument, was hier stünde.
  */
 function einarbeiten(antwort: Antwort, gesendet: Aenderung[], gesendetBild: Flachbild) {
     const waehrenddessen = unterschied(gesendetBild, flach(arbeitsmappe))
@@ -169,6 +174,7 @@ function einarbeiten(antwort: Antwort, gesendet: Aenderung[], gesendetBild: Flac
 
     verbindung.stand = antwort.stand
     verbindung.zuletzt = Date.now()
+    if (!antwort.aenderungen.length) return
     ersetzen(uebernehmen(rund(anlegen(serverBild, waehrenddessen)) as Arbeitsmappe))
 }
 

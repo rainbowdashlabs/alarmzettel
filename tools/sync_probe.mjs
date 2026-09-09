@@ -294,6 +294,23 @@ await abgleichen(anna)
 pruefe('nach dem Abgleich steht sie in Annas Arbeitsmappe',
     alarmVon(anna).stichwort === 'BRAND 4 KURZ VOR DEM DRUCK', alarmVon(anna).stichwort)
 
+console.log('\nEin Abgleich ohne Neuigkeiten lässt das Dokument in Ruhe')
+{
+    await anna.jetztAbgleichen()
+    const vorher = anna.arbeitsmappe.alarme[0]
+    await anna.jetztAbgleichen()
+    pruefe('derselbe Alarm, nicht bloß derselbe Inhalt', anna.arbeitsmappe.alarme[0] === vorher)
+
+    await ben.jetztAbgleichen()
+    ben.arbeitsmappe.alarme[0].kurzinfo = 'Weckruf für Anna'
+    await ben.jetztAbgleichen()
+    await anna.jetztAbgleichen()
+    pruefe('kommt aber etwas an, wird gebaut', anna.arbeitsmappe.alarme[0] !== vorher)
+    pruefe('und steht dann auch drin',
+        anna.arbeitsmappe.alarme[0].kurzinfo === 'Weckruf für Anna',
+        anna.arbeitsmappe.alarme[0].kurzinfo)
+}
+
 console.log('\nBeide Seiten am Ende gleich')
 await abgleichen(anna)
 await abgleichen(ben)
