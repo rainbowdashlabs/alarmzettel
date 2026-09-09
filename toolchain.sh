@@ -86,6 +86,7 @@ Adressen
 
 Ablaufplan
   ablauf-pruefen        Personenplan, Ortssicht und die Pruefungen, ausserhalb des Browsers
+  ablauf-bewegungen     Bewegungsbild, Stand zu einem Zeitpunkt und die Koordinaten der Karte
   ablauf-vergleichen    Personenplan aus beiden Sprachen, Zeile fuer Zeile verglichen
 
 Abfragebaum
@@ -242,6 +243,7 @@ print(f'{laden.laden()} Adressen in {laden.datei}')" ;;
     adressen-polar) cd "$ROOT"; run node tools/polar_pruefen.mjs ;;
 
     ablauf-pruefen) cd "$ROOT"; run node tools/ablauf_pruefen.mjs "$@" ;;
+    ablauf-bewegungen) cd "$ROOT"; run node tools/bewegungen_pruefen.mjs "$@" ;;
     ablauf-vergleichen)
         # Der Personenplan wird zweimal gerechnet - im Browser für die Ansicht, auf dem Server
         # für das PDF. Was der Diff zeigt, wäre ein Widerspruch zwischen Schirm und Blatt.
@@ -275,6 +277,7 @@ print(Adressen(settings.adressen_datei, settings.adressen_tage).bestand())" ;;
         "$ROOT/toolchain.sh" sync-probe
         "$ROOT/toolchain.sh" adressen-polar
         "$ROOT/toolchain.sh" ablauf-pruefen
+        "$ROOT/toolchain.sh" ablauf-bewegungen
         "$ROOT/toolchain.sh" ablauf-vergleichen
         ;;
 

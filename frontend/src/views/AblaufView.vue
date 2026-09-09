@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {ref, watch} from 'vue'
 import {RouterLink} from 'vue-router'
+import BewegungsBild from '../components/planung/BewegungsBild.vue'
+import LageKarte from '../components/planung/LageKarte.vue'
 import LagenAnsicht from '../components/planung/LagenAnsicht.vue'
 import LaufKette from '../components/planung/LaufKette.vue'
 import OrtsSicht from '../components/planung/OrtsSicht.vue'
@@ -32,7 +34,7 @@ function offen(fuer: {fahrzeugId?: string, personId?: string}): boolean {
 }
 
 /** Geplant wird in den Ketten; die drei anderen Ansichten sind dieselben Daten von anderer Seite. */
-const ANSICHTEN = ['ketten', 'personen', 'orte', 'lagen'] as const
+const ANSICHTEN = ['ketten', 'bewegung', 'karte', 'personen', 'orte', 'lagen'] as const
 const ansicht = ref<typeof ANSICHTEN[number]>('ketten')
 const fehler = ref<string | null>(null)
 
@@ -82,7 +84,9 @@ async function drucken() {
       </button>
     </div>
 
-    <PersonenPlan v-if="ansicht === 'personen'"/>
+    <BewegungsBild v-if="ansicht === 'bewegung'"/>
+    <LageKarte v-else-if="ansicht === 'karte'"/>
+    <PersonenPlan v-else-if="ansicht === 'personen'"/>
     <OrtsSicht v-else-if="ansicht === 'orte'"/>
     <LagenAnsicht v-else-if="ansicht === 'lagen'"/>
 

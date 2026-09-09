@@ -23,7 +23,7 @@ import type {
  * Die Koordinaten der Orte, soweit der Adressdienst sie kennt. Sie kommen über das Netz, die
  * Prüfungen rechnen aber ohne Warten — deshalb liegen sie hier und werden einmal geladen.
  */
-const ortsPunkte = reactive<Record<string, Punkt>>({})
+export const ortsPunkte = reactive<Record<string, Punkt>>({})
 
 export async function punkteLaden() {
     for (const ort of arbeitsmappe.planung.orte) {

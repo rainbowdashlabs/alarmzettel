@@ -72,6 +72,12 @@ jobs:
       - name: Check den Ablaufplan
         run: node tools/ablauf_pruefen.mjs
 
+      # Das Bewegungsbild, der Stand zu einem Zeitpunkt und die Umrechnung der amtlichen
+      # Koordinaten in die der Karte — gegen Punkte, die der Berliner Dienst in beiden Systemen
+      # ausgibt.
+      - name: Check das Bewegungsbild
+        run: node tools/bewegungen_pruefen.mjs
+
       # Browser and server each flatten the working set into paths, and they have to agree
       # exactly: a path only one side knows reads to the other as an entry that was never there.
       - name: Compare the flatteners
