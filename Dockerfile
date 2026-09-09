@@ -4,8 +4,13 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
-# Stage 2: build the frontend
+# Stage 2: build the frontend. Der Commit und die Bauzeit stehen im Fuß der Seite; hier gibt es
+# kein .git, also werden sie hereingereicht.
 FROM frontend-deps AS frontend-build
+ARG COMMIT=dev
+ARG GEBAUT
+ENV ALARMPLANER_COMMIT=$COMMIT
+ENV ALARMPLANER_GEBAUT=$GEBAUT
 COPY frontend/ ./
 RUN npm run build
 

@@ -44,6 +44,14 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
 
+      # Beides steht im Fuß der Seite. Im Build-Kontext gibt es kein .git, also wird es hier
+      # ausgerechnet und hereingereicht.
+      - name: Collect build stamp
+        id: stempel
+        run: |
+          echo "commit=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "gebaut=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
@@ -51,6 +59,9 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            COMMIT=${{ steps.stempel.outputs.commit }}
+            GEBAUT=${{ steps.stempel.outputs.gebaut }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

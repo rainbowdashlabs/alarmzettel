@@ -83,6 +83,10 @@ screen are the ones printed on the slip.
   after another at the same place each keep their own time and crew. Those fields show in the editor as what will be printed, rather than being editable
   there. Switched off, the Ablaufplanung changes nothing about the alarm slip.
 
+The page carries a footer with the source, the licence and the build it is running: the short
+commit and the time it was built. Outside a container the version comes from the working copy, in
+the image it is handed in as a build argument — an invented number would be worse than none.
+
 ## Where the data lives
 
 On the server, in a session. A working set is a JSON file in a volume, managed through a small

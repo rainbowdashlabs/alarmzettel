@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {RouterLink, RouterView} from 'vue-router'
+import AppFuss from './components/base/AppFuss.vue'
 import {t} from './i18n'
 import {activeTheme, toggleTheme} from './theme'
 import {ref} from 'vue'
@@ -94,6 +95,8 @@ async function tun(was: () => Promise<void>) {
     <main class="grow mx-auto w-full max-w-[1560px] px-4 md:px-6 py-6">
       <RouterView/>
     </main>
+
+    <AppFuss/>
   </div>
 </template>
 

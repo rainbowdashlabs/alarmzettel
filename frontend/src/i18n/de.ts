@@ -17,6 +17,12 @@ export default {
         ablauf: 'Ablauf',
         notFound: 'Nicht gefunden',
     },
+    fuss: {
+        urheber: '© 2026 RainbowDashLabs und Mitwirkende',
+        gemacht: 'Gemacht mit ❤️ und 🏳️‍🌈',
+        lizenz: 'Lizenziert unter AGPL-3.0',
+        fassung: 'Alarmplaner {commit} · gebaut {gebaut}',
+    },
     liste: {
         leer: 'Noch kein Alarm angelegt.',
         leerHinweis: 'Lege einen Alarm an oder lade eine gespeicherte Datei.',

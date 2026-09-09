@@ -32,6 +32,7 @@ import {
     faXmark,
 } from '@fortawesome/free-solid-svg-icons'
 import {faCircle} from '@fortawesome/free-regular-svg-icons'
+import {faGithub} from '@fortawesome/free-brands-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 import {initTheme} from './theme'
 import {sitzungStarten} from './store/sitzung'
@@ -40,7 +41,7 @@ import {sitzungStarten} from './store/sitzung'
 library.add(faAngleDown, faAngleRight, faAngleUp, faArrowLeft, faBox, faCheck, faCircle,
     faCircleCheck, faCopy, faDownload, faFilePdf, faListCheck, faLocationDot, faMoon, faPen,
     faPersonWalking, faPlus, faRotate, faShareNodes, faSun, faTable, faTrash, faTruck, faUpload,
-    faUsers, faXmark)
+    faUsers, faXmark, faGithub)
 
 initTheme()
 void sitzungStarten()
