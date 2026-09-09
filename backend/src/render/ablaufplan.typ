@@ -42,6 +42,22 @@
 
 #let leerer_hinweis(text_) = text(size: 10pt, fill: luma(120), style: "italic")[#text_]
 
+/// Ein Weg zu einem Ort: das Kennmuster fürs Telefon, darunter der Dienst als anklickbarer Name.
+///
+/// Beides zeigt auf dieselbe Stelle. Wer den Zettel auf Papier hat, hält die Kamera davor; wer
+/// ihn am Bildschirm liest, klickt.
+#let wegweiser(ort, dienst, name) = {
+  if dienst not in ort or ort.at(dienst) not in data.kennmuster { return [] }
+  let ziel = ort.at(dienst)
+  link(ziel)[
+    #align(center)[
+      #image(data.kennmuster.at(ziel), width: 17mm)
+      #v(1pt)
+      #text(size: 7pt, fill: luma(90))[#underline[#name]]
+    ]
+  ]
+}
+
 /// Die Orte des Blattes mit Adresse und den beiden Kennmustern.
 ///
 /// Der Zettel soll für sich allein genügen: wer ihn in die Hand gedrückt bekommt, hat keine
@@ -62,18 +78,8 @@
         #text(weight: "bold")[#ort.name] \
         #text(size: 9pt, fill: luma(70))[#ort.adresse]
       ],
-      if "apple" in ort and ort.apple in data.kennmuster [
-        #align(center)[
-          #image(data.kennmuster.at(ort.apple), width: 16mm)
-          #text(size: 7pt, fill: luma(110))[Karten]
-        ]
-      ] else [],
-      if "google" in ort and ort.google in data.kennmuster [
-        #align(center)[
-          #image(data.kennmuster.at(ort.google), width: 16mm)
-          #text(size: 7pt, fill: luma(110))[Maps]
-        ]
-      ] else [],
+      wegweiser(ort, "apple", "Apple Maps"),
+      wegweiser(ort, "google", "Google Maps"),
     )
   }
 }
