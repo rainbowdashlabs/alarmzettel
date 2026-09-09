@@ -12,6 +12,7 @@ anzurühren.
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from data.ablaufplan import plandaten
+from services.adressen import adressen
 from data.alarmplan import ableitung, mit_plan
 from data.katalog import mit_katalog
 from data.typst import RenderError, render, render_plan
@@ -61,12 +62,25 @@ def render_alarm(alarm_id: str, request: Request) -> Response:
                 f"alarmzettel-{alarm_id}.pdf")
 
 
+def _ortspunkte(mappe: Arbeitsmappe) -> dict:
+    """
+    Die Koordinaten der Orte, soweit der Adressdienst sie kennt. Sie tragen die geschätzten
+    Fahrzeiten auf den Blättern; ohne Liste fehlt allein die Schätzung.
+    """
+    punkte = {}
+    for ort in mappe.kataloge.alle_orte():
+        gefunden = adressen.finden(ort.adresse.strasse, ort.adresse.hnr, ort.adresse.plz)
+        if gefunden and gefunden.get("ostwert") is not None:
+            punkte[ort.id] = {"ostwert": gefunden["ostwert"], "nordwert": gefunden["nordwert"]}
+    return punkte
+
+
 @router.post("/plan/ablauf")
 def render_ablaufplan(request: Request) -> Response:
     """Der Ablaufplan: ein Blatt je Person, eines je Fahrzeug, und der Gesamtplan quer."""
     mappe = _mappe(request)
     try:
-        pdf = render_plan(plandaten(mappe))
+        pdf = render_plan(plandaten(mappe, _ortspunkte(mappe)))
     except RenderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",

@@ -20,6 +20,14 @@
 
 #let zeitspanne(zeile) = [#zeile.von–#zeile.bis]
 
+/// Wie lange die Luftlinie dauern würde, wo sie sich rechnen lässt. Sie steht klein unter der
+/// geplanten Zeit — ein Vorschlag, an dem man ablesen kann, ob die geplante knapp ist.
+#let geschaetzt(zeile) = {
+  if zeile.at("geschaetzt", default: none) == none { return [] }
+  linebreak()
+  text(size: 7pt, weight: "regular", fill: luma(110))[≈ #str(zeile.geschaetzt) min]
+}
+
 /// Ein Tag steht nur dort, wo er wechselt — sonst wiederholt er sich in jeder Zeile.
 #let mit_tagen(zeilen) = {
   let bisher = ""
@@ -108,7 +116,7 @@
       ("Tag", "Zeit", "Wohin", "Lage", "Fahrzeug", "Material und Notiz"),
       mit_tagen(person.zeilen).map(((zeile, tag)) => (
         text(size: 9pt, fill: luma(110))[#tag],
-        text(weight: "bold")[#zeitspanne(zeile)],
+        text(weight: "bold")[#zeitspanne(zeile)#geschaetzt(zeile)],
         [#zeile.was],
         text(fill: luma(70))[#zeile.lage],
         [#zeile.fahrzeug#if zeile.faehrt [ #text(weight: "bold")[· fährt]]],
@@ -130,7 +138,7 @@
       ("Tag", "Zeit", "Wohin", "Lage", "Besatzung", "Material und Notiz"),
       mit_tagen(fahrzeug.zeilen).map(((zeile, tag)) => (
         text(size: 9pt, fill: luma(110))[#tag],
-        text(weight: "bold")[#zeitspanne(zeile)],
+        text(weight: "bold")[#zeitspanne(zeile)#geschaetzt(zeile)],
         [#zeile.was],
         text(fill: luma(70))[#zeile.lage],
         zeile.besatzung.map(sitzt => {

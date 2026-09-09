@@ -252,6 +252,32 @@ class ZettelTest(unittest.TestCase):
         self.assertEqual("Schlüssel nicht vergessen", zeile["notiz"])
 
 
+class FahrzeitTest(unittest.TestCase):
+    """
+    Die geschätzte Fahrzeit steht neben der geplanten. Gerechnet wird sie wie im Browser; dass
+    beide Seiten dasselbe herausbekommen, hält `tools/plan_vergleichen` fest.
+    """
+
+    PUNKTE = {"o-nord": {"ostwert": 400000, "nordwert": 5818000},
+              "o-kita": {"ostwert": 400000, "nordwert": 5814000}}
+
+    def zeilen(self, punkte: dict | None = None) -> list[dict]:
+        mappe = Arbeitsmappe.model_validate(MAPPE)
+        return plandaten(mappe, punkte)["fahrzeuge"][0]["zeilen"]
+
+    def test_vier_kilometer_im_fahrzeug_sind_zehn_minuten(self):
+        fahrt = next(zeile for zeile in self.zeilen(self.PUNKTE) if zeile["art"] == "fahrt")
+        self.assertEqual(10, fahrt["geschaetzt"])
+
+    def test_ein_aufenthalt_wird_nicht_geschaetzt(self):
+        stehend = next(zeile for zeile in self.zeilen(self.PUNKTE)
+                       if zeile["art"] == "aufenthalt")
+        self.assertIsNone(stehend["geschaetzt"])
+
+    def test_ohne_koordinaten_gibt_es_keine_schaetzung(self):
+        self.assertTrue(all(zeile["geschaetzt"] is None for zeile in self.zeilen()))
+
+
 class BewegungTest(unittest.TestCase):
     """Das Bild, das der Bildschirm auch zeichnet: Bänder, Reihen darin, Zeitfenster."""
 

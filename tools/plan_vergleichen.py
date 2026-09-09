@@ -24,7 +24,11 @@ if len(sys.argv) < 2:
 
 mappe = Arbeitsmappe.model_validate(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")))
 
-daten = plandaten(mappe)
+# Die Koordinaten stehen daneben und nicht im Adressdienst: verglichen wird die Rechnung, nicht
+# das Nachschlagen. Beide Seiten bekommen dieselben Zahlen.
+punkte = json.loads((Path(sys.argv[1]).parent / "punkte.json").read_text(encoding="utf-8"))
+
+daten = plandaten(mappe, punkte)
 
 for blatt in daten["personen"]:
     for zeile in blatt["zeilen"]:
@@ -32,6 +36,7 @@ for blatt in daten["personen"]:
             "PLAN", blatt["name"], zeile["datum"], zeile["von"], zeile["bis"], zeile["art"],
             zeile["vonOrt"], zeile["ort"], zeile["lage"],
             "faehrt" if zeile["faehrt"] else "-", zeile["fahrzeug"],
+            str(zeile["geschaetzt"] if zeile["geschaetzt"] is not None else "-"),
         ]))
 
 for bild in daten["bewegung"]:

@@ -8,6 +8,7 @@ können, und das Typst-Template legt nur noch aus, was hier steht.
 """
 
 from data.bewegungen import bewegungsbilder
+from data.fahrzeit import schaetzung
 from data.karten import adresstext, karten
 from data.planzeit import minuten as _minuten, tag as _datum, uhrzeit as _uhrzeit
 from entities.alarm import Arbeitsmappe
@@ -31,7 +32,7 @@ def _von_ort(lauf: Lauf, schritt: Schritt) -> str:
 class Plan:
     """Namen und Ketten der laufenden Arbeitsmappe, in der Form, die der Druck braucht."""
 
-    def __init__(self, arbeitsmappe: Arbeitsmappe) -> None:
+    def __init__(self, arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> None:
         self.planung: Planung = arbeitsmappe.planung
         self._orte = {ort.id: ort.name for ort in arbeitsmappe.kataloge.alle_orte()}
         self._personen = {person.id: person for person in self.planung.personen}
@@ -40,6 +41,7 @@ class Plan:
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
         self._material = {stueck.id: stueck.name for stueck in arbeitsmappe.kataloge.material}
         self._adressen = {ort.id: ort for ort in arbeitsmappe.kataloge.alle_orte()}
+        self._punkte = punkte or {}
 
     def ort(self, ort_id: str) -> str:
         return self._orte.get(ort_id, "")
@@ -69,6 +71,13 @@ class Plan:
             return None
         return {"name": ort.name, "adresse": adresstext(ort.adresse), **karten(ort.adresse)}
 
+    def fahrzeit(self, lauf: Lauf, schritt: Schritt) -> int | None:
+        """Wie lange die Luftlinie dauern würde — neben der geplanten Zeit auf dem Blatt."""
+        if schritt.art != "fahrt":
+            return None
+        return schaetzung(self._punkte.get(_von_ort(lauf, schritt)),
+                          self._punkte.get(schritt.ortId), schritt.mittel)
+
     def wohin(self, schritt: Schritt) -> str:
         """Wo man ist; bei einer Fahrt, wohin sie geht."""
         ort = self.ort(schritt.ortId)
@@ -83,6 +92,7 @@ def _zeile(plan: Plan, lauf: Lauf, schritt: Schritt) -> dict:
         "vonOrt": plan.ort(_von_ort(lauf, schritt)),
         "material": [name for name in plan.material(schritt) if name],
         "notiz": schritt.notiz,
+        "geschaetzt": plan.fahrzeit(lauf, schritt),
         "_orte": [ort_id for ort_id in (_von_ort(lauf, schritt), schritt.ortId) if ort_id],
     }
 
@@ -219,9 +229,14 @@ def _zelle_zur_zeit(plan: Plan, lauf: Lauf, datum: str, minute: int) -> str:
     return beste
 
 
-def plandaten(arbeitsmappe: Arbeitsmappe) -> dict:
-    """Personenblätter, Fahrzeugblätter und der Gesamtplan, fertig zum Auslegen."""
-    plan = Plan(arbeitsmappe)
+def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
+    """
+    Personenblätter, Fahrzeugblätter und der Gesamtplan, fertig zum Auslegen.
+
+    `punkte` sind die Koordinaten der Orte, soweit der Adressdienst sie kennt. Ohne sie fehlt auf
+    den Blättern allein die geschätzte Fahrzeit.
+    """
+    plan = Plan(arbeitsmappe, punkte)
     return {
         "personen": [_personenblatt(plan, person) for person in plan.planung.personen],
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe

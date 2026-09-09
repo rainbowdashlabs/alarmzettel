@@ -33,7 +33,7 @@ async function laden(pfad) {
         Buffer.from(gebaut.outputFiles[0].text).toString('base64'))
 }
 
-const {personenplan} = await laden('frontend/src/scripts/ablauf.ts')
+const {fahrzeitSchaetzung, personenplan} = await laden('frontend/src/scripts/ablauf.ts')
 const {bewegungsbild, bewegungstage} = await laden('frontend/src/scripts/bewegungen.ts')
 
 const mappe = JSON.parse(readFileSync(quelle, 'utf8'))
@@ -43,7 +43,11 @@ const dienststelle = {
     adresse: mappe.kataloge?.wache ?? {},
 }
 const orte = [dienststelle, ...(mappe.kataloge?.orte ?? [])]
-const daten = {planung: mappe.planung, fahrzeuge: mappe.kataloge?.fahrzeuge ?? [], orte}
+const punkte = JSON.parse(readFileSync(resolve(quelle, '..', 'punkte.json'), 'utf8'))
+const daten = {
+    planung: mappe.planung, fahrzeuge: mappe.kataloge?.fahrzeuge ?? [], orte, punkte,
+    kataloge: {material: mappe.kataloge?.material ?? []},
+}
 
 const namen = (liste, id, feld) => liste?.find(eintrag => eintrag.id === id)?.[feld] ?? ''
 const ort = id => namen(orte, id, 'name')
@@ -58,6 +62,7 @@ for (const person of mappe.planung.personen ?? []) {
             eintrag.schritt.bis.slice(11, 16), eintrag.schritt.art,
             ort(eintrag.vonOrtId), ort(eintrag.nachOrtId), lage(eintrag.schritt.programmpunktId),
             eintrag.faehrt ? 'faehrt' : '-', fahrzeug(eintrag.lauf.fahrzeugId),
+            fahrzeitSchaetzung(daten, eintrag.lauf, eintrag.schritt) ?? '-',
         ].join(' | '))
     }
 }

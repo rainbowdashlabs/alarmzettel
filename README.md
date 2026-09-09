@@ -45,7 +45,8 @@ screen are the ones printed on the slip.
   without a journey between them cannot be entered at all. Crew belongs to the step, which is
   what makes a driver change a step like any other. Journey times are proposed from the straight
   line between two places — 3 minutes per kilometre by vehicle, 15 on foot — and can be
-  overwritten.
+  overwritten. It stays visible next to the planned duration, on screen and on the printed
+  sheets, so a journey that was cut short shows it.
 - **What the plan checks** — seats against heads, journeys
   without a driver, someone boarding where they are not, one person in two chains at once,
   people scheduled outside their availability, journeys planned far shorter than the estimate,
