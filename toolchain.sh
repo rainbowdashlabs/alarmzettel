@@ -264,7 +264,7 @@ print(Adressen(settings.adressen_datei, settings.adressen_tage).bestand())" ;;
     sna-build)     cd "$ROOT"; run python tools/build_sna_tree.py "$@" ;;
     sna-check)     cd "$ROOT"; run python tools/sna_pruefen.py ;;
 
-    docker-build)     cd "$ROOT"; run docker build -t alarmzettel:dev . "$@" ;;
+    docker-build)     cd "$ROOT"; run docker build -t alarmplaner:dev . "$@" ;;
     docker-app)       cd "$ROOT"; run docker compose up -d --build "$@" ;;
     docker-app-down)  cd "$ROOT"; run docker compose down "$@" ;;
     docker-app-logs)  cd "$ROOT"; run docker compose logs -f "$@" ;;

@@ -52,7 +52,7 @@ async def lifespan(_: FastAPI):
         aufgabe.cancel()
 
 
-app = FastAPI(title="Alarmzettel", lifespan=lifespan)
+app = FastAPI(title="Alarmplaner", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

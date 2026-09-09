@@ -57,8 +57,8 @@ jobs:
       - name: Smoke test the image
         if: github.event_name == 'pull_request'
         run: |
-          docker build -t alarmzettel:pr .
-          docker run -d --name pruefung -p 8000:8000 alarmzettel:pr
+          docker build -t alarmplaner:pr .
+          docker run -d --name pruefung -p 8000:8000 alarmplaner:pr
           for versuch in $(seq 1 30); do
             sleep 1
             curl -fs http://127.0.0.1:8000/api/health && break

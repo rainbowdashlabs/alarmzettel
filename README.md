@@ -1,11 +1,13 @@
-# Alarmzettel
+# Alarmplaner
 
-A tool for producing the Berlin fire brigade's alarm slips and printing them as PDF.
+A tool for planning a fire brigade exercise day and for producing the Berlin fire brigade's alarm
+slips that go with it.
 
 The slip used to come out of a Word mail merge fed by a spreadsheet with one row per alarm. That
 row holds exactly one vehicle; the printed slip holds as many as you like, in several groups at
 several addresses. This gives that flexibility back, and makes entering a batch of alarms in one
-sitting bearable.
+sitting bearable. The day around those alarms — who is where, in which vehicle, and who drives —
+used to be a second spreadsheet, and is now planned here as well.
 
 The interface is German throughout — it is a German fire service document, and the field names on
 screen are the ones printed on the slip.

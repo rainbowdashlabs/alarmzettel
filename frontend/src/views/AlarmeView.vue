@@ -34,7 +34,7 @@ async function herunterladen() {
   // does nothing.
   await jetztAbgleichen()
   speichern(new Blob([JSON.stringify(arbeitsmappe, null, 2)], {type: 'application/json'}),
-      'alarmzettel.json')
+      'alarmplaner.json')
 }
 
 async function pdf() {

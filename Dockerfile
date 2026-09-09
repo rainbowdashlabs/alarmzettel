@@ -50,9 +50,9 @@ COPY --from=frontend-build /app/dist ./static/
 ENV SITZUNG_VERZEICHNIS=/data/freigaben \
     ADRESSEN_DATEI=/data/adressen.sqlite
 RUN mkdir -p src/render/tmp /data/freigaben && chmod 1777 src/render/tmp \
- && useradd --system --uid 10001 alarmzettel \
- && chown -R alarmzettel:alarmzettel /app /data
-USER alarmzettel
+ && useradd --system --uid 10001 alarmplaner \
+ && chown -R alarmplaner:alarmplaner /app /data
+USER alarmplaner
 VOLUME ["/data"]
 
 EXPOSE 8000

@@ -1,7 +1,7 @@
 export default {
     app: {
-        name: 'Alarmzettel',
-        untertitel: 'Alarmzettel erstellen und als PDF drucken',
+        name: 'Alarmplaner',
+        untertitel: 'Alarmzettel schreiben und Übungstage planen',
     },
     nav: {
         alarme: 'Alarme',
