@@ -32,6 +32,8 @@ export interface Plandaten {
     fahrzeuge: Fahrzeugvorlage[]
     /** Die Orte des Katalogs, die Dienststelle voran. */
     orte: Ort[]
+    /** Das Personal des Katalogs — die Ketten zeigen nur auf seine Kennungen. */
+    personen: Person[]
     /** Was die Wache an Material führt — wonach die Standorte benannt werden. */
     kataloge?: {material: Materialvorlage[]}
     punkte?: Record<string, Punkt>
@@ -87,7 +89,7 @@ export interface Befund {
 }
 
 function person(daten: Plandaten, personId: string): Person | undefined {
-    return daten.planung.personen.find(p => p.id === personId)
+    return daten.personen.find(eintrag => eintrag.id === personId)
 }
 
 function fahrzeug(daten: Plandaten, fahrzeugId: string): Fahrzeugvorlage | undefined {
@@ -363,7 +365,7 @@ export function pruefen(daten: Plandaten): Befund[] {
         for (const schritt of lauf.schritte) befunde.push(...schrittBefunde(daten, lauf, schritt))
         befunde.push(...ueberschneidungBefunde(lauf))
     }
-    for (const wer of daten.planung.personen) {
+    for (const wer of daten.personen) {
         const plan = personenplan(daten, wer.id)
         befunde.push(...zustiegBefunde(daten, wer.id, plan))
         befunde.push(...doppelBefunde(daten, wer.id, plan))

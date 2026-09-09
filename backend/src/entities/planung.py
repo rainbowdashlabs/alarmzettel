@@ -119,12 +119,14 @@ class Lauf(Eintrag):
 
 
 class Planung(Eintrag):
-    """Aus: kein Navigationspunkt, keine Daten, der Alarmzettel-Teil unverändert."""
+    """
+    Der Plan eines Übungstages: die Lagen und die Ketten.
+
+    Was die Wache dauerhaft führt — Tage, Personal, Rollen, Fahrerlaubnisklassen, Orte und
+    Material — steht im Katalog und nicht hier. Aus: kein Navigationspunkt, keine Daten, der
+    Alarmzettel-Teil unverändert.
+    """
 
     aktiv: bool = False
-    tage: list[Tag] = []
-    personen: list[Person] = []
-    rollen: list[str] = []
-    fahrerlaubnisse: list[str] = []
     programmpunkte: list[Programmpunkt] = []
     laeufe: list[Lauf] = []

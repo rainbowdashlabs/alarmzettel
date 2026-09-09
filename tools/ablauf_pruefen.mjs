@@ -77,10 +77,10 @@ function daten({personen = [], fahrzeuge = [], laeufe = [], programmpunkte = [],
                 material = []} = {}) {
     return {
         planung: {
-            aktiv: true, tage: [{id: 't', sortierung: 0, datum: TAG, name: ''}],
-            personen, rollen: [], fahrerlaubnisse: [], programmpunkte, laeufe,
+            aktiv: true, programmpunkte, laeufe,
         },
         fahrzeuge,
+        personen,
         orte: orte.length ? orte : [ort('o-nord', 'Wache Nord'), ort('o-sued', 'Kindergarten')],
         kataloge: {material},
         punkte: PUNKTE,

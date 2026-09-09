@@ -26,8 +26,9 @@ screen are the ones printed on the slip.
 - **PDF** — one sheet per alarm, all of them in one file or singly.
 - **JSON** — the working set downloads and uploads again. Old ODS or XLSX spreadsheets are
   imported.
-- **Catalogues** — your own lists of Stichwörter, vehicles, places, status and Trupp, plus the
-  Arbeitsgruppe every new alarm starts with and the station the sheets are written for. A place
+- **Catalogues** — one page for everything the station keeps: Stichwörter, vehicles, places,
+  material, status and Trupp, the days of the event, the people with their roles and licence
+  classes, plus the Arbeitsgruppe every new alarm starts with and the station itself. A place
   belongs to the station rather than to a single exercise day, so it lives here beside the
   vehicles; the station itself is always a place and is never created or deleted. An
   Einsatzadresse entered on an alarm joins the list by itself, the way a new Stichwort does. An alarm
@@ -40,8 +41,9 @@ screen are the ones printed on the slip.
   from the station to the Einsatzadresse.
 - **Share and edit together** — a working set gets a link. Whoever opens it either works on their
   own copy or joins everyone else on the same one.
-- **Ablaufplanung** — optional and off by default. An exercise day is planned as a chain per
-  vehicle and per person: each step starts where the previous one ended, so a jump from A to B
+- **Ablaufplanung** — optional and off by default. What the station keeps lives in the
+  catalogue; the plan itself holds only the Lagen and the chains. An exercise day is planned as a
+  chain per vehicle and per person: each step starts where the previous one ended, so a jump from A to B
   without a journey between them cannot be entered at all. Crew belongs to the step, which is
   what makes a driver change a step like any other. Journey times are proposed from the straight
   line between two places — 3 minutes per kilometre by vehicle, 15 on foot — and can be

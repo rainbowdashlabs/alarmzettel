@@ -114,24 +114,21 @@ export interface Lauf extends Eintrag {
     schritte: Schritt[]
 }
 
+/**
+ * Der Plan eines Übungstages: die Lagen und die Ketten.
+ *
+ * Was die Wache dauerhaft führt — Tage, Personal, Rollen, Fahrerlaubnisklassen, Orte und
+ * Material — steht im Katalog und nicht hier.
+ */
 export interface Planung {
     /** Aus: kein Navigationspunkt, keine Daten, der Alarmzettel-Teil unverändert. */
     aktiv: boolean
-    tage: Tag[]
-    personen: Person[]
-    rollen: string[]
-    fahrerlaubnisse: string[]
     programmpunkte: Programmpunkt[]
     laeufe: Lauf[]
 }
 
 export function leerePlanung(): Planung {
-    return {
-        aktiv: false,
-        tage: [], personen: [],
-        rollen: [...ROLLEN], fahrerlaubnisse: [...FAHRERLAUBNISSE],
-        programmpunkte: [], laeufe: [],
-    }
+    return {aktiv: false, programmpunkte: [], laeufe: []}
 }
 
 export const ROLLEN = ['Ausbilder', 'Teilnehmer', 'Mime', 'Foto', 'Beobachter']

@@ -59,10 +59,7 @@
         "id": "m-nebel",
         "name": "Nebelmaschine"
       }
-    ]
-  },
-  "planung": {
-    "aktiv": true,
+    ],
     "tage": [
       {
         "id": "t1",
@@ -109,7 +106,10 @@
         "name": "Noch nicht eingeteilt",
         "anzahl": 1
       }
-    ],
+    ]
+  },
+  "planung": {
+    "aktiv": true,
     "programmpunkte": [
       {
         "id": "g-brand",

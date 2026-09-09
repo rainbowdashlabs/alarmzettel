@@ -46,6 +46,7 @@ const orte = [dienststelle, ...(mappe.kataloge?.orte ?? [])]
 const punkte = JSON.parse(readFileSync(resolve(quelle, '..', 'punkte.json'), 'utf8'))
 const daten = {
     planung: mappe.planung, fahrzeuge: mappe.kataloge?.fahrzeuge ?? [], orte, punkte,
+    personen: mappe.kataloge?.personen ?? [],
     kataloge: {material: mappe.kataloge?.material ?? []},
 }
 
@@ -54,7 +55,7 @@ const ort = id => namen(orte, id, 'name')
 const lage = id => namen(mappe.planung.programmpunkte, id, 'name')
 const fahrzeug = id => namen(mappe.kataloge?.fahrzeuge, id, 'funkrufname')
 
-for (const person of mappe.planung.personen ?? []) {
+for (const person of mappe.kataloge?.personen ?? []) {
     for (const eintrag of personenplan(daten, person.id)) {
         console.log([
             'PLAN', person.name,

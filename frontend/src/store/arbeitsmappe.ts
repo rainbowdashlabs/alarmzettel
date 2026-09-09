@@ -1,8 +1,8 @@
 import {reactive, watch} from 'vue'
 import {fahrzeugwerte} from '../scripts/katalog'
 import {neuSortieren} from '../scripts/listen'
-import {DIENSTSTELLE} from '../interfaces/Planung'
-import type {Ort, Planung} from '../interfaces/Planung'
+import {DIENSTSTELLE, FAHRERLAUBNISSE, ROLLEN} from '../interfaces/Planung'
+import type {Ort, Person, Planung, Tag} from '../interfaces/Planung'
 import {
     ARBEITSMAPPE_VERSION,
     naechste,
@@ -12,6 +12,7 @@ import {
     type Adresse,
     type Alarm,
     type Arbeitsmappe,
+    type Kataloge,
 } from '../interfaces/Alarm'
 
 const STORAGE_KEY = 'alarmzettel_arbeitsmappe'
@@ -57,6 +58,7 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
         .map(ort => ({...ort, adresse: {...leereAdresse(), ...ort.adresse}}))
     kataloge.wacheName = kataloge.wacheName ?? ''
     kataloge.material = kataloge.material ?? []
+    katalogFuellen(kataloge as Kataloge, quelle.planung)
 
     return sortierungSetzen(katalogVerknuepfen(verweiseHerstellen({
         version: ARBEITSMAPPE_VERSION,
@@ -64,6 +66,30 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
         kataloge,
         planung: planungFuellen(leer.planung, quelle.planung),
     })))
+}
+
+/**
+ * Füllt den Katalog auf, was eine Datei oder ein Abgleich weggelassen hat, und holt herüber, was
+ * einmal im Plan stand: Tage, Personal, Rollen und Fahrerlaubnisklassen gehören der Wache und
+ * nicht dem einzelnen Übungstag.
+ */
+function katalogFuellen(kataloge: Kataloge, quelle?: Partial<Planung>) {
+    const frueher = (quelle ?? {}) as Record<string, unknown>
+    const nimm = <T>(name: keyof Kataloge, vorgabe: T[]): T[] => {
+        const eigen = (kataloge[name] ?? []) as unknown as T[]
+        const alt = (frueher[name] ?? []) as T[]
+        return eigen.length ? eigen : alt.length ? alt : vorgabe
+    }
+    kataloge.tage = nimm<Tag>('tage', []).map(tag => ({...tag}))
+    kataloge.personen = nimm<Person>('personen', []).map(person => ({
+        ...person,
+        anzahl: person.anzahl || 1,
+        rollen: person.rollen ?? [],
+        fahrerlaubnis: person.fahrerlaubnis ?? [],
+        verfuegbar: person.verfuegbar ?? [],
+    }))
+    kataloge.rollen = nimm<string>('rollen', [...ROLLEN])
+    kataloge.fahrerlaubnisse = nimm<string>('fahrerlaubnisse', [...FAHRERLAUBNISSE])
 }
 
 /**
@@ -78,14 +104,6 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
  */
 function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
     const planung: Planung = {...leer, ...(quelle ?? {})}
-    planung.tage = (planung.tage ?? []).map(tag => ({...tag}))
-    planung.personen = (planung.personen ?? []).map(person => ({
-        ...person,
-        anzahl: person.anzahl || 1,
-        rollen: person.rollen ?? [],
-        fahrerlaubnis: person.fahrerlaubnis ?? [],
-        verfuegbar: person.verfuegbar ?? [],
-    }))
     planung.programmpunkte = (planung.programmpunkte ?? []).map(punkt => ({...punkt}))
     planung.laeufe = (planung.laeufe ?? []).map(lauf => ({
         ...lauf,
@@ -99,9 +117,6 @@ function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
             })),
         })),
     }))
-    for (const liste of ['rollen', 'fahrerlaubnisse'] as const) {
-        planung[liste] = planung[liste] ?? []
-    }
     return planung
 }
 

@@ -12,7 +12,7 @@ import {tagwechsel, uhrzeit} from '../../scripts/zeit'
  * sie steht, plus ihre eigenen. Personenplan und Fahrzeugplan können sich deshalb nicht
  * widersprechen.
  */
-const plaene = computed(() => arbeitsmappe.planung.personen.map(person => {
+const plaene = computed(() => arbeitsmappe.kataloge.personen.map(person => {
   const eintraege = personenplan(plandaten(), person.id)
   return {
     person, eintraege,

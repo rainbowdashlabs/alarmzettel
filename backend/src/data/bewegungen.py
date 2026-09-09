@@ -75,7 +75,8 @@ class _Namen:
         self.planung = arbeitsmappe.planung
         self.orte = arbeitsmappe.kataloge.alle_orte()
         self._orte = {ort.id: ort.name for ort in self.orte}
-        self._personen = {person.id: person for person in self.planung.personen}
+        self.personen = arbeitsmappe.kataloge.personen
+        self._personen = {person.id: person for person in self.personen}
         self._lagen = {punkt.id: punkt.name for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
@@ -136,7 +137,7 @@ def bewegungsbild(arbeitsmappe: Arbeitsmappe, datum: str, modus: str = "fahrzeug
     wo an diesem Tag nichts geschieht, gibt es auch kein Band.
     """
     namen = _Namen(arbeitsmappe)
-    spuren = ([_personenspur(namen, person) for person in namen.planung.personen]
+    spuren = ([_personenspur(namen, person) for person in namen.personen]
               if modus == "personen" else _fahrzeugspuren(namen))
 
     stehend = sorted(

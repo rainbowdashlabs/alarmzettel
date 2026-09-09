@@ -28,7 +28,10 @@ function adresse(basis: string, werte: Flachbild, quelle: Record<string, unknown
 const FAHRZEUGFELDER =
     ['funkrufname', 'staerke', 'ezp', 'status', 'plaetze', 'fuehrerschein'] as const
 
-const PLANUNGSLISTEN = ['rollen', 'fahrerlaubnisse'] as const
+const KATALOGWORTLISTEN = ['status', 'trupp', 'rollen', 'fahrerlaubnisse'] as const
+
+/** Was einmal im Plan stand und heute im Katalog. Der alte Pfad wird beim Lesen umgesetzt. */
+const UMGEZOGEN = ['orte', 'tage', 'personen', 'rollen', 'fahrerlaubnisse']
 
 /**
  * Jede Liste des Plans mit den Feldern, die als Pfad je Eintrag geschrieben werden. Was darunter
@@ -36,10 +39,14 @@ const PLANUNGSLISTEN = ['rollen', 'fahrerlaubnisse'] as const
  * `PLANUNGSEINTRAEGE` in `backend/src/data/dokument.py`.
  */
 const PLANUNGSEINTRAEGE = {
-    tage: ['datum', 'name'],
-    personen: ['name', 'anzahl'],
     programmpunkte: ['name', 'ortId', 'alarmId'],
     laeufe: ['fahrzeugId', 'personId'],
+} as const
+
+/** Die Tage und das Personal stehen im Katalog; die Verfügbarkeiten hängen unter der Person. */
+const KATALOGEINTRAEGE = {
+    tage: ['datum', 'name'],
+    personen: ['name', 'anzahl'],
 } as const
 
 const SCHRITTFELDER =
@@ -67,11 +74,29 @@ function eintragsfelder(basis: string, werte: Flachbild, eintrag: Eintragsdaten,
  * jede Ebene trägt ihre eigene id, damit zwei Leute an verschiedenen Schritten desselben Laufs
  * arbeiten können, ohne sich zu überschreiben.
  */
+/** Tage und Personal — die Verfügbarkeiten und die Wortmengen hängen unter der Person. */
+function katalogeintraege(werte: Flachbild, kataloge: Record<string, unknown>) {
+    for (const [liste, felder] of Object.entries(KATALOGEINTRAEGE)) {
+        const eintraege = (kataloge[liste] ?? []) as Eintragsdaten[]
+        eintraege.forEach((eintrag, stelle) => {
+            const basis = pfad('kataloge', liste, eintrag.id)
+            eintragsfelder(basis, werte, eintrag, felder, stelle)
+            if (liste !== 'personen') return
+            for (const satz of ['rollen', 'fahrerlaubnis'] as const) {
+                for (const wert of (eintrag[satz] ?? []) as string[]) {
+                    werte[pfad(basis, satz, wert)] = true
+                }
+            }
+            ;((eintrag.verfuegbar ?? []) as Eintragsdaten[]).forEach((fenster, platz) => {
+                eintragsfelder(pfad(basis, 'verfuegbar', fenster.id), werte, fenster,
+                               ['von', 'bis'], platz)
+            })
+        })
+    }
+}
+
 function planungsfelder(werte: Flachbild, planung: Planung) {
     werte[pfad('planung', 'aktiv')] = planung.aktiv ?? false
-    for (const liste of PLANUNGSLISTEN) {
-        for (const wert of planung[liste] ?? []) werte[pfad('planung', liste, wert)] = true
-    }
 
     for (const [liste, felder] of Object.entries(PLANUNGSEINTRAEGE)) {
         const eintraege = (planung[liste as keyof Planung] ?? []) as unknown as Eintragsdaten[]
@@ -79,19 +104,7 @@ function planungsfelder(werte: Flachbild, planung: Planung) {
             const basis = pfad('planung', liste, eintrag.id)
             eintragsfelder(basis, werte, eintrag, felder, stelle)
 
-            if (liste === 'orte') {
-                adresse(pfad(basis, 'adresse'), werte, eintrag.adresse as never)
-            } else if (liste === 'personen') {
-                for (const satz of ['rollen', 'fahrerlaubnis'] as const) {
-                    for (const wert of (eintrag[satz] ?? []) as string[]) {
-                        werte[pfad(basis, satz, wert)] = true
-                    }
-                }
-                ;((eintrag.verfuegbar ?? []) as Eintragsdaten[]).forEach((fenster, platz) => {
-                    eintragsfelder(pfad(basis, 'verfuegbar', fenster.id), werte, fenster,
-                                   ['von', 'bis'], platz)
-                })
-            } else if (liste === 'laeufe') {
+            if (liste === 'laeufe') {
                 ;((eintrag.schritte ?? []) as Eintragsdaten[]).forEach((schritt, platz) => {
                     const sbasis = pfad(basis, 'schritte', schritt.id)
                     eintragsfelder(sbasis, werte, schritt, SCHRITTFELDER, platz)
@@ -172,6 +185,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
         werte[pfad(obasis, 'name')] = ort.name ?? ''
         adresse(pfad(obasis, 'adresse'), werte, ort.adresse as never)
     })
+    katalogeintraege(werte, mappe.kataloge as unknown as Record<string, unknown>)
     if (mappe.planung) planungsfelder(werte, mappe.planung)
     return werte
 }
@@ -190,14 +204,26 @@ type Sammlung = Record<string, Record<string, unknown>>
  * heißen hier `_…`, solange sie noch nach id geschlüsselt sind; `rund` macht am Ende sortierte
  * Listen daraus. Spiegelt `_planung_lesen` in `backend/src/data/dokument.py`.
  */
+/** Einen Pfad des Katalogs zurücklegen, soweit er einen Eintrag mit Unterlisten meint. */
+function katalogLesen(kataloge: Record<string, unknown>, rest: string[], wert: unknown) {
+    if (rest.length < 2 || !(rest[0]! in KATALOGEINTRAEGE)) return
+    const sammlung = kataloge[rest[0]!] as Sammlung
+    const eintrag = (sammlung[rest[1]!] ??= {id: rest[1]})
+    const tiefer = rest.slice(2)
+    if (tiefer.length === 1) {
+        eintrag[tiefer[0]!] = wert
+    } else if ((tiefer[0] === 'rollen' || tiefer[0] === 'fahrerlaubnis') && tiefer.length === 2) {
+        ((eintrag[tiefer[0]] ??= []) as string[]).push(tiefer[1]!)
+    } else if (tiefer[0] === 'verfuegbar' && tiefer.length === 3) {
+        const fenster = (eintrag._verfuegbar ??= {}) as Sammlung
+        ;(fenster[tiefer[1]!] ??= {id: tiefer[1]})[tiefer[2]!] = wert
+    }
+}
+
 function planungLesen(planung: Record<string, unknown>, rest: string[], wert: unknown) {
     if (!rest.length) return
     if (rest.length === 1) {
         planung[rest[0]!] = wert
-        return
-    }
-    if ((PLANUNGSLISTEN as readonly string[]).includes(rest[0]!)) {
-        (planung[rest[0]!] as string[]).push(rest[1]!)
         return
     }
     if (!(rest[0]! in PLANUNGSEINTRAEGE)) return
@@ -207,13 +233,6 @@ function planungLesen(planung: Record<string, unknown>, rest: string[], wert: un
     const tiefer = rest.slice(2)
     if (tiefer.length === 1) {
         eintrag[tiefer[0]!] = wert
-    } else if (tiefer[0] === 'adresse' && tiefer.length === 2) {
-        ((eintrag.adresse ??= {}) as Record<string, unknown>)[tiefer[1]!] = wert
-    } else if ((tiefer[0] === 'rollen' || tiefer[0] === 'fahrerlaubnis') && tiefer.length === 2) {
-        ((eintrag[tiefer[0]] ??= []) as string[]).push(tiefer[1]!)
-    } else if (tiefer[0] === 'verfuegbar' && tiefer.length === 3) {
-        const fenster = (eintrag._verfuegbar ??= {}) as Sammlung
-        ;(fenster[tiefer[1]!] ??= {id: tiefer[1]})[tiefer[2]!] = wert
     } else if (tiefer[0] === 'schritte' && tiefer.length >= 3) {
         const schritte = (eintrag._schritte ??= {}) as Sammlung
         const schritt = (schritte[tiefer[1]!] ??= {id: tiefer[1]})
@@ -232,23 +251,25 @@ function planungLesen(planung: Record<string, unknown>, rest: string[], wert: un
 export function rund(werte: Flachbild): unknown {
     const alarme: Record<string, Record<string, never>> = {}
     const planung: Record<string, unknown> = {
-        aktiv: false, rollen: [] as string[], fahrerlaubnisse: [] as string[],
+        aktiv: false,
         ...Object.fromEntries(Object.keys(PLANUNGSEINTRAEGE).map(liste => [liste, {}])),
     }
     const kataloge: Record<string, unknown> = {
         stichwoerter: {} as Record<string, Record<string, unknown>>,
-        status: [] as string[], trupp: [] as string[],
         fahrzeuge: {} as Record<string, Record<string, unknown>>,
         orte: {} as Record<string, Record<string, unknown>>,
         material: {} as Record<string, Record<string, unknown>>,
         arbeitsgruppe: '', wache: {} as Record<string, unknown>, wacheName: '',
+        ...Object.fromEntries(KATALOGWORTLISTEN.map(liste => [liste, [] as string[]])),
+        ...Object.fromEntries(Object.keys(KATALOGEINTRAEGE).map(liste => [liste, {}])),
     }
 
     for (const [schluessel, wert] of Object.entries(werte)) {
         let teile = schluessel.split(TRENNER)
-        // Orte standen einmal im Plan. Der alte Pfad behält seine Bedeutung, sonst verlöre eine
-        // bestehende Sitzung ihre Orte; geschrieben wird er nicht mehr.
-        if (teile[0] === 'planung' && teile[1] === 'orte') {
+        // Orte, Tage, Personal und die Wortlisten standen einmal im Plan. Die alten Pfade
+        // behalten ihre Bedeutung, sonst verlöre eine bestehende Sitzung sie; geschrieben werden
+        // sie nicht mehr.
+        if (teile[0] === 'planung' && UMGEZOGEN.includes(teile[1] ?? '')) {
             teile = ['kataloge', ...teile.slice(1)]
         } else if (teile[0] === 'planung') {
             planungLesen(planung, teile.slice(1), wert)
@@ -262,8 +283,10 @@ export function rund(werte: Flachbild): unknown {
             const liste = teile[1]!
             if (liste === 'wache' && teile.length === 3) {
                 (kataloge['wache'] as Record<string, unknown>)[teile[2]!] = wert
-            } else if (liste === 'status' || liste === 'trupp') {
+            } else if ((KATALOGWORTLISTEN as readonly string[]).includes(liste)) {
                 (kataloge[liste] as string[]).push(teile[2]!)
+            } else if (liste in KATALOGEINTRAEGE) {
+                katalogLesen(kataloge, teile.slice(1), wert)
             } else if ((liste === 'stichwoerter' || liste === 'fahrzeuge' || liste === 'material')
                        && teile.length === 4) {
                 const eintraege = kataloge[liste] as Record<string, Record<string, unknown>>
@@ -333,18 +356,21 @@ export function rund(werte: Flachbild): unknown {
         kataloge['stichwoerter'] as Record<string, Record<string, unknown>>)
     kataloge['material'] = nachText('name')(
         kataloge['material'] as Record<string, Record<string, unknown>>)
-    for (const liste of ['status', 'trupp'] as const) {
+    for (const liste of KATALOGWORTLISTEN) {
         (kataloge[liste] as string[]).sort()
     }
 
     const nachSortierung = (eintraege: Sammlung) => geordnet(eintraege as never as Record<string, Sortierbar>)
     kataloge['orte'] = nachSortierung(kataloge['orte'] as Sammlung)
-    for (const liste of Object.keys(PLANUNGSEINTRAEGE)) {
-        planung[liste] = nachSortierung(planung[liste] as Sammlung)
+    for (const liste of Object.keys(KATALOGEINTRAEGE)) {
+        kataloge[liste] = nachSortierung(kataloge[liste] as Sammlung)
     }
-    for (const person of planung.personen as Record<string, unknown>[]) {
+    for (const person of kataloge.personen as Record<string, unknown>[]) {
         person.verfuegbar = nachSortierung((person._verfuegbar ?? {}) as Sammlung)
         delete person._verfuegbar
+    }
+    for (const liste of Object.keys(PLANUNGSEINTRAEGE)) {
+        planung[liste] = nachSortierung(planung[liste] as Sammlung)
     }
     for (const lauf of planung.laeufe as Record<string, unknown>[]) {
         const schritte = nachSortierung((lauf._schritte ?? {}) as Sammlung) as Record<string, unknown>[]
@@ -357,7 +383,5 @@ export function rund(werte: Flachbild): unknown {
         lauf.schritte = schritte
         delete lauf._schritte
     }
-    for (const liste of PLANUNGSLISTEN) (planung[liste] as string[]).sort()
-
     return {version: 1, alarme: fertig, kataloge, planung}
 }

@@ -55,6 +55,7 @@ export function plandaten(): Plandaten {
         planung: arbeitsmappe.planung,
         fahrzeuge: arbeitsmappe.kataloge.fahrzeuge,
         orte: alleOrte(),
+        personen: arbeitsmappe.kataloge.personen,
         kataloge: {material: arbeitsmappe.kataloge.material},
         punkte: ortsPunkte,
     }
@@ -70,10 +71,10 @@ export function planungUmschalten(an: boolean) {
 
 export function tagAnlegen(): Tag {
     const tag: Tag = {
-        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.planung.tage),
+        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.kataloge.tage),
         datum: new Date().toISOString().slice(0, 10), name: '',
     }
-    arbeitsmappe.planung.tage.push(tag)
+    arbeitsmappe.kataloge.tage.push(tag)
     return tag
 }
 
@@ -88,10 +89,10 @@ export function ortAnlegen(): Ort {
 
 export function personAnlegen(): Person {
     const person: Person = {
-        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.planung.personen),
+        id: crypto.randomUUID(), sortierung: naechste(arbeitsmappe.kataloge.personen),
         name: '', rollen: [], fahrerlaubnis: [], anzahl: 1, verfuegbar: [],
     }
-    arbeitsmappe.planung.personen.push(person)
+    arbeitsmappe.kataloge.personen.push(person)
     return person
 }
 
@@ -100,7 +101,7 @@ export function personAnlegen(): Person {
  * Fenster den ganzen ersten Tag an und wird von dort aus zurechtgezogen.
  */
 export function verfuegbarkeitAnlegen(person: Person): Verfuegbarkeit {
-    const tag = arbeitsmappe.planung.tage[0]?.datum ?? new Date().toISOString().slice(0, 10)
+    const tag = arbeitsmappe.kataloge.tage[0]?.datum ?? new Date().toISOString().slice(0, 10)
     const fenster: Verfuegbarkeit = {
         id: crypto.randomUUID(), sortierung: naechste(person.verfuegbar),
         von: `${tag}T08:00`, bis: `${tag}T18:00`,
@@ -171,7 +172,7 @@ export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30):
 }
 
 function standardBeginn(): string {
-    const tag = arbeitsmappe.planung.tage[0]?.datum ?? new Date().toISOString().slice(0, 10)
+    const tag = arbeitsmappe.kataloge.tage[0]?.datum ?? new Date().toISOString().slice(0, 10)
     return `${tag}T08:00`
 }
 
@@ -286,7 +287,7 @@ export function ortName(ortId: string): string {
 }
 
 export function personName(personId: string): string {
-    return arbeitsmappe.planung.personen.find(person => person.id === personId)?.name ?? ''
+    return arbeitsmappe.kataloge.personen.find(person => person.id === personId)?.name ?? ''
 }
 
 /** Wie viele Köpfe an Bord dürfen. Leer heißt: unbekannt, dann wird nicht gezählt. */

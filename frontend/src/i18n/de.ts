@@ -238,7 +238,7 @@ export default {
     ablauf: {
         titel: 'Ablauf',
         beschreibung: 'Der Tag als Kette: jeder Schritt fängt an, wo der vorige aufgehört hat.',
-        stammdaten: 'Stammdaten',
+        stammdaten: 'Kataloge',
         ersteOrte: 'Lege zuerst unter Stammdaten ein paar Orte an — ohne sie hat ein Schritt kein Ziel.',
         einplanen: 'Einplanen',
         einplanenHinweis: 'Fahrzeuge kommen aus dem Katalog, Personen aus den Stammdaten. Wer in keinem Fahrzeug sitzt, braucht eine eigene Kette, damit ihn jemand abholen kann.',

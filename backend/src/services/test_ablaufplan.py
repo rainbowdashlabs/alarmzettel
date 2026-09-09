@@ -19,15 +19,15 @@ MAPPE = {
                  {"id": "o-kita", "name": "Kindergarten",
                   "adresse": {"strasse": "Archenholdstraße", "hnr": "21", "plz": "10315",
                               "ort": "Berlin"}}],
-    },
-    "planung": {
-        "aktiv": True,
         "tage": [{"id": "t1", "datum": "2026-09-19", "name": "Übungstag"}],
         "personen": [
             {"id": "p-alex", "name": "Alex", "anzahl": 1, "rollen": ["Ausbilder"]},
             {"id": "p-maria", "name": "Maria", "anzahl": 1},
             {"id": "p-mimen", "name": "Mimen", "anzahl": 4, "rollen": ["Mime"]},
         ],
+    },
+    "planung": {
+        "aktiv": True,
         "programmpunkte": [{"id": "g-brand", "name": "Brand im Kindergarten", "ortId": "o-kita"},
                            {"id": "g-leer", "name": "Rea", "ortId": "o-nord"}],
         "laeufe": [

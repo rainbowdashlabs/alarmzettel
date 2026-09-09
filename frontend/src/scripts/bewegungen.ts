@@ -124,7 +124,7 @@ function fahrzeugName(daten: Plandaten, fahrzeugId: string): string {
 }
 
 function personName(daten: Plandaten, personId: string): string {
-    return daten.planung.personen.find(person => person.id === personId)?.name ?? ''
+    return daten.personen.find(person => person.id === personId)?.name ?? ''
 }
 
 function laufName(daten: Plandaten, lauf: Lauf): string {
@@ -153,7 +153,7 @@ function fahrzeugspuren(daten: Plandaten): Spur[] {
  * widersprechen.
  */
 function personenspuren(daten: Plandaten): Spur[] {
-    return daten.planung.personen.map(person => ({
+    return daten.personen.map(person => ({
         id: person.id, name: person.name,
         schritte: personenplan(daten, person.id).map(eintrag => ({
             schritt: eintrag.schritt,

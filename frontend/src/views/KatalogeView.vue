@@ -4,18 +4,23 @@ import AdresseFeld from '../components/base/AdresseFeld.vue'
 import TextFeld from '../components/base/TextFeld.vue'
 import {t} from '../i18n'
 import {arbeitsmappe} from '../store/arbeitsmappe'
-import {ortAnlegen} from '../store/planung'
+import {
+  entfernen as ausListe, ortAnlegen, personAnlegen, tagAnlegen, umschalten,
+  verfuegbarkeitAnlegen,
+} from '../store/planung'
 import {truppText} from '../scripts/staerke'
 import type {
   Fahrzeugvorlage, Kataloge, Materialvorlage, Stichwortvorlage,
 } from '../interfaces/Alarm'
 import type {Ort} from '../interfaces/Planung'
 
-type Wortliste = Extract<keyof Kataloge, 'status' | 'trupp'>
+type Wortliste = Extract<keyof Kataloge, 'status' | 'trupp' | 'rollen' | 'fahrerlaubnisse'>
 
 const listen: { schluessel: Wortliste, titel: string }[] = [
   {schluessel: 'status', titel: t('kataloge.status')},
   {schluessel: 'trupp', titel: t('kataloge.trupp')},
+  {schluessel: 'rollen', titel: t('planung.rollen')},
+  {schluessel: 'fahrerlaubnisse', titel: t('planung.fahrerlaubnisse')},
 ]
 
 /**
@@ -255,7 +260,8 @@ function truppVorschau(staerke: string): string {
             <TextFeld v-if="arbeitsmappe.planung.aktiv" v-model="fahrzeug.plaetze"
                       :label="t('planung.plaetze')"/>
             <TextFeld v-if="arbeitsmappe.planung.aktiv" v-model="fahrzeug.fuehrerschein"
-                      :label="t('planung.fuehrerschein')"/>
+                      :label="t('planung.fuehrerschein')"
+                      :vorschlaege="arbeitsmappe.kataloge.fahrerlaubnisse"/>
           </div>
           <button type="button" class="knopf knopf-klein knopf-gefahr"
                   :title="t('kataloge.eintragEntfernen')"
@@ -330,6 +336,119 @@ function truppVorschau(staerke: string): string {
       </div>
     </section>
 
+    <section class="abschnitt">
+      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <h2 class="abschnitt-titel mb-0">{{ t('planung.tage') }}</h2>
+        <button type="button" class="knopf knopf-klein" @click="tagAnlegen">
+          <font-awesome-icon icon="fa-solid fa-plus"/>
+          {{ t('planung.tagNeu') }}
+        </button>
+      </div>
+      <p v-if="!arbeitsmappe.kataloge.tage.length" class="text-muted text-sm">{{ t('planung.keineTage') }}</p>
+
+      <div class="grid gap-2">
+        <div v-for="tag in arbeitsmappe.kataloge.tage" :key="tag.id"
+             class="grid md:grid-cols-[10rem_1fr_auto] gap-2 items-end">
+          <div>
+            <label class="feld-label">{{ t('planung.datum') }}</label>
+            <input v-model="tag.datum" type="date" class="field"/>
+          </div>
+          <TextFeld v-model="tag.name" :label="t('planung.tagName')"
+                    :platzhalter="t('planung.tagPlatzhalter')"/>
+          <button type="button" class="knopf knopf-klein knopf-gefahr"
+                  @click="ausListe(arbeitsmappe.kataloge.tage, tag)">
+            <font-awesome-icon icon="fa-solid fa-xmark"/>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="abschnitt">
+      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <h2 class="abschnitt-titel mb-0">{{ t('planung.personen') }}</h2>
+        <button type="button" class="knopf knopf-klein" @click="personAnlegen">
+          <font-awesome-icon icon="fa-solid fa-plus"/>
+          {{ t('planung.personNeu') }}
+        </button>
+      </div>
+      <p class="text-muted text-[13px] mb-3">{{ t('planung.personenHinweis') }}</p>
+      <p v-if="!arbeitsmappe.kataloge.personen.length" class="text-muted text-sm">
+        {{ t('planung.keinePersonen') }}
+      </p>
+
+      <div class="grid gap-4">
+        <div v-for="person in arbeitsmappe.kataloge.personen" :key="person.id"
+             class="border border-rule rounded p-3 bg-page grid gap-3">
+          <div class="grid md:grid-cols-[1fr_6rem_auto] gap-3 items-end">
+            <TextFeld v-model="person.name" :label="t('planung.personName')"/>
+            <div>
+              <label class="feld-label">{{ t('planung.anzahl') }}</label>
+              <input v-model.number="person.anzahl" type="number" min="1" class="field"/>
+            </div>
+            <button type="button" class="knopf knopf-klein knopf-gefahr"
+                    @click="ausListe(arbeitsmappe.kataloge.personen, person)">
+              <font-awesome-icon icon="fa-solid fa-trash"/>
+            </button>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-3">
+            <div>
+              <span class="feld-label">{{ t('planung.rollen') }}</span>
+              <div class="flex flex-wrap gap-2">
+                <button v-for="wert in arbeitsmappe.kataloge.rollen" :key="wert" type="button"
+                        class="knopf knopf-klein"
+                        :class="person.rollen.includes(wert) ? 'knopf-primaer' : ''"
+                        @click="umschalten(person.rollen, wert)">
+                  {{ wert }}
+                </button>
+              </div>
+            </div>
+            <div>
+              <span class="feld-label">{{ t('planung.fahrerlaubnis') }}</span>
+              <div class="flex flex-wrap gap-2">
+                <button v-for="wert in arbeitsmappe.kataloge.fahrerlaubnisse" :key="wert" type="button"
+                        class="knopf knopf-klein"
+                        :class="person.fahrerlaubnis.includes(wert) ? 'knopf-primaer' : ''"
+                        @click="umschalten(person.fahrerlaubnis, wert)">
+                  {{ wert }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-3 mb-2 flex-wrap">
+              <span class="feld-label mb-0">{{ t('planung.verfuegbar') }}</span>
+              <button type="button" class="knopf knopf-klein"
+                      @click="verfuegbarkeitAnlegen(person)">
+                <font-awesome-icon icon="fa-solid fa-plus"/>
+                {{ t('planung.fensterNeu') }}
+              </button>
+            </div>
+            <p v-if="!person.verfuegbar.length" class="text-muted text-[13px]">
+              {{ t('planung.immerDa') }}
+            </p>
+            <div class="grid gap-2">
+              <div v-for="fenster in person.verfuegbar" :key="fenster.id"
+                   class="grid md:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                <div>
+                  <label class="feld-label">{{ t('planung.von') }}</label>
+                  <input v-model="fenster.von" type="datetime-local" class="field"/>
+                </div>
+                <div>
+                  <label class="feld-label">{{ t('planung.bis') }}</label>
+                  <input v-model="fenster.bis" type="datetime-local" class="field"/>
+                </div>
+                <button type="button" class="knopf knopf-klein knopf-gefahr"
+                        @click="ausListe(person.verfuegbar, fenster)">
+                  <font-awesome-icon icon="fa-solid fa-xmark"/>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
     <div class="grid md:grid-cols-2 gap-4">
       <section v-for="liste in listen" :key="liste.schluessel" class="abschnitt">
         <h2 class="abschnitt-titel">{{ liste.titel }}</h2>

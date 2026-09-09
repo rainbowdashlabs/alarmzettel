@@ -35,7 +35,8 @@ class Plan:
     def __init__(self, arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> None:
         self.planung: Planung = arbeitsmappe.planung
         self._orte = {ort.id: ort.name for ort in arbeitsmappe.kataloge.alle_orte()}
-        self._personen = {person.id: person for person in self.planung.personen}
+        self.personen = arbeitsmappe.kataloge.personen
+        self._personen = {person.id: person for person in self.personen}
         self._lagen = {punkt.id: punkt.name for punkt in self.planung.programmpunkte}
         self._fahrzeuge = {
             fahrzeug.id: fahrzeug.funkrufname for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
@@ -243,7 +244,7 @@ def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
     """
     plan = Plan(arbeitsmappe, punkte)
     return {
-        "personen": [_personenblatt(plan, person) for person in plan.planung.personen],
+        "personen": [_personenblatt(plan, person) for person in plan.personen],
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe
                       if lauf.fahrzeugId and lauf.schritte],
         "gesamt": _gesamtplan(plan),

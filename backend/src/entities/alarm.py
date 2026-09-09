@@ -3,11 +3,12 @@ from typing import Annotated, Any, Literal, Union
 from pydantic import BaseModel, Field, model_validator
 
 from entities.basis import Adresse, Eintrag, kennung as _kennung
-from entities.planung import DIENSTSTELLE, Ort, Planung
+from entities.planung import DIENSTSTELLE, Ort, Person, Planung, Tag
 
 __all__ = ["Adresse", "Eintrag", "Karte", "Fahrzeug", "Einsatzmittelgruppe", "HinweisText",
            "HinweisCode", "Hinweis", "Alarm", "Fahrzeugvorlage", "Stichwortvorlage", "Kataloge",
-           "Arbeitsmappe", "Planung", "Ort", "Materialvorlage", "DIENSTSTELLE"]
+           "Arbeitsmappe", "Planung", "Ort", "Person", "Tag", "Materialvorlage",
+           "DIENSTSTELLE"]
 
 
 class Karte(BaseModel):
@@ -145,6 +146,15 @@ class Kataloge(BaseModel):
     orte: list[Ort] = []
     """Was die Wache an Material führt. Neu Geschriebenes kommt von selbst dazu."""
     material: list[Materialvorlage] = []
+    """
+    Die Tage der Veranstaltung, das Personal und die Wörter, aus denen sich seine Rollen und
+    Fahrerlaubnisklassen zusammensetzen. Alles, was die Wache dauerhaft führt, steht hier —
+    damit es an einem Ort steht und nicht an zweien.
+    """
+    tage: list[Tag] = []
+    personen: list[Person] = []
+    rollen: list[str] = []
+    fahrerlaubnisse: list[str] = []
     """One fixed value for the whole working set; every new Alarm starts with it."""
     arbeitsgruppe: str = ""
     """The station the sheets are written for; the Polar-Koordinaten are measured from it."""

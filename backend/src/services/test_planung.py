@@ -2,8 +2,7 @@ import unittest
 
 from data.dokument import TRENNER, flach, rund
 
-PLAN = {
-    "aktiv": True,
+STAMM = {
     "rollen": ["Ausbilder", "Mime"],
     "fahrerlaubnisse": ["B", "C"],
     "tage": [{"id": "t1", "sortierung": 0.0, "datum": "2026-09-19", "name": "Übungstag"}],
@@ -11,6 +10,11 @@ PLAN = {
                   "rollen": ["Ausbilder"], "fahrerlaubnis": ["B", "C"],
                   "verfuegbar": [{"id": "v1", "sortierung": 0.0,
                                   "von": "2026-09-19T10:00", "bis": "2026-09-19T15:00"}]}],
+}
+"""Was die Wache dauerhaft führt, steht im Katalog — nicht im Plan des einzelnen Tages."""
+
+PLAN = {
+    "aktiv": True,
     "programmpunkte": [{"id": "g1", "sortierung": 0.0, "name": "Brand im Kindergarten",
                         "ortId": "o1", "alarmId": "a1"}],
     "laeufe": [{"id": "l1", "sortierung": 0.0, "fahrzeugId": "f1", "personId": "",
@@ -34,7 +38,8 @@ ORTE = [{"id": "o1", "sortierung": 0.0, "name": "Wache Nord",
          "adresse": {"strasse": "Junker-Jörg-Straße", "hnr": "36", "objekt": "",
                      "plz": "10318", "ort": "Karlshorst"}}]
 
-MAPPE = {"version": 1, "alarme": [], "kataloge": {"orte": ORTE}, "planung": PLAN}
+MAPPE = {"version": 1, "alarme": [],
+         "kataloge": {"orte": ORTE, **STAMM}, "planung": PLAN}
 
 
 class VorgabeTest(unittest.TestCase):
@@ -98,10 +103,15 @@ class PlanungRundlaufTest(unittest.TestCase):
         self.assertTrue(schritte[0]["besatzung"][0]["faehrt"])
         self.assertFalse(schritte[1]["besatzung"][0]["faehrt"])
 
-    def test_ein_ort_traegt_eine_ganze_adresse(self):
-        """Orte stehen im Katalog, nicht im Plan — die Schritte zeigen nur auf ihre id."""
+    def test_die_stammdaten_stehen_im_katalog(self):
+        """
+        Orte, Tage, Personal, Rollen und Klassen gehören der Wache und überdauern den einzelnen
+        Übungstag — die Ketten zeigen nur auf ihre Kennungen.
+        """
         kataloge = rund(flach(MAPPE))["kataloge"]
         self.assertEqual(ORTE, kataloge["orte"])
+        for name, erwartet in STAMM.items():
+            self.assertEqual(erwartet, kataloge[name], name)
 
     def test_ohne_plan_kommt_ein_leerer_zurueck(self):
         leer = rund(flach({"version": 1, "alarme": [], "kataloge": {}}))["planung"]

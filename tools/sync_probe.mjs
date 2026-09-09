@@ -296,7 +296,7 @@ pruefe('nach dem Abgleich steht sie in Annas Arbeitsmappe',
 
 // Eine Sitzung von vor dem Umzug trägt ihre Orte unter `planung|orte|…`. Sie entsteht nur über
 // die Pfade selbst: über das Modell ginge sie schon beim Anlegen in den Katalog.
-console.log('\nOrte einer älteren Sitzung überleben den Umzug in den Katalog')
+console.log('\nStammdaten einer älteren Sitzung überleben den Umzug in den Katalog')
 {
     const alte = await (await fetch(`${basis}/api/sitzung`, {
         method: 'POST', headers: {'content-type': 'application/json'},
@@ -340,11 +340,11 @@ console.log('\nOrte einer älteren Sitzung überleben den Umzug in den Katalog')
     pruefe('und der Abgleich begräbt sie nicht',
         danach.kataloge.orte.map((ort) => ort.name).join() === 'Kindergarten',
         JSON.stringify(danach.kataloge.orte))
-    pruefe('der übrige Plan steht auch noch',
-        danach.planung.aktiv === true && danach.planung.tage.length === 1 &&
-        danach.planung.personen.length === 1 && danach.planung.laeufe.length === 1,
-        JSON.stringify({aktiv: danach.planung.aktiv, tage: danach.planung.tage.length,
-                        personen: danach.planung.personen.length,
+    pruefe('Tage und Personal stehen jetzt im Katalog',
+        danach.planung.aktiv === true && danach.kataloge.tage.length === 1 &&
+        danach.kataloge.personen.length === 1 && danach.planung.laeufe.length === 1,
+        JSON.stringify({aktiv: danach.planung.aktiv, tage: danach.kataloge.tage.length,
+                        personen: danach.kataloge.personen.length,
                         laeufe: danach.planung.laeufe.length}))
     pruefe('samt seinem Schritt am umgezogenen Ort',
         danach.planung.laeufe[0]?.schritte[0]?.ortId === 'o1',

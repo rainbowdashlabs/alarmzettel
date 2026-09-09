@@ -46,7 +46,7 @@ function meldung(befund: Befund): string {
 /** Wie viele Köpfe an Bord sind — „Mimen (4)“ zählt vier. */
 function koepfe(schritt: Schritt): number {
   return schritt.besatzung.reduce((summe, sitzt) => {
-    const person = arbeitsmappe.planung.personen.find(p => p.id === sitzt.personId)
+    const person = arbeitsmappe.kataloge.personen.find(p => p.id === sitzt.personId)
     return summe + (person?.anzahl || 1)
   }, 0)
 }
@@ -229,7 +229,7 @@ function lageAnlegen(schritt: Schritt) {
           </span>
           <select class="field w-auto" @change="besatzungHinzufuegen(schritt, ($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).value = ''">
             <option value="">{{ t('ablauf.personDazu') }}</option>
-            <option v-for="person in arbeitsmappe.planung.personen" :key="person.id"
+            <option v-for="person in arbeitsmappe.kataloge.personen" :key="person.id"
                     :value="person.id">{{ person.name || t('ablauf.ohneName') }}</option>
           </select>
         </div>

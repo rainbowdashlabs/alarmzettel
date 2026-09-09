@@ -133,6 +133,15 @@ export interface Kataloge {
     orte: Ort[]
     /** Was die Wache an Material führt. Neu Geschriebenes kommt von selbst dazu. */
     material: Materialvorlage[]
+    /**
+     * Die Tage der Veranstaltung, das Personal und die Wörter, aus denen sich seine Rollen und
+     * Fahrerlaubnisklassen zusammensetzen. Alles, was die Wache dauerhaft führt, steht hier —
+     * damit es an einem Ort steht und nicht an zweien.
+     */
+    tage: Tag[]
+    personen: Person[]
+    rollen: string[]
+    fahrerlaubnisse: string[]
     /** One fixed value for the whole working set; every new Alarm starts with it. */
     arbeitsgruppe: string
     /** The station the sheets are written for. The Polar-Koordinaten are measured from it. */
@@ -150,7 +159,9 @@ export interface Arbeitsmappe {
 }
 
 import {aPlatzKennung, festnetznummer, mobilnummer, zufallsname} from '../scripts/generator'
-import {leerePlanung, type Ort, type Planung} from './Planung'
+import {
+    FAHRERLAUBNISSE, ROLLEN, leerePlanung, type Ort, type Person, type Planung, type Tag,
+} from './Planung'
 
 export const ARBEITSMAPPE_VERSION = 1
 
@@ -240,7 +251,8 @@ export function leereArbeitsmappe(): Arbeitsmappe {
         planung: leerePlanung(),
         kataloge: {
             stichwoerter: stichwortvorlagen(), fahrzeuge: [], status: [], trupp: [], orte: [],
-            material: [],
+            material: [], tage: [], personen: [],
+            rollen: [...ROLLEN], fahrerlaubnisse: [...FAHRERLAUBNISSE],
             arbeitsgruppe: '', wache: leereAdresse(), wacheName: '',
         },
     }

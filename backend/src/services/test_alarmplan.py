@@ -25,11 +25,11 @@ MAPPE = {
              "adresse": {"strasse": "Archenholdstraße", "hnr": "21", "plz": "10315",
                          "ort": "Berlin"}},
         ],
+        "personen": [{"id": "p-alex", "name": "Alex", "anzahl": 1},
+                     {"id": "p-mimen", "name": "Mimen", "anzahl": 4}],
     },
     "planung": {
         "aktiv": True,
-        "personen": [{"id": "p-alex", "name": "Alex", "anzahl": 1},
-                     {"id": "p-mimen", "name": "Mimen", "anzahl": 4}],
         "programmpunkte": [{"id": "g-brand", "name": "Brand im Kindergarten",
                             "ortId": "o-kita", "alarmId": "a-brand"}],
         "laeufe": [

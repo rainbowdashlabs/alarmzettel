@@ -59,7 +59,7 @@ def _lage_zu(arbeitsmappe: Arbeitsmappe, alarm: Alarm) -> Programmpunkt | None:
 
 def _beteiligte(arbeitsmappe: Arbeitsmappe, punkt: Programmpunkt) -> list[dict]:
     """Die Fahrzeuge, die zu dieser Lage fahren, mit ihrer tatsächlichen Stärke und Zeit."""
-    koepfe = {person.id: person.anzahl for person in arbeitsmappe.planung.personen}
+    koepfe = {person.id: person.anzahl for person in arbeitsmappe.kataloge.personen}
     vorlagen = {fahrzeug.id: fahrzeug for fahrzeug in arbeitsmappe.kataloge.fahrzeuge}
     beteiligte = []
     for lauf in arbeitsmappe.planung.laeufe:

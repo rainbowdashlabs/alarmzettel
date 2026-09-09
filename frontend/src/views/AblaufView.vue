@@ -77,7 +77,7 @@ async function drucken() {
           <font-awesome-icon icon="fa-solid fa-file-pdf"/>
           {{ t('ablauf.drucken') }}
         </button>
-        <RouterLink to="/planung" class="knopf knopf-klein">{{ t('ablauf.stammdaten') }}</RouterLink>
+        <RouterLink to="/kataloge" class="knopf knopf-klein">{{ t('ablauf.stammdaten') }}</RouterLink>
       </div>
     </div>
 
@@ -110,7 +110,7 @@ async function drucken() {
           <font-awesome-icon icon="fa-solid fa-plus"/>
           {{ fahrzeug.funkrufname || t('ablauf.ohneName') }}
         </button>
-        <button v-for="person in arbeitsmappe.planung.personen.filter(p => offen({personId: p.id}))"
+        <button v-for="person in arbeitsmappe.kataloge.personen.filter(p => offen({personId: p.id}))"
                 :key="person.id" type="button" class="knopf knopf-klein"
                 @click="einplanen({personId: person.id})">
           <font-awesome-icon icon="fa-solid fa-plus"/>

@@ -9,8 +9,8 @@ const routes: RouteRecordRaw[] = [
         meta: {titleKey: 'routes.alarm'}},
     {path: '/ablauf', name: 'Ablauf', component: () => import('../views/AblaufView.vue'),
         meta: {titleKey: 'routes.ablauf'}},
-    {path: '/planung', name: 'Planung', component: () => import('../views/PlanungView.vue'),
-        meta: {titleKey: 'routes.planung'}},
+    // Die Stammdaten stehen im Katalog; alte Links sollen weiter irgendwo landen.
+    {path: '/planung', redirect: '/kataloge'},
     {path: '/sitzung/:token', name: 'Sitzung', component: () => import('../views/FreigabeView.vue'),
         meta: {titleKey: 'routes.freigabe'}},
     // Links, die schon herumgereicht wurden, zeigen auf den alten Pfad und sollen weiter gehen.
