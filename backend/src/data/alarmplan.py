@@ -39,8 +39,13 @@ def _anfahrt(lauf: Lauf, stelle: int) -> str:
 
 
 def _erster_schritt(lauf: Lauf, punkt: Programmpunkt) -> tuple[int, Schritt] | None:
+    """
+    Der Schritt, mit dem dieses Fahrzeug an der Lage ankommt — sofern es überhaupt zu ihr
+    gehört. Ein Fahrzeug, das nur Mimen hinfährt, steht am selben Ort und bleibt trotzdem außen
+    vor: es ist nicht alarmiert.
+    """
     for stelle, schritt in enumerate(lauf.schritte):
-        if schritt.programmpunktId == punkt.id:
+        if schritt.programmpunktId == punkt.id and schritt.aufgebot:
             return stelle, schritt
     return None
 

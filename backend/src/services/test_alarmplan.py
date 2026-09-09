@@ -101,6 +101,21 @@ class BlaetterTest(unittest.TestCase):
         self.assertEqual("12:00", frei.einsatzZeit)
         self.assertEqual([], frei.einsatzmittel)
 
+    def test_wer_nur_hinfaehrt_gehoert_nicht_zum_aufgebot(self):
+        """Das MTF bringt die Mimen an die Lage und bleibt trotzdem unalarmiert."""
+        laeufe = []
+        for lauf in MAPPE["planung"]["laeufe"]:
+            if lauf["fahrzeugId"] == "f-mtf":
+                schritte = [schritt | {"aufgebot": False} for schritt in lauf["schritte"]]
+                laeufe.append(lauf | {"schritte": schritte})
+            else:
+                laeufe.append(lauf)
+        alarme = self.alarme(planung=MAPPE["planung"] | {"laeufe": laeufe})
+        self.assertEqual(["a-brand", "a-frei"], [alarm.id for alarm in alarme])
+        self.assertEqual(["LHF 6501.3"],
+                         [fahrzeug.funkrufname
+                          for fahrzeug in alarme[0].einsatzmittel[0].fahrzeuge])
+
     def test_ohne_fahrzeug_bleibt_das_getippte_aufgebot(self):
         """Sonst druckt der Zwischenstand „Lage da, Ketten noch nicht“ an niemanden adressiert."""
         ohne = {**MAPPE["planung"], "laeufe": []}

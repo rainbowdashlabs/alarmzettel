@@ -56,20 +56,22 @@ for (const person of mappe.planung.personen ?? []) {
     }
 }
 
-for (const tag of bewegungstage(daten)) {
-    const bild = bewegungsbild(daten, tag)
-    console.log(['FENSTER', bild.datum, bild.von, bild.bis].join(' | '))
-    for (const band of bild.baender) {
-        console.log(['BAND', bild.datum, band.name, band.reihen].join(' | '))
-    }
-    for (const balken of bild.balken) {
-        console.log(['BALKEN', bild.datum, balken.schrittId, balken.ortId, balken.reihe,
-                     balken.von, balken.bis, balken.name, balken.besatzung.join(','),
-                     balken.lage].join(' | '))
-    }
-    for (const linie of bild.linien) {
-        console.log(['LINIE', bild.datum, linie.schrittId, linie.vonOrtId, linie.vonReihe,
-                     linie.nachOrtId, linie.nachReihe, linie.von, linie.bis, linie.mittel,
-                     linie.name].join(' | '))
+for (const modus of ['fahrzeuge', 'personen']) {
+    for (const tag of bewegungstage(daten)) {
+        const bild = bewegungsbild(daten, tag, modus)
+        console.log(['FENSTER', bild.modus, bild.datum, bild.von, bild.bis].join(' | '))
+        for (const band of bild.baender) {
+            console.log(['BAND', bild.modus, bild.datum, band.name, band.reihen].join(' | '))
+        }
+        for (const balken of bild.balken) {
+            console.log(['BALKEN', bild.modus, bild.datum, balken.schrittId, balken.ortId,
+                         balken.reihe, balken.von, balken.bis, balken.name,
+                         balken.begleitung.join(','), balken.lage].join(' | '))
+        }
+        for (const linie of bild.linien) {
+            console.log(['LINIE', bild.modus, bild.datum, linie.schrittId, linie.vonOrtId,
+                         linie.vonReihe, linie.nachOrtId, linie.nachReihe, linie.von, linie.bis,
+                         linie.mittel, linie.name, linie.begleitung.join(',')].join(' | '))
+        }
     }
 }

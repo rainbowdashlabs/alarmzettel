@@ -159,6 +159,11 @@ function lageAnlegen(schritt: Schritt) {
 
       <div v-if="schritt.programmpunktId && programmpunkt(schritt.programmpunktId)"
            class="grid md:grid-cols-2 gap-2">
+        <label v-if="lauf.fahrzeugId" class="flex items-center gap-2 text-sm md:col-span-2">
+          <input v-model="schritt.aufgebot" type="checkbox"/>
+          {{ t('ablauf.imAufgebot') }}
+          <span class="text-muted text-[13px]">{{ t('ablauf.imAufgebotHinweis') }}</span>
+        </label>
         <div>
           <label class="feld-label">{{ t('ablauf.lageName') }}</label>
           <input v-model="programmpunkt(schritt.programmpunktId)!.name" type="text" class="field"/>

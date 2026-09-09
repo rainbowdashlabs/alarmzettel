@@ -140,7 +140,7 @@ export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30):
         art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss',
         von: beginn, bis: verschieben(beginn, minuten),
         ortId: vorher?.ortId ?? arbeitsmappe.planung.orte[0]?.id ?? '',
-        programmpunktId: '',
+        programmpunktId: '', aufgebot: true,
         besatzung: (vorher?.besatzung ?? []).map(sitzt => ({
             ...sitzt, id: crypto.randomUUID(),
         })),

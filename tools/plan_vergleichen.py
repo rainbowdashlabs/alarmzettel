@@ -35,18 +35,22 @@ for blatt in daten["personen"]:
         ]))
 
 for bild in daten["bewegung"]:
-    print(" | ".join(["FENSTER", bild["datum"], str(bild["von"]), str(bild["bis"])]))
+    print(" | ".join(["FENSTER", bild["modus"], bild["datum"],
+                      str(bild["von"]), str(bild["bis"])]))
     for band in bild["baender"]:
-        print(" | ".join(["BAND", bild["datum"], band["name"], str(band["reihen"])]))
+        print(" | ".join(["BAND", bild["modus"], bild["datum"], band["name"],
+                          str(band["reihen"])]))
     for balken in bild["balken"]:
         print(" | ".join([
-            "BALKEN", bild["datum"], balken["schrittId"], balken["ortId"], str(balken["reihe"]),
+            "BALKEN", bild["modus"], bild["datum"], balken["schrittId"], balken["ortId"],
+            str(balken["reihe"]),
             str(balken["von"]), str(balken["bis"]), balken["name"],
-            ",".join(balken["besatzung"]), balken["lage"],
+            ",".join(balken["begleitung"]), balken["lage"],
         ]))
     for linie in bild["linien"]:
         print(" | ".join([
-            "LINIE", bild["datum"], linie["schrittId"], linie["vonOrtId"], str(linie["vonReihe"]),
+            "LINIE", bild["modus"], bild["datum"], linie["schrittId"], linie["vonOrtId"],
+            str(linie["vonReihe"]),
             linie["nachOrtId"], str(linie["nachReihe"]), str(linie["von"]), str(linie["bis"]),
-            linie["mittel"], linie["name"],
+            linie["mittel"], linie["name"], ",".join(linie["begleitung"]),
         ]))

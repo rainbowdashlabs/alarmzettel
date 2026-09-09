@@ -119,7 +119,8 @@
   }
   let mitte = (ortId, reihe) => oben.at(ortId) + reihe * REIHE + REIHE / 2
 
-  kopf("Bewegungsbild", bild.datum)
+  kopf("Bewegungsbild", bild.datum + " · " +
+       (if bild.modus == "personen" { "je Person" } else { "je Fahrzeug" }))
   block(width: SPALTE + FLAECHE, height: hoehe, {
     for minute in range(bild.von, bild.bis + 1, step: 60) {
       place(dx: x(minute), dy: KOPF, line(end: (0mm, hoehe - KOPF), stroke: 0.4pt + luma(200)))
@@ -150,7 +151,7 @@
     for balken in bild.balken {
       let x1 = x(balken.von)
       let breite = calc.max(x(balken.bis) - x1, 2mm)
-      let wer = balken.besatzung.filter(name => name != "")
+      let wer = balken.begleitung.filter(name => name != "")
       let text_ = balken.name + if wer.len() > 0 { " · " + wer.join(", ") } else { "" }
       place(dx: x1, dy: mitte(balken.ortId, balken.reihe) - REIHE / 2 + 0.8mm,
             rect(width: breite, height: REIHE - 1.6mm, radius: 1mm,

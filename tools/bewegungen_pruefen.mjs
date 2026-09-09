@@ -149,6 +149,33 @@ fall('Jeder Tag bekommt sein eigenes Bild', () => {
     ]
 })
 
+fall('Dasselbe je Person erzählt: das Fahrzeug wird zur Begleitung', () => {
+    const kette = lauf({fahrzeugId: 'f-lhf'}, [
+        schritt('aufenthalt', '08:00', '08:30', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('fahrt', '08:30', '08:45', 'o-sued', {besatzung: [sitzt('p-alex', true)]}),
+        schritt('aufenthalt', '08:45', '10:00', 'o-sued', {besatzung: [sitzt('p-alex', true)]}),
+    ])
+    const eigene = lauf({personId: 'p-mimen'}, [
+        schritt('aufenthalt', '07:30', '10:00', 'o-sued'),
+    ])
+    const gesetzt = daten({
+        personen: [person('p-alex', 'Alex'), person('p-mimen', 'Mimen', {anzahl: 4})],
+        fahrzeuge: [fahrzeug('f-lhf', 'LHF')], laeufe: [kette, eigene],
+    })
+    const bild = bewegungsbild(gesetzt, TAG, 'personen')
+    const alex = bild.balken.filter(balken => balken.name === 'Alex')
+    return [
+        ['Alex ist eine eigene Spur', alex.length, 2],
+        ['und fährt im LHF', alex[1].begleitung.join(','), 'LHF'],
+        ['die Mimen stehen für sich', bild.balken.find(b => b.name === 'Mimen').begleitung.length, 0],
+        ['seine Fahrt zieht von Band zu Band',
+            bild.linien.filter(l => l.name === 'Alex').length, 1],
+        ['und im Fahrzeugbild ist es umgekehrt: das LHF trägt seine Besatzung',
+            bewegungsbild(gesetzt, TAG).balken.find(b => b.name === 'LHF').begleitung.join(','),
+            'Alex'],
+    ]
+})
+
 fall('Der Stand zu einem Zeitpunkt: stehend, unterwegs, gar nicht da', () => {
     const kette = lauf({fahrzeugId: 'f-lhf'}, [
         schritt('aufenthalt', '08:00', '08:30', 'o-nord', {besatzung: [sitzt('p-alex', true)]}),

@@ -54,13 +54,21 @@ PLANUNGSEINTRAEGE = {
     "laeufe": ("fahrzeugId", "personId"),
 }
 
-SCHRITTFELDER = ("art", "mittel", "von", "bis", "ortId", "programmpunktId")
+SCHRITTFELDER = ("art", "mittel", "von", "bis", "ortId", "programmpunktId", "aufgebot")
+
+VORGABEN: dict[str, Any] = {"aufgebot": True, "faehrt": False}
+"""
+Was ein Feld bedeutet, das eine ältere Arbeitsmappe noch gar nicht kannte. Für Text ist das der
+leere String; ein Wahrheitswert braucht seine eigene Vorgabe, sonst käme ein leerer String zurück,
+den das Modell nicht als Ja oder Nein lesen kann.
+"""
 
 
 def _eintragsfelder(basis: str, eintrag: dict, felder, stelle: int) -> dict[str, Any]:
     werte: dict[str, Any] = {_pfad(basis, "sortierung"): eintrag.get("sortierung", float(stelle))}
     for feld in felder:
-        werte[_pfad(basis, feld)] = eintrag.get(feld, "")
+        wert = eintrag.get(feld)
+        werte[_pfad(basis, feld)] = VORGABEN.get(feld, "") if wert is None else wert
     return werte
 
 

@@ -2,19 +2,25 @@
 Das Bewegungsbild für den Druck.
 
 Jeder Ort ist ein waagerechtes Band, die Zeit läuft nach rechts, ein Aufenthalt ist ein Balken
-darin und eine Fahrt eine Linie von einem Band ins andere. Die Anordnung — welche Bänder, wie
-viele Reihen, welches Zeitfenster — wird hier gerechnet; das Typst-Template zeichnet sie nur.
+darin und eine Fahrt eine Linie von einem Band ins andere. Erzählt wird der Tag wahlweise je
+Fahrzeug oder je Person; beides ist dieselbe Rechnung über **Spuren** — eine Spur ist eine Folge
+von Schritten mit einem Namen. Im Fahrzeugbild ist das eine Kette, im Personenbild der Plan einer
+Person, der ohnehin aus denselben Ketten entsteht.
 
 Dieselbe Anordnung rechnet der Browser in `frontend/src/scripts/bewegungen.ts` für den
 Bildschirm. Die beiden müssen übereinstimmen, sonst zeigt der Ausdruck ein anderes Bild als die
 Ansicht; `tools/plan_vergleichen` hält sie aneinander.
 """
 
+from dataclasses import dataclass, field
+
 from data.planzeit import minuten as _minuten, tag as _tag
 from entities.alarm import Arbeitsmappe
-from entities.planung import Lauf, Planung, Schritt
+from entities.planung import Lauf, Person, Planung, Schritt
 
 STUNDE = 60
+
+MODI = ("fahrzeuge", "personen")
 
 
 def _minute_am_tag(zeitpunkt: str, datum: str) -> int:
@@ -33,6 +39,22 @@ def bewegungstage(planung: Planung) -> list[str]:
     """Die Tage, an denen überhaupt etwas geplant ist."""
     tage = {_tag(schritt.von) for lauf in planung.laeufe for schritt in lauf.schritte}
     return sorted(tag for tag in tage if tag)
+
+
+@dataclass
+class _Spurschritt:
+    """Ein Schritt, wie ihn eine Spur sieht: mit dem Ort, an dem er anfängt, und seinem Umfeld."""
+
+    schritt: Schritt
+    von_ort_id: str
+    begleitung: list[str]
+
+
+@dataclass
+class _Spur:
+    id: str
+    name: str
+    schritte: list[_Spurschritt] = field(default_factory=list)
 
 
 def _reihe_suchen(belegt: list[int], von: int, bis: int) -> int:
@@ -63,72 +85,110 @@ class _Namen:
     def lage(self, schritt: Schritt) -> str:
         return self._lagen.get(schritt.programmpunktId, "")
 
+    def fahrzeug(self, fahrzeug_id: str) -> str:
+        return self._fahrzeuge.get(fahrzeug_id, "")
+
+    def person(self, person_id: str) -> str:
+        eintrag = self._personen.get(person_id)
+        return eintrag.name if eintrag else ""
+
     def kette(self, lauf: Lauf) -> str:
-        if lauf.fahrzeugId:
-            return self._fahrzeuge.get(lauf.fahrzeugId, "")
-        person = self._personen.get(lauf.personId)
-        return person.name if person else ""
+        return self.fahrzeug(lauf.fahrzeugId) if lauf.fahrzeugId else self.person(lauf.personId)
 
     def besatzung(self, schritt: Schritt) -> list[str]:
-        return [self._personen[platz.personId].name if platz.personId in self._personen else ""
-                for platz in schritt.besatzung]
+        return [self.person(platz.personId) for platz in schritt.besatzung]
 
 
-def bewegungsbild(arbeitsmappe: Arbeitsmappe, datum: str) -> dict:
+def _fahrzeugspuren(namen: _Namen) -> list[_Spur]:
+    """Im Fahrzeugbild ist jede Kette eine Spur — die eines Fahrzeugs wie die einer Person."""
+    return [
+        _Spur(lauf.id, namen.kette(lauf), [
+            _Spurschritt(schritt, _von_ort(lauf, schritt), namen.besatzung(schritt))
+            for schritt in lauf.schritte])
+        for lauf in namen.planung.laeufe
+    ]
+
+
+def _personenspur(namen: _Namen, person: Person) -> _Spur:
+    """
+    Der Plan einer Person: alle Schritte, in deren Besatzung sie steht, plus die ihrer eigenen
+    Kette, nach Zeit sortiert. Er wird nirgends gepflegt, sondern hieraus gelesen — deshalb kann
+    das Personenbild dem Fahrzeugbild nicht widersprechen.
+    """
+    eintraege = []
+    for lauf in namen.planung.laeufe:
+        eigene = lauf.personId == person.id
+        for schritt in lauf.schritte:
+            sitzt = any(platz.personId == person.id for platz in schritt.besatzung)
+            if not eigene and not sitzt:
+                continue
+            begleitung = [namen.fahrzeug(lauf.fahrzeugId)] if lauf.fahrzeugId else []
+            eintraege.append((_minuten(schritt.von) or 0,
+                              _Spurschritt(schritt, _von_ort(lauf, schritt), begleitung)))
+    eintraege.sort(key=lambda eintrag: eintrag[0])
+    return _Spur(person.id, person.name, [eintrag for _, eintrag in eintraege])
+
+
+def bewegungsbild(arbeitsmappe: Arbeitsmappe, datum: str, modus: str = "fahrzeuge") -> dict:
     """
     Das Bild eines Tages. Ein Ort bekommt ein Band, sobald jemand dort steht oder dorthin fährt;
     wo an diesem Tag nichts geschieht, gibt es auch kein Band.
     """
     namen = _Namen(arbeitsmappe)
-    planung = arbeitsmappe.planung
+    spuren = ([_personenspur(namen, person) for person in namen.planung.personen]
+              if modus == "personen" else _fahrzeugspuren(namen))
 
     stehend = sorted(
-        ((lauf, schritt, _minute_am_tag(schritt.von, datum), _minute_am_tag(schritt.bis, datum))
-         for lauf in planung.laeufe for schritt in lauf.schritte
-         if schritt.art == "aufenthalt" and _tag(schritt.von) == datum),
-        key=lambda eintrag: eintrag[2])
-    fahrten = [(lauf, schritt) for lauf in planung.laeufe for schritt in lauf.schritte
-               if schritt.art == "fahrt" and _tag(schritt.von) == datum]
+        ((spur, eintrag,
+          _minute_am_tag(eintrag.schritt.von, datum), _minute_am_tag(eintrag.schritt.bis, datum))
+         for spur in spuren for eintrag in spur.schritte
+         if eintrag.schritt.art == "aufenthalt" and _tag(eintrag.schritt.von) == datum),
+        key=lambda anwesend: anwesend[2])
+    fahrten = [(spur, eintrag) for spur in spuren for eintrag in spur.schritte
+               if eintrag.schritt.art == "fahrt" and _tag(eintrag.schritt.von) == datum]
 
-    beteiligt = {schritt.ortId for _, schritt, _, _ in stehend}
-    for lauf, schritt in fahrten:
-        beteiligt |= {_von_ort(lauf, schritt), schritt.ortId}
-    reihenfolge = [ort.id for ort in planung.orte if ort.id in beteiligt and ort.id]
+    beteiligt = {eintrag.schritt.ortId for _, eintrag, _, _ in stehend}
+    for _, eintrag in fahrten:
+        beteiligt |= {eintrag.von_ort_id, eintrag.schritt.ortId}
+    reihenfolge = [ort.id for ort in namen.planung.orte if ort.id and ort.id in beteiligt]
 
     belegung: dict[str, list[int]] = {ort_id: [] for ort_id in reihenfolge}
-    reihen: dict[str, int] = {}
+    reihen: dict[tuple[str, str], int] = {}
     balken = []
-    for lauf, schritt, von, bis in stehend:
-        if schritt.ortId not in belegung:
+    for spur, eintrag, von, bis in stehend:
+        if eintrag.schritt.ortId not in belegung:
             continue
-        reihe = _reihe_suchen(belegung[schritt.ortId], von, bis)
-        reihen[schritt.id] = reihe
+        reihe = _reihe_suchen(belegung[eintrag.schritt.ortId], von, bis)
+        reihen[(spur.id, eintrag.schritt.id)] = reihe
         balken.append({
-            "laufId": lauf.id, "schrittId": schritt.id, "ortId": schritt.ortId, "reihe": reihe,
-            "von": von, "bis": bis, "name": namen.kette(lauf),
-            "besatzung": namen.besatzung(schritt), "lage": namen.lage(schritt),
+            "spurId": spur.id, "schrittId": eintrag.schritt.id,
+            "ortId": eintrag.schritt.ortId, "reihe": reihe, "von": von, "bis": bis,
+            "name": spur.name, "begleitung": eintrag.begleitung,
+            "lage": namen.lage(eintrag.schritt),
         })
 
     linien = []
-    for lauf, schritt in fahrten:
-        stelle = lauf.schritte.index(schritt)
-        abfahrt = lauf.schritte[stelle - 1] if stelle > 0 else None
-        ankunft = lauf.schritte[stelle + 1] if stelle + 1 < len(lauf.schritte) else None
+    for spur, eintrag in fahrten:
+        stelle = spur.schritte.index(eintrag)
+        abfahrt = spur.schritte[stelle - 1] if stelle > 0 else None
+        ankunft = spur.schritte[stelle + 1] if stelle + 1 < len(spur.schritte) else None
         linien.append({
-            "laufId": lauf.id, "schrittId": schritt.id,
-            "vonOrtId": _von_ort(lauf, schritt),
-            "vonReihe": reihen.get(abfahrt.id, 0) if abfahrt else 0,
-            "nachOrtId": schritt.ortId,
-            "nachReihe": reihen.get(ankunft.id, 0) if ankunft else 0,
-            "von": _minute_am_tag(schritt.von, datum), "bis": _minute_am_tag(schritt.bis, datum),
-            "mittel": schritt.mittel, "name": namen.kette(lauf),
+            "spurId": spur.id, "schrittId": eintrag.schritt.id,
+            "vonOrtId": eintrag.von_ort_id,
+            "vonReihe": reihen.get((spur.id, abfahrt.schritt.id), 0) if abfahrt else 0,
+            "nachOrtId": eintrag.schritt.ortId,
+            "nachReihe": reihen.get((spur.id, ankunft.schritt.id), 0) if ankunft else 0,
+            "von": _minute_am_tag(eintrag.schritt.von, datum),
+            "bis": _minute_am_tag(eintrag.schritt.bis, datum),
+            "mittel": eintrag.schritt.mittel, "name": spur.name,
+            "begleitung": eintrag.begleitung,
         })
 
     zeiten = [wert for eintrag in balken + linien for wert in (eintrag["von"], eintrag["bis"])]
     von = min(zeiten) // STUNDE * STUNDE if zeiten else 0
     bis = -(-max(zeiten) // STUNDE) * STUNDE if zeiten else STUNDE
     return {
-        "datum": datum, "von": von, "bis": max(bis, von + STUNDE),
+        "datum": datum, "modus": modus, "von": von, "bis": max(bis, von + STUNDE),
         "baender": [{"ortId": ort_id, "name": namen.ort(ort_id),
                      "reihen": max(1, len(belegung[ort_id]))}
                     for ort_id in reihenfolge],
@@ -137,4 +197,7 @@ def bewegungsbild(arbeitsmappe: Arbeitsmappe, datum: str) -> dict:
 
 
 def bewegungsbilder(arbeitsmappe: Arbeitsmappe) -> list[dict]:
-    return [bewegungsbild(arbeitsmappe, tag) for tag in bewegungstage(arbeitsmappe.planung)]
+    """Beide Erzählweisen, jede für jeden Tag — der Bogen zeigt sie nacheinander."""
+    return [bewegungsbild(arbeitsmappe, tag, modus)
+            for modus in MODI
+            for tag in bewegungstage(arbeitsmappe.planung)]

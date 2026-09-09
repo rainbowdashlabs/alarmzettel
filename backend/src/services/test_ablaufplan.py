@@ -215,8 +215,9 @@ class BlattbreiteTest(unittest.TestCase):
 class BewegungTest(unittest.TestCase):
     """Das Bild, das der Bildschirm auch zeichnet: Bänder, Reihen darin, Zeitfenster."""
 
-    def bild(self, mappe: dict, datum: str = "2026-09-19") -> dict:
-        return plandaten(Arbeitsmappe.model_validate(mappe))["bewegung"]
+    def bild(self, mappe: dict, modus: str = "fahrzeuge") -> list[dict]:
+        return [eintrag for eintrag in plandaten(Arbeitsmappe.model_validate(mappe))["bewegung"]
+                if eintrag["modus"] == modus]
 
     def test_jeder_ort_ein_band_in_der_reihenfolge_der_stammdaten(self):
         bilder = self.bild(MAPPE)
@@ -247,6 +248,16 @@ class BewegungTest(unittest.TestCase):
                       "bis": "2026-09-19T09:00", "ortId": "o-nord"})
         self.assertEqual(["Wache Nord"],
                          [band["name"] for band in self.bild(ohne)[0]["baender"]])
+
+    def test_das_personenbild_erzaehlt_denselben_tag_je_person(self):
+        """Alex sitzt im LHF; im Personenbild ist er die Spur und das Fahrzeug die Begleitung."""
+        bild = self.bild(MAPPE, "personen")[0]
+        alex = [balken for balken in bild["balken"] if balken["name"] == "Alex"]
+        self.assertEqual(2, len(alex))
+        self.assertEqual([["LHF 6501.3"], ["LHF 6501.3"]],
+                         [balken["begleitung"] for balken in alex])
+        self.assertEqual(["Mimen"], [balken["name"] for balken in bild["balken"]
+                                     if balken["begleitung"] == []])
 
     def test_jeder_tag_bekommt_sein_bild(self):
         zwei = kette(

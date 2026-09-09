@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import {ref, watch} from 'vue'
+import {defineAsyncComponent, ref, watch} from 'vue'
 import {RouterLink} from 'vue-router'
-import BewegungsBild from '../components/planung/BewegungsBild.vue'
-import LageKarte from '../components/planung/LageKarte.vue'
 import LagenAnsicht from '../components/planung/LagenAnsicht.vue'
 import LaufKette from '../components/planung/LaufKette.vue'
 import OrtsSicht from '../components/planung/OrtsSicht.vue'
@@ -34,6 +32,14 @@ function offen(fuer: {fahrzeugId?: string, personId?: string}): boolean {
 }
 
 /** Geplant wird in den Ketten; die drei anderen Ansichten sind dieselben Daten von anderer Seite. */
+/**
+ * Bild und Karte bringen ihre Zeichenbibliotheken mit und werden deshalb erst geladen, wenn
+ * jemand sie auch aufschlägt — der Rest der Seite soll davon nichts merken.
+ */
+const BewegungsBild = defineAsyncComponent(
+    () => import('../components/planung/BewegungsBild.vue'))
+const LageKarte = defineAsyncComponent(() => import('../components/planung/LageKarte.vue'))
+
 const ANSICHTEN = ['ketten', 'bewegung', 'karte', 'personen', 'orte', 'lagen'] as const
 const ansicht = ref<typeof ANSICHTEN[number]>('ketten')
 const fehler = ref<string | null>(null)

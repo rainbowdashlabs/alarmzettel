@@ -82,6 +82,11 @@ class Schritt(Eintrag):
     """Wo man ist, beziehungsweise wohin es geht. Woher, sagt der vorige Schritt."""
     ortId: str = ""
     programmpunktId: str = ""
+    """
+    Ob dieses Fahrzeug zum Einsatzmittelaufgebot der Lage gehört. Wer nur Mimen hinbringt, steht
+    am Ort, ohne alarmiert zu sein — und bekommt weder einen Zettel noch eine Zeile darauf.
+    """
+    aufgebot: bool = True
     besatzung: list[Besatzung] = []
 
 

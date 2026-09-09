@@ -4,17 +4,23 @@
  *
  * Jeder Ort ist ein waagerechtes Band, die Zeit läuft nach rechts. Ein Aufenthalt ist ein Balken
  * im Band, eine Fahrt eine Linie, die von einem Band ins andere zieht. Damit ist die Bewegung
- * selbst das Bild und nicht bloß eine Zeile in einer Tabelle — genau die Ansicht, die eine
- * Tabelle nie geben konnte.
+ * selbst das Bild und nicht bloß eine Zeile in einer Tabelle.
+ *
+ * Erzählt wird der Tag wahlweise je Fahrzeug oder je Person. Beides ist dieselbe Rechnung über
+ * **Spuren** — eine Spur ist eine Folge von Schritten mit einem Namen. Im Fahrzeugbild ist das
+ * eine Kette, im Personenbild der Plan einer Person, der ohnehin aus denselben Ketten entsteht.
  *
  * Gerechnet wird hier nur die Anordnung, nicht das Aussehen: Bänder, Reihen darin, Zeitfenster.
- * Dieselbe Anordnung zeichnet der Bildschirm und das PDF, und `tools/bewegungen_vergleichen`
- * hält die beiden Seiten aneinander.
+ * Dieselbe Anordnung zeichnet der Bildschirm und das PDF, und `tools/plan_vergleichen` hält die
+ * beiden Seiten aneinander.
  */
 import type {Lauf, Schritt} from '../interfaces/Planung'
 import type {Plandaten} from './ablauf'
-import {vonOrt} from './ablauf'
+import {personenplan, vonOrt} from './ablauf'
 import {alsMinuten, tagVon} from './zeit'
+
+/** Wovon der Tag erzählt wird. */
+export type Modus = 'fahrzeuge' | 'personen'
 
 /** Ein Ort als Band. `reihen` sagt, wie viele Balken darin nebeneinander liegen müssen. */
 export interface Band {
@@ -25,7 +31,7 @@ export interface Band {
 
 /** Ein Aufenthalt: jemand steht von — bis in diesem Band. */
 export interface Balken {
-    laufId: string
+    spurId: string
     schrittId: string
     ortId: string
     reihe: number
@@ -33,13 +39,17 @@ export interface Balken {
     von: number
     bis: number
     name: string
-    besatzung: string[]
+    /**
+     * Wer oder was noch dazugehört: im Fahrzeugbild die Besatzung, im Personenbild das
+     * Fahrzeug, in dem die Person sitzt. Leer, wo jemand für sich steht.
+     */
+    begleitung: string[]
     lage: string
 }
 
 /** Eine Fahrt: die Linie, die ein Band verlässt und in einem anderen ankommt. */
 export interface Linie {
-    laufId: string
+    spurId: string
     schrittId: string
     vonOrtId: string
     vonReihe: number
@@ -49,16 +59,31 @@ export interface Linie {
     bis: number
     mittel: Schritt['mittel']
     name: string
+    begleitung: string[]
 }
 
 export interface Bewegungsbild {
     datum: string
+    modus: Modus
     /** Das Zeitfenster, auf volle Stunden gelegt, damit die Achse runde Zahlen trägt. */
     von: number
     bis: number
     baender: Band[]
     balken: Balken[]
     linien: Linie[]
+}
+
+/** Ein Schritt, wie ihn eine Spur sieht: mit dem Ort, an dem er anfängt, und seinem Umfeld. */
+interface Spurschritt {
+    schritt: Schritt
+    vonOrtId: string
+    begleitung: string[]
+}
+
+interface Spur {
+    id: string
+    name: string
+    schritte: Spurschritt[]
 }
 
 const STUNDE = 60
@@ -79,16 +104,50 @@ export function bewegungstage(daten: Plandaten): string[] {
     return [...tage].sort()
 }
 
-function name(daten: Plandaten, lauf: Lauf): string {
-    if (lauf.fahrzeugId) {
-        return daten.fahrzeuge.find(fahrzeug => fahrzeug.id === lauf.fahrzeugId)?.funkrufname ?? ''
-    }
-    return daten.planung.personen.find(person => person.id === lauf.personId)?.name ?? ''
+function fahrzeugName(daten: Plandaten, fahrzeugId: string): string {
+    return daten.fahrzeuge.find(fahrzeug => fahrzeug.id === fahrzeugId)?.funkrufname ?? ''
+}
+
+function personName(daten: Plandaten, personId: string): string {
+    return daten.planung.personen.find(person => person.id === personId)?.name ?? ''
+}
+
+function laufName(daten: Plandaten, lauf: Lauf): string {
+    return lauf.fahrzeugId
+        ? fahrzeugName(daten, lauf.fahrzeugId)
+        : personName(daten, lauf.personId)
 }
 
 function besatzung(daten: Plandaten, schritt: Schritt): string[] {
-    return schritt.besatzung.map(platz =>
-        daten.planung.personen.find(person => person.id === platz.personId)?.name ?? '')
+    return schritt.besatzung.map(platz => personName(daten, platz.personId))
+}
+
+/** Im Fahrzeugbild ist jede Kette eine Spur — die eines Fahrzeugs wie die einer Person. */
+function fahrzeugspuren(daten: Plandaten): Spur[] {
+    return daten.planung.laeufe.map(lauf => ({
+        id: lauf.id, name: laufName(daten, lauf),
+        schritte: lauf.schritte.map(schritt => ({
+            schritt, vonOrtId: vonOrt(lauf, schritt), begleitung: besatzung(daten, schritt),
+        })),
+    }))
+}
+
+/**
+ * Im Personenbild ist jede Person eine Spur. Ihr Plan wird nirgends gepflegt, sondern aus
+ * denselben Ketten gerechnet — deshalb kann das Personenbild dem Fahrzeugbild nicht
+ * widersprechen.
+ */
+function personenspuren(daten: Plandaten): Spur[] {
+    return daten.planung.personen.map(person => ({
+        id: person.id, name: person.name,
+        schritte: personenplan(daten, person.id).map(eintrag => ({
+            schritt: eintrag.schritt,
+            vonOrtId: eintrag.vonOrtId,
+            begleitung: eintrag.lauf.fahrzeugId
+                ? [fahrzeugName(daten, eintrag.lauf.fahrzeugId)]
+                : [],
+        })),
+    }))
 }
 
 /**
@@ -107,77 +166,79 @@ function reiheSuchen(belegt: number[], von: number, bis: number): number {
     return belegt.length - 1
 }
 
-interface Aufenthalt {
-    lauf: Lauf
-    schritt: Schritt
+interface Anwesenheit {
+    spur: Spur
+    eintrag: Spurschritt
     von: number
     bis: number
-}
-
-function aufenthalte(daten: Plandaten, datum: string): Aufenthalt[] {
-    const gefunden: Aufenthalt[] = []
-    for (const lauf of daten.planung.laeufe) {
-        for (const schritt of lauf.schritte) {
-            if (schritt.art !== 'aufenthalt' || tagVon(schritt.von) !== datum) continue
-            gefunden.push({lauf, schritt,
-                           von: minuteAmTag(schritt.von, datum),
-                           bis: minuteAmTag(schritt.bis, datum)})
-        }
-    }
-    return gefunden.sort((a, b) => a.von - b.von)
 }
 
 /**
  * Das Bild eines Tages. Ein Ort bekommt ein Band, sobald jemand dort steht oder dorthin fährt;
  * Orte, an denen an diesem Tag nichts geschieht, tauchen nicht auf.
  */
-export function bewegungsbild(daten: Plandaten, datum: string): Bewegungsbild {
-    const stehend = aufenthalte(daten, datum)
-    const fahrten = daten.planung.laeufe.flatMap(lauf => lauf.schritte
-        .filter(schritt => schritt.art === 'fahrt' && tagVon(schritt.von) === datum)
-        .map(schritt => ({lauf, schritt})))
+export function bewegungsbild(daten: Plandaten, datum: string,
+                              modus: Modus = 'fahrzeuge'): Bewegungsbild {
+    const spuren = modus === 'personen' ? personenspuren(daten) : fahrzeugspuren(daten)
+    const amTag = (eintrag: Spurschritt) => tagVon(eintrag.schritt.von) === datum
 
-    const beteiligt: string[] = []
-    for (const ortId of [
-        ...stehend.map(eintrag => eintrag.schritt.ortId),
-        ...fahrten.flatMap(({lauf, schritt}) => [vonOrt(lauf, schritt), schritt.ortId]),
-    ]) {
-        if (ortId && !beteiligt.includes(ortId)) beteiligt.push(ortId)
+    const stehend: Anwesenheit[] = []
+    for (const spur of spuren) {
+        for (const eintrag of spur.schritte) {
+            if (eintrag.schritt.art !== 'aufenthalt' || !amTag(eintrag)) continue
+            stehend.push({spur, eintrag,
+                          von: minuteAmTag(eintrag.schritt.von, datum),
+                          bis: minuteAmTag(eintrag.schritt.bis, datum)})
+        }
+    }
+    stehend.sort((a, b) => a.von - b.von)
+
+    const fahrten = spuren.flatMap(spur => spur.schritte
+        .filter(eintrag => eintrag.schritt.art === 'fahrt' && amTag(eintrag))
+        .map(eintrag => ({spur, eintrag})))
+
+    const beteiligt = new Set<string>()
+    for (const {eintrag} of stehend) beteiligt.add(eintrag.schritt.ortId)
+    for (const {eintrag} of fahrten) {
+        beteiligt.add(eintrag.vonOrtId)
+        beteiligt.add(eintrag.schritt.ortId)
     }
     const reihenfolge = daten.planung.orte
-        .filter(ort => beteiligt.includes(ort.id))
+        .filter(ort => ort.id && beteiligt.has(ort.id))
         .map(ort => ort.id)
 
     const belegung = new Map<string, number[]>(reihenfolge.map(ortId => [ortId, []]))
     const reihen = new Map<string, number>()
     const balken: Balken[] = []
-    for (const eintrag of stehend) {
-        const belegt = belegung.get(eintrag.schritt.ortId)
+    for (const anwesend of stehend) {
+        const belegt = belegung.get(anwesend.eintrag.schritt.ortId)
         if (!belegt) continue
-        const reihe = reiheSuchen(belegt, eintrag.von, eintrag.bis)
-        reihen.set(eintrag.schritt.id, reihe)
+        const reihe = reiheSuchen(belegt, anwesend.von, anwesend.bis)
+        reihen.set(`${anwesend.spur.id}|${anwesend.eintrag.schritt.id}`, reihe)
         balken.push({
-            laufId: eintrag.lauf.id, schrittId: eintrag.schritt.id,
-            ortId: eintrag.schritt.ortId, reihe, von: eintrag.von, bis: eintrag.bis,
-            name: name(daten, eintrag.lauf),
-            besatzung: besatzung(daten, eintrag.schritt),
+            spurId: anwesend.spur.id, schrittId: anwesend.eintrag.schritt.id,
+            ortId: anwesend.eintrag.schritt.ortId, reihe,
+            von: anwesend.von, bis: anwesend.bis, name: anwesend.spur.name,
+            begleitung: anwesend.eintrag.begleitung,
             lage: daten.planung.programmpunkte
-                .find(punkt => punkt.id === eintrag.schritt.programmpunktId)?.name ?? '',
+                .find(punkt => punkt.id === anwesend.eintrag.schritt.programmpunktId)?.name ?? '',
         })
     }
 
-    const linien: Linie[] = fahrten.map(({lauf, schritt}) => {
-        const stelle = lauf.schritte.indexOf(schritt)
-        const abfahrt = lauf.schritte[stelle - 1]
-        const ankunft = lauf.schritte[stelle + 1]
+    const linien: Linie[] = fahrten.map(({spur, eintrag}) => {
+        const stelle = spur.schritte.indexOf(eintrag)
+        const abfahrt = spur.schritte[stelle - 1]
+        const ankunft = spur.schritte[stelle + 1]
+        const reihe = (nachbar: Spurschritt | undefined) =>
+            nachbar ? reihen.get(`${spur.id}|${nachbar.schritt.id}`) ?? 0 : 0
         return {
-            laufId: lauf.id, schrittId: schritt.id,
-            vonOrtId: vonOrt(lauf, schritt),
-            vonReihe: abfahrt ? reihen.get(abfahrt.id) ?? 0 : 0,
-            nachOrtId: schritt.ortId,
-            nachReihe: ankunft ? reihen.get(ankunft.id) ?? 0 : 0,
-            von: minuteAmTag(schritt.von, datum), bis: minuteAmTag(schritt.bis, datum),
-            mittel: schritt.mittel, name: name(daten, lauf),
+            spurId: spur.id, schrittId: eintrag.schritt.id,
+            vonOrtId: eintrag.vonOrtId, vonReihe: reihe(abfahrt),
+            nachOrtId: eintrag.schritt.ortId, nachReihe: reihe(ankunft),
+            von: minuteAmTag(eintrag.schritt.von, datum),
+            bis: minuteAmTag(eintrag.schritt.bis, datum),
+            mittel: eintrag.schritt.mittel, name: spur.name,
+            begleitung: eintrag.begleitung,
         }
     })
 
@@ -185,7 +246,7 @@ export function bewegungsbild(daten: Plandaten, datum: string): Bewegungsbild {
     const von = zeiten.length ? Math.floor(Math.min(...zeiten) / STUNDE) * STUNDE : 0
     const bis = zeiten.length ? Math.ceil(Math.max(...zeiten) / STUNDE) * STUNDE : STUNDE
     return {
-        datum, von, bis: Math.max(bis, von + STUNDE),
+        datum, modus, von, bis: Math.max(bis, von + STUNDE),
         baender: reihenfolge.map(ortId => ({
             ortId,
             name: daten.planung.orte.find(ort => ort.id === ortId)?.name ?? '',
@@ -232,7 +293,7 @@ export function standorte(daten: Plandaten, zeitpunkt: string): Standort[] {
         const von = alsMinuten(schritt.von) ?? 0
         const bis = alsMinuten(schritt.bis) ?? von + 1
         gefunden.push({
-            laufId: lauf.id, name: name(daten, lauf),
+            laufId: lauf.id, name: laufName(daten, lauf),
             art: lauf.fahrzeugId ? 'fahrzeug' : 'person',
             ortId: schritt.art === 'fahrt' ? '' : schritt.ortId,
             unterwegs: schritt.art !== 'fahrt' ? null : {
@@ -241,7 +302,7 @@ export function standorte(daten: Plandaten, zeitpunkt: string): Standort[] {
                 mittel: schritt.mittel,
             },
             personen: lauf.personId
-                ? [name(daten, lauf), ...besatzung(daten, schritt)]
+                ? [laufName(daten, lauf), ...besatzung(daten, schritt)]
                 : besatzung(daten, schritt),
             lage: daten.planung.programmpunkte
                 .find(punkt => punkt.id === schritt.programmpunktId)?.name ?? '',
@@ -277,7 +338,7 @@ export function ereignisse(daten: Plandaten, zeitpunkt: string, anzahl = 8): Ere
             gefunden.push({
                 zeitpunkt: schritt.von,
                 art: schritt.art === 'fahrt' ? 'abfahrt' : 'ankunft',
-                name: name(daten, lauf), ortId: schritt.ortId,
+                name: laufName(daten, lauf), ortId: schritt.ortId,
                 lage: daten.planung.programmpunkte
                     .find(punkt => punkt.id === schritt.programmpunktId)?.name ?? '',
                 in: beginn - jetzt,

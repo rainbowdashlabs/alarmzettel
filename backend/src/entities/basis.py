@@ -6,8 +6,9 @@ Arbeitsmappe im Alarmteil braucht den Plan.
 """
 
 import uuid
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 def kennung() -> str:
@@ -26,6 +27,21 @@ class Eintrag(BaseModel):
 
     id: str = Field(default_factory=kennung)
     sortierung: float = 0
+
+    @model_validator(mode="before")
+    @classmethod
+    def _leere_wahrheitswerte(cls, werte: Any) -> Any:
+        """
+        Ein leerer String, wo ein Ja oder Nein stehen sollte, ist kein Wert, sondern ein Feld,
+        das es zu der Zeit noch nicht gab: der Flattener schrieb für alles Unbekannte "". Solche
+        Felder bekommen ihre Vorgabe, statt eine Arbeitsmappe unlesbar zu machen, die vor der
+        Erweiterung angelegt wurde.
+        """
+        if not isinstance(werte, dict):
+            return werte
+        leer = [name for name, feld in cls.model_fields.items()
+                if feld.annotation is bool and werte.get(name) == ""]
+        return {name: wert for name, wert in werte.items() if name not in leer} if leer else werte
 
 
 class Adresse(BaseModel):

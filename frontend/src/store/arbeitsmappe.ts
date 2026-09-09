@@ -62,6 +62,9 @@ export function uebernehmen(roh: unknown): Arbeitsmappe {
  * Eine Menge, die leer ist, hat keinen einzigen Pfad — eine Person ohne Rollen kommt deshalb ganz
  * ohne `rollen` zurück. Der Editor darf darauf nicht stoßen, also wird hier jeder Eintrag auf
  * seine volle Form gebracht, so wie es die Alarme längst tun.
+ *
+ * Ein Wahrheitswert, der als leerer String ankommt, ist dasselbe in Grün: ein Feld, das es zur
+ * Zeit dieser Arbeitsmappe noch nicht gab. Er bekommt seine Vorgabe.
  */
 function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
     const planung: Planung = {...leer, ...(quelle ?? {})}
@@ -78,7 +81,9 @@ function planungFuellen(leer: Planung, quelle?: Partial<Planung>): Planung {
     planung.laeufe = (planung.laeufe ?? []).map(lauf => ({
         ...lauf,
         schritte: (lauf.schritte ?? []).map(schritt => ({
-            ...schritt, besatzung: schritt.besatzung ?? [],
+            ...schritt,
+            aufgebot: typeof schritt.aufgebot === 'boolean' ? schritt.aufgebot : true,
+            besatzung: schritt.besatzung ?? [],
         })),
     }))
     for (const liste of ['rollen', 'fahrerlaubnisse'] as const) {

@@ -49,7 +49,9 @@ screen are the ones printed on the slip.
   PDF with one sheet per person, one per vehicle and a landscape overall plan.
 - **The movement picture** — the whole plan in one image: every place is a horizontal band, time
   runs to the right, a stay is a bar in its band and a journey a line crossing from one band to
-  the next. On screen and in the PDF, from the same computed layout.
+  the next. It tells the day either per vehicle or per person — the same computation over
+  *tracks*, since a person's plan comes out of the same chains. On screen (ECharts, with zoom and
+  tooltips) and in the PDF, from one computed layout that both languages produce and CI diffs.
 - **The situation map** — the places on OpenStreetMap, with a slider that moves the shown moment
   and a strip of what happens next. Whoever is travelling stands proportionally along the
   straight line between the two places, so a day can be driven through before it runs and
@@ -58,7 +60,8 @@ screen are the ones printed on the slip.
   from ETRS89 / UTM 33N into WGS 84 in the browser.
 - **Slips from the plan** — where a Lage points at an alarm, its times, Einsatzadresse and
   Einsatzmittelaufgebot come from the schedule, and one sheet is printed per vehicle at that
-  Lage. Those fields show in the editor as what will be printed, rather than being editable
+  Lage. A vehicle can stand at the Lage without belonging to it — the one that only brings the
+  mimes gets neither a sheet nor a line on anyone else's. Those fields show in the editor as what will be printed, rather than being editable
   there. Switched off, the Ablaufplanung changes nothing about the alarm slip.
 
 ## Where the data lives

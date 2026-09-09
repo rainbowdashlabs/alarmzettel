@@ -43,14 +43,24 @@ const PLANUNGSEINTRAEGE = {
     laeufe: ['fahrzeugId', 'personId'],
 } as const
 
-const SCHRITTFELDER = ['art', 'mittel', 'von', 'bis', 'ortId', 'programmpunktId'] as const
+const SCHRITTFELDER =
+    ['art', 'mittel', 'von', 'bis', 'ortId', 'programmpunktId', 'aufgebot'] as const
 
 type Eintragsdaten = Record<string, unknown> & { id: string, sortierung?: number }
+
+/**
+ * Was ein Feld bedeutet, das eine ältere Arbeitsmappe noch gar nicht kannte. Für Text ist das der
+ * leere String; ein Wahrheitswert braucht seine eigene Vorgabe, sonst käme ein leerer String
+ * zurück, den das Modell nicht als Ja oder Nein lesen kann.
+ */
+const VORGABEN: Record<string, unknown> = {aufgebot: true, faehrt: false}
 
 function eintragsfelder(basis: string, werte: Flachbild, eintrag: Eintragsdaten,
                         felder: readonly string[], stelle: number) {
     werte[pfad(basis, 'sortierung')] = eintrag.sortierung ?? stelle
-    for (const feld of felder) werte[pfad(basis, feld)] = eintrag[feld] ?? ''
+    for (const feld of felder) {
+        werte[pfad(basis, feld)] = eintrag[feld] ?? VORGABEN[feld] ?? ''
+    }
 }
 
 /**

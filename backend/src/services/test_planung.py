@@ -20,17 +20,42 @@ PLAN = {
                 "schritte": [
                     {"id": "s1", "sortierung": 0.0, "art": "aufenthalt", "mittel": "fahrzeug",
                      "von": "2026-09-19T06:30", "bis": "2026-09-19T07:45", "ortId": "o1",
-                     "programmpunktId": "",
+                     "programmpunktId": "", "aufgebot": True,
                      "besatzung": [{"id": "b1", "sortierung": 0.0, "personId": "p1",
                                     "faehrt": True}]},
                     {"id": "s2", "sortierung": 1.0, "art": "fahrt", "mittel": "fahrzeug",
                      "von": "2026-09-19T07:45", "bis": "2026-09-19T08:00", "ortId": "o1",
-                     "programmpunktId": "g1",
+                     "programmpunktId": "g1", "aufgebot": False,
                      "besatzung": [{"id": "b2", "sortierung": 0.0, "personId": "p1",
                                     "faehrt": False}]}]}],
 }
 
 MAPPE = {"version": 1, "alarme": [], "kataloge": {}, "planung": PLAN}
+
+
+class VorgabeTest(unittest.TestCase):
+    """Eine Arbeitsmappe, die ein Feld noch nicht kennt, bekommt seine Vorgabe — nicht ''."""
+
+    def test_ein_leerer_wahrheitswert_wird_zur_vorgabe(self):
+        """
+        Eine Sitzung, die vor der Erweiterung geschrieben wurde, trägt "" statt Ja oder Nein.
+        Sie muss sich weiter lesen lassen, sonst kostet ein neues Feld bestehende Arbeit.
+        """
+        from entities.planung import Schritt
+
+        self.assertIs(True, Schritt.model_validate({"aufgebot": ""}).aufgebot)
+        self.assertIs(False, Schritt.model_validate({"aufgebot": False}).aufgebot)
+
+    def test_ein_alter_schritt_gehoert_zum_aufgebot(self):
+        alt = {"version": 1, "alarme": [], "kataloge": {}, "planung": {
+            "aktiv": True,
+            "laeufe": [{"id": "l1", "sortierung": 0.0, "fahrzeugId": "f1", "personId": "",
+                        "schritte": [{"id": "s1", "sortierung": 0.0, "art": "aufenthalt",
+                                      "mittel": "fahrzeug", "von": "2026-09-19T08:00",
+                                      "bis": "2026-09-19T09:00", "ortId": "o1",
+                                      "programmpunktId": "g1", "besatzung": []}]}]}}
+        schritt = rund(flach(alt))["planung"]["laeufe"][0]["schritte"][0]
+        self.assertIs(True, schritt["aufgebot"])
 
 
 class PlanungRundlaufTest(unittest.TestCase):
