@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "1e18255252a1701078d6274a2106f9133774535215bd4df543e858d2313c75d3"
+            "sha256": "d16dab9471cfabe35f5bd467e5e0fff9ce4efe438678e85fb0872a0bb4441dac"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -771,11 +771,11 @@
         },
         "rich-toolkit": {
             "hashes": [
-                "sha256:88f1b225e360e13c53d643ab52efaf59ef7bf4da282614c8ba5afb72bc63ddc2",
-                "sha256:ea37e9d364e7a6a59af9d96c5b18de3f6046f17affa8b4bc07f3bfad7a597ec5"
+                "sha256:0c9e1c414ffb0720be26285d472e263d1e704b71d31a7e13274b9996db4969e1",
+                "sha256:e21fd616db9c0539d3c50f3433fb1173db95c19d3cbf215615e224182fad6c18"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==0.20.4"
+            "version": "==0.20.5"
         },
         "rignore": {
             "hashes": [
@@ -954,13 +954,22 @@
             "markers": "python_version >= '3.8'",
             "version": "==0.8.1"
         },
+        "segno": {
+            "hashes": [
+                "sha256:28c7d081ed0cf935e0411293a465efd4d500704072cdb039778a2ab8736190c7",
+                "sha256:e60933afc4b52137d323a4434c8340e0ce1e58cec71439e46680d4db188f11b3"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.5'",
+            "version": "==1.6.6"
+        },
         "sentry-sdk": {
             "hashes": [
-                "sha256:0cf7d29419145ab0250ea51363ad79fb7509996aaa35c5d5d2c3ed85b3b80a7d",
-                "sha256:3b92738027322061fbab34199102fcc0459ff9a5bf373ccca7091af9a5f07530"
+                "sha256:2d2556d9a14db548982b914cbed2a2dc07b6e55d941a620752f89a2afccfd78d",
+                "sha256:f9284b417540b0784b994fa021eb6f1e30ae1cce593d83541274d03c93966eff"
             ],
             "markers": "python_version >= '3.6'",
-            "version": "==2.69.0"
+            "version": "==2.69.1"
         },
         "shellingham": {
             "hashes": [
