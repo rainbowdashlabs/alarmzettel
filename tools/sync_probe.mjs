@@ -268,6 +268,28 @@ pruefe('gelöschter Hinweis bleibt weg',
 pruefe('gleichzeitig geänderter Hinweis überlebt',
     alarmVon(ben).hinweise.find((h) => h.id === 'neuer-hinweis')?.text === 'Von Anna geändert')
 
+console.log('\nEin Abfrageweg, der an Ort und Stelle wächst')
+// Die Antworten eines Code-Hinweises stehen als ganze Liste unter einem Pfad. Wird sie an Ort
+// und Stelle ergänzt — genau das tut der Editor —, muss der Vergleich das trotzdem sehen; hielte
+// das Schattenbild dieselbe Liste, wüchse sie dort mit und die Änderung fiele nie auf.
+alarmVon(anna).hinweise.push({id: 'code-hinweis', sortierung: 50, typ: 'code',
+    code: '01A01', meldung: 'Aus der Abfrage', antworten: ['Aus der Abfrage']})
+await abgleichen(anna)
+await abgleichen(ben)
+alarmVon(anna).hinweise.find((h) => h.id === 'code-hinweis').antworten.push('Von Hand ergänzt')
+await abgleichen(anna)
+await abgleichen(ben)
+pruefe('der von Hand ergänzte Punkt kommt an',
+    alarmVon(ben).hinweise.find((h) => h.id === 'code-hinweis')?.antworten
+        .includes('Von Hand ergänzt'),
+    JSON.stringify(alarmVon(ben).hinweise.find((h) => h.id === 'code-hinweis')?.antworten))
+alarmVon(anna).hinweise.find((h) => h.id === 'code-hinweis').antworten[0] = 'Umgeschrieben'
+await abgleichen(anna)
+await abgleichen(ben)
+pruefe('und ein umgeschriebener ebenso',
+    alarmVon(ben).hinweise.find((h) => h.id === 'code-hinweis')?.antworten[0] === 'Umgeschrieben',
+    JSON.stringify(alarmVon(ben).hinweise.find((h) => h.id === 'code-hinweis')?.antworten))
+
 console.log('\nDie Liste läuft leer und füllt sich wieder')
 // Wird der letzte Eintrag einer Liste gelöscht, ist die Liste selbst vollständig verschwunden.
 // Ein Grabstein darauf würde sie zumauern: der Server hält alles unterhalb eines Grabsteins für

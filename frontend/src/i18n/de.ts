@@ -250,6 +250,8 @@ export default {
         einplanenHinweis: 'Fahrzeuge kommen aus dem Katalog, Personen aus den Stammdaten. Wer in keinem Fahrzeug sitzt, braucht eine eigene Kette, damit ihn jemand abholen kann.',
         keineKetten: 'Noch nichts eingeplant.',
         ketteEntfernen: 'Kette entfernen',
+        aufenthaltDavor: 'Aufenthalt davor einfügen',
+        fahrtDavor: 'Fahrt davor einfügen',
         aufenthalt: 'Aufenthalt',
         fahrt: 'Fahrt',
         beginn: 'Beginn',

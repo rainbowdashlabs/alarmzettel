@@ -122,6 +122,19 @@ function planungsfelder(werte: Flachbild, planung: Planung) {
     }
 }
 
+/**
+ * Eine Liste, die als ganzer Wert unter einem Pfad steht — der Abfrageweg eines Code-Hinweises
+ * ist die einzige —, darf im Bild nicht dieselbe sein wie im Dokument. Sonst wächst sie im Bild
+ * mit, sobald der Editor sie an Ort und Stelle ergänzt, und der Vergleich mit dem zuletzt
+ * gesendeten Bild sähe keinen Unterschied: die Ergänzung ginge nie an den Server.
+ */
+function abgelegt(bild: Flachbild): Flachbild {
+    for (const [schluessel, wert] of Object.entries(bild)) {
+        if (Array.isArray(wert)) bild[schluessel] = [...wert]
+    }
+    return bild
+}
+
 export function flach(mappe: Arbeitsmappe): Flachbild {
     const werte: Flachbild = {}
 
@@ -188,7 +201,7 @@ export function flach(mappe: Arbeitsmappe): Flachbild {
     })
     katalogeintraege(werte, mappe.kataloge as unknown as Record<string, unknown>)
     if (mappe.planung) planungsfelder(werte, mappe.planung)
-    return werte
+    return abgelegt(werte)
 }
 
 type Sortierbar = { id: string, sortierung?: number }
@@ -249,7 +262,8 @@ function planungLesen(planung: Record<string, unknown>, rest: string[], wert: un
     }
 }
 
-export function rund(werte: Flachbild): unknown {
+export function rund(bild: Flachbild): unknown {
+    const werte = abgelegt({...bild})
     const alarme: Record<string, Record<string, never>> = {}
     const planung: Record<string, unknown> = {
         aktiv: false,

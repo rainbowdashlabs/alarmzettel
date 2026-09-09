@@ -14,7 +14,7 @@ import {darfFahren as darfFahrenLaut, lagenName, lagenOrt, MINUTEN_JE_KM} from '
 import {entfernungKm} from '../scripts/polar'
 import type {Plandaten} from '../scripts/ablauf'
 import type {Punkt} from '../scripts/polar'
-import {tagVon, verschieben} from '../scripts/zeit'
+import {alsMinuten, tagVon, verschieben} from '../scripts/zeit'
 import {DIENSTSTELLE} from '../interfaces/Planung'
 import type {
     Besatzung, Lauf, Materialposten, Mittel, Ort, Person, Programmpunkt, Schritt, Tag,
@@ -148,6 +148,28 @@ export function letzterSchritt(lauf: Lauf): Schritt | undefined {
 }
 
 /**
+ * Ein neuer Schritt nach dem Vorbild eines vorhandenen: Ort, Besatzung und Material kommen von
+ * dort, damit man nur die Änderung anfasst. Angelegt, nicht eingehängt — wohin er gehört, sagt
+ * der Aufrufer.
+ */
+function neuerSchritt(lauf: Lauf, art: Schritt['art'], vorbild: Schritt | undefined,
+                      von: string, bis: string, sortierung: number): Schritt {
+    return {
+        id: crypto.randomUUID(), sortierung,
+        art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss', fahrzeit: 0,
+        von, bis,
+        ortId: vorbild?.ortId ?? alleOrte()[0]?.id ?? '',
+        programmpunktId: '', aufgebot: true, notiz: '',
+        besatzung: (vorbild?.besatzung ?? []).map(sitzt => ({
+            ...sitzt, id: crypto.randomUUID(),
+        })),
+        material: (vorbild?.material ?? []).map(stueck => ({
+            ...stueck, id: crypto.randomUUID(),
+        })),
+    }
+}
+
+/**
  * Hängt einen Schritt an. Er fängt an, wo der vorige aufhörte — Zeit, Ort und Besatzung kommen
  * von dort. Genau deshalb ist ein Sprung von A nach B ohne Weg dazwischen nicht darstellbar und
  * muss nicht geprüft werden.
@@ -155,20 +177,34 @@ export function letzterSchritt(lauf: Lauf): Schritt | undefined {
 export function schrittAnhaengen(lauf: Lauf, art: Schritt['art'], minuten = 30): Schritt {
     const vorher = letzterSchritt(lauf)
     const beginn = vorher?.bis ?? standardBeginn()
-    const schritt: Schritt = {
-        id: crypto.randomUUID(), sortierung: naechste(lauf.schritte),
-        art, mittel: lauf.fahrzeugId ? 'fahrzeug' : 'fuss', fahrzeit: 0,
-        von: beginn, bis: verschieben(beginn, minuten),
-        ortId: vorher?.ortId ?? alleOrte()[0]?.id ?? '',
-        programmpunktId: '', aufgebot: true, notiz: '',
-        besatzung: (vorher?.besatzung ?? []).map(sitzt => ({
-            ...sitzt, id: crypto.randomUUID(),
-        })),
-        material: (vorher?.material ?? []).map(stueck => ({
-            ...stueck, id: crypto.randomUUID(),
-        })),
-    }
+    const schritt = neuerSchritt(lauf, art, vorher, beginn, verschieben(beginn, minuten),
+        naechste(lauf.schritte))
     lauf.schritte.push(schritt)
+    return schritt
+}
+
+/**
+ * Schiebt einen Schritt vor den an dieser Stelle. Er füllt die Lücke davor: er beginnt, wo der
+ * vorige endet, und endet, wo der nächste anfängt. Wo keine Lücke ist, bekommt er fünf Minuten
+ * und überschneidet sichtbar — die Zeiten der anderen zu verschieben wäre schlimmer, denn die
+ * hat jemand von Hand gesetzt.
+ *
+ * Die Sortierung liegt zwischen den Nachbarn, statt die Liste neu durchzuzählen: so ändert sich
+ * nur der neue Schritt, und wer gleichzeitig woanders in derselben Kette arbeitet, verliert
+ * nichts.
+ */
+export function schrittEinfuegen(lauf: Lauf, stelle: number, art: Schritt['art']): Schritt {
+    const vorher = lauf.schritte[stelle - 1]
+    const nachher = lauf.schritte[stelle]
+    const beginn = vorher?.bis ?? verschieben(nachher?.von ?? standardBeginn(), -30)
+    const ende = nachher && (alsMinuten(nachher.von) ?? 0) > (alsMinuten(beginn) ?? 0)
+        ? nachher.von
+        : verschieben(beginn, 5)
+    const sortierung = vorher && nachher
+        ? (vorher.sortierung + nachher.sortierung) / 2
+        : (nachher?.sortierung ?? 0) - 1
+    const schritt = neuerSchritt(lauf, art, vorher ?? nachher, beginn, ende, sortierung)
+    lauf.schritte.splice(stelle, 0, schritt)
     return schritt
 }
 

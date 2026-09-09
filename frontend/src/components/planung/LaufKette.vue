@@ -6,7 +6,7 @@ import {
   besatzungHinzufuegen, entfernen, fahrerSetzen, fahrzeitSchaetzen, letzterSchritt, nachziehen,
   alleOrte, darfFahren, lageName, materialHinzufuegen, materialName, materialSichern,
   mehrereTage, ortName, personName, plandaten, programmpunkt, programmpunktAnlegen,
-  schrittAnhaengen,
+  schrittAnhaengen, schrittEinfuegen,
 } from '../../store/planung'
 import {anfahrt, fahrzeitSchaetzung, pruefen} from '../../scripts/ablauf'
 import type {Befund} from '../../scripts/ablauf'
@@ -129,6 +129,18 @@ function lageAnlegen(schritt: Schritt) {
          class="border border-rule rounded p-3 bg-page grid gap-2">
       <div class="flex items-center gap-2 flex-wrap">
         <span class="label">{{ stelle + 1 }}.</span>
+        <span class="flex">
+          <button type="button" class="knopf knopf-klein rounded-r-none px-2"
+                  :title="t('ablauf.aufenthaltDavor')"
+                  @click="schrittEinfuegen(lauf, stelle, 'aufenthalt')">
+            <font-awesome-icon icon="fa-solid fa-plus"/>
+          </button>
+          <button type="button" class="knopf knopf-klein rounded-l-none border-l-0 px-2"
+                  :title="t('ablauf.fahrtDavor')"
+                  @click="schrittEinfuegen(lauf, stelle, 'fahrt')">
+            <font-awesome-icon icon="fa-solid fa-angle-right"/>
+          </button>
+        </span>
         <span class="tabular text-sm">
           <span v-if="mehrereTage()" class="text-muted">{{ tagVon(schritt.von) }}</span>
           {{ uhrzeit(schritt.von) }}–{{ uhrzeit(schritt.bis) }}
