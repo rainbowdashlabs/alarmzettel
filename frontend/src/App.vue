@@ -3,11 +3,13 @@ import {RouterLink, RouterView} from 'vue-router'
 import AppFuss from './components/base/AppFuss.vue'
 import {t} from './i18n'
 import {activeTheme, toggleTheme} from './theme'
-import {ref} from 'vue'
+import {computed, ref} from 'vue'
 import {jetztAbgleichen, verbindung} from './store/sync'
 import {neueSitzung, sitzung, sitzungVergessen, sitzungWechseln} from './store/sitzung'
 import {arbeitsmappe} from './store/arbeitsmappe'
 import {lesetoken} from './api/sitzung'
+import {personenplan} from './scripts/ablauf'
+import {plandaten} from './store/planung'
 
 const wechsler = ref(false)
 const arbeitet = ref(false)
@@ -36,6 +38,32 @@ async function teilen() {
     nurLesenToken.value = null
   }
 }
+
+/**
+ * Ein Link je Zettel: wer ihn bekommt, sieht seinen Tag und sonst nichts. Aufgeführt wird, wer
+ * auch ein Blatt bekäme — jede Person mit einem Plan und jedes Fahrzeug mit einer Kette.
+ */
+const blaetter = computed(() => {
+  const token = nurLesenToken.value ?? (sitzung.nurLesen ? sitzung.token : null)
+  if (!token || !arbeitsmappe.planung.aktiv) return []
+  const daten = plandaten()
+  const zeilen: {name: string, link: string}[] = []
+  for (const person of arbeitsmappe.kataloge.personen) {
+    if (person.blatt === false || !personenplan(daten, person.id).length) continue
+    zeilen.push({name: person.name || t('ablauf.ohneName'),
+                 link: `${window.location.origin}/blatt/${token}/person/${person.id}`})
+  }
+  for (const fahrzeug of arbeitsmappe.kataloge.fahrzeuge) {
+    const kette = arbeitsmappe.planung.laeufe.find(lauf => lauf.fahrzeugId === fahrzeug.id)
+    if (!kette?.schritte.length) continue
+    zeilen.push({name: fahrzeug.funkrufname || t('ablauf.ohneName'),
+                 link: `${window.location.origin}/blatt/${token}/fahrzeug/${fahrzeug.id}`})
+  }
+  return zeilen
+})
+
+const blattliste = computed(() =>
+    blaetter.value.map(blatt => `${blatt.name} — ${blatt.link}`).join('\n'))
 
 async function kopieren(link: string) {
   try {
@@ -125,6 +153,20 @@ async function tun(was: () => Promise<void>) {
                   </button>
                 </div>
                 <p class="text-muted text-[12px] mt-1">{{ t('freigabe.zumAnsehenHinweis') }}</p>
+              </div>
+
+              <div v-if="blaetter.length" class="border-t border-rule pt-3">
+                <div class="label mb-1">{{ t('blatt.titel') }}</div>
+                <textarea class="field text-[12px] tabular" rows="4" readonly
+                          :value="blattliste"
+                          @focus="($event.target as HTMLTextAreaElement).select()"></textarea>
+                <div class="flex items-center gap-2 mt-2">
+                  <button type="button" class="knopf knopf-klein" @click="kopieren(blattliste)">
+                    <font-awesome-icon icon="fa-solid fa-copy"/>
+                    {{ t('blatt.kopieren') }}
+                  </button>
+                  <span class="text-muted text-[12px]">{{ t('blatt.hinweisLinks') }}</span>
+                </div>
               </div>
 
               <p v-if="kopiert" class="text-[12px]">{{ t('freigabe.kopiert') }}</p>

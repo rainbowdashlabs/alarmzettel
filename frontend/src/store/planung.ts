@@ -9,6 +9,7 @@
 import {reactive} from 'vue'
 import {arbeitsmappe} from './arbeitsmappe'
 import {naechste, leereAdresse} from '../interfaces/Alarm'
+import type {Arbeitsmappe} from '../interfaces/Alarm'
 import {zuPunkt} from '../api/adressen'
 import {
     darfFahren as darfFahrenLaut, lagenName, lagenOrt, MINUTEN_JE_KM, personenplan,
@@ -35,12 +36,37 @@ export const ortsPunkte = reactive<Record<string, Punkt>>({})
  * löschen kann.
  */
 export function alleOrte(): Ort[] {
+    return orteVon(arbeitsmappe)
+}
+
+/**
+ * Die Orte einer Arbeitsmappe, die Dienststelle voran. Sie ist kein Eintrag, den jemand anlegt,
+ * sondern einer, den es gibt, solange die Wache eine Adresse hat.
+ */
+export function orteVon(mappe: Arbeitsmappe): Ort[] {
     return [
         {id: DIENSTSTELLE, sortierung: -1,
-         name: arbeitsmappe.kataloge.wacheName || 'Dienststelle',
-         adresse: arbeitsmappe.kataloge.wache},
-        ...arbeitsmappe.kataloge.orte,
+         name: mappe.kataloge.wacheName || 'Dienststelle',
+         adresse: mappe.kataloge.wache},
+        ...mappe.kataloge.orte,
     ]
+}
+
+/**
+ * Was die Ableitung braucht, aus einer beliebigen Arbeitsmappe — nicht nur aus der laufenden.
+ * Ein Blatt, das über seinen eigenen Link geöffnet wird, liest die Sitzung, ohne in sie zu
+ * wechseln, und rechnet damit dieselben Zeilen wie der Rest.
+ */
+export function plandatenVon(mappe: Arbeitsmappe, punkte: Record<string, Punkt> = {}): Plandaten {
+    return {
+        planung: mappe.planung,
+        fahrzeuge: mappe.kataloge.fahrzeuge,
+        orte: orteVon(mappe),
+        personen: mappe.kataloge.personen,
+        alarme: mappe.alarme.map(alarm => ({id: alarm.id, stichwort: alarm.stichwort})),
+        kataloge: {material: mappe.kataloge.material},
+        punkte,
+    }
 }
 
 export async function punkteLaden() {

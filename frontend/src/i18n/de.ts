@@ -12,6 +12,7 @@ export default {
     routes: {
         alarme: 'Alarme',
         ansicht: 'Ansicht',
+        blatt: 'Blatt',
         alarm: 'Alarm',
         kataloge: 'Kataloge',
         freigabe: 'Freigabe',
@@ -251,6 +252,15 @@ export default {
         keine: 'Noch keine andere Sitzung.',
         entfernen: 'Aus dieser Liste nehmen',
         laeuftAb: 'Läuft am {datum} ab, wenn sie bis dahin niemand öffnet.',
+    },
+    blatt: {
+        hinweis: 'Dein Tag, wie er im Plan steht. Die Seite frischt sich von selbst auf.',
+        koepfe: '{n} Köpfe',
+        orte: 'Orte',
+        unbekannt: 'Dieses Blatt gibt es in der Sitzung nicht (mehr).',
+        titel: 'Blätter je Person und Fahrzeug',
+        hinweisLinks: 'Ein Link je Zettel: wer ihn bekommt, sieht seinen Tag und sonst nichts.',
+        kopieren: 'Alle Links kopieren',
     },
     ansicht: {
         titel: 'Übersicht',

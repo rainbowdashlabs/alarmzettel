@@ -12,6 +12,9 @@ const routes: RouteRecordRaw[] = [
         meta: {titleKey: 'routes.ablauf'}},
     {path: '/ansicht', name: 'Ansicht', component: () => import('../views/AnsichtView.vue'),
         meta: {titleKey: 'routes.ansicht'}},
+    // Ein Blatt hängt an seinem eigenen Link und liest die Sitzung, ohne in sie zu wechseln.
+    {path: '/blatt/:token/:art(person|fahrzeug)/:id', name: 'Blatt',
+        component: () => import('../views/BlattView.vue'), meta: {titleKey: 'routes.blatt'}},
     // Die Stammdaten stehen im Katalog; alte Links sollen weiter irgendwo landen.
     {path: '/planung', redirect: '/kataloge'},
     {path: '/sitzung/:token', name: 'Sitzung', component: () => import('../views/FreigabeView.vue'),
@@ -26,7 +29,7 @@ const routes: RouteRecordRaw[] = [
 
 const router = createRouter({history: createWebHistory(), routes})
 
-const NUR_ZUM_LESEN = ['Ansicht', 'Ablauf', 'Sitzung', 'NotFound']
+const NUR_ZUM_LESEN = ['Ansicht', 'Ablauf', 'Sitzung', 'Blatt', 'NotFound']
 
 /**
  * Wer nur zusieht, landet in der Übersicht statt in einem Editor. Die Felder änderten ohnehin
