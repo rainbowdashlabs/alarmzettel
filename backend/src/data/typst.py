@@ -99,16 +99,20 @@ def _dateiname(name: str, art: str) -> str:
     return f"{art}-{sauber or 'ohne-namen'}.pdf"
 
 
+def einzelnes_blatt(blatt: dict, art: str) -> tuple[str, dict]:
+    """Ein Blatt für sich, samt dem Namen, unter dem es gespeichert wird."""
+    schluessel = "personen" if art == "person" else "fahrzeuge"
+    return _dateiname(blatt["name"], art), {**LEERER_PLAN, schluessel: [blatt]}
+
+
 def plan_blattweise(daten: dict) -> list[tuple[str, dict]]:
     """
     Derselbe Plan, zerlegt in ein Dokument je Blatt: eines für jede Person, eines für jedes
     Fahrzeug, und der Gesamtplan mit dem Bewegungsbild für sich. So bekommt jeder genau seinen
     Zettel in die Hand, statt den Stapel aller.
     """
-    teile = [(_dateiname(blatt["name"], "person"), {**LEERER_PLAN, "personen": [blatt]})
-             for blatt in daten["personen"]]
-    teile += [(_dateiname(blatt["name"], "fahrzeug"), {**LEERER_PLAN, "fahrzeuge": [blatt]})
-              for blatt in daten["fahrzeuge"]]
+    teile = [einzelnes_blatt(blatt, "person") for blatt in daten["personen"]]
+    teile += [einzelnes_blatt(blatt, "fahrzeug") for blatt in daten["fahrzeuge"]]
     if daten["gesamt"]["bloecke"]:
         teile.append(("gesamtplan.pdf", {**LEERER_PLAN, "gesamt": daten["gesamt"]}))
     return teile

@@ -261,6 +261,7 @@ export default {
         titel: 'Blätter je Person und Fahrzeug',
         hinweisLinks: 'Ein Link je Zettel: wer ihn bekommt, sieht seinen Tag und sonst nichts.',
         kopieren: 'Alle Links kopieren',
+        pdf: 'Als PDF',
     },
     ansicht: {
         titel: 'Übersicht',

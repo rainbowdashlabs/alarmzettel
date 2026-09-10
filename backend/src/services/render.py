@@ -11,6 +11,7 @@ anzurühren.
 
 import io
 import zipfile
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
@@ -20,7 +21,7 @@ from data.alarmplan import ableitung, mit_plan
 from data.geo import punkt_aus_text
 from data.polar import polar_koordinaten
 from data.katalog import mit_katalog
-from data.typst import RenderError, plan_blattweise, render, render_plan
+from data.typst import RenderError, einzelnes_blatt, plan_blattweise, render, render_plan
 from entities.alarm import Arbeitsmappe
 from data.sitzung import SitzungFehler
 from services import sitzung as sitzungsdienst
@@ -41,7 +42,7 @@ def _mappe(request: Request) -> Arbeitsmappe:
     return Arbeitsmappe.model_validate(inhalt)
 
 
-def _blattbasis(request: Request) -> str:
+def _lesebasis(request: Request, echt: str) -> str:
     """
     Der Anfang der Lese-Links, mit denen jedes Blatt sein Kennmuster bekommt. Das Lesetoken
     entsteht dabei, falls es noch keines gibt — es ist dasselbe, das der Teilen-Knopf ausgibt.
@@ -49,15 +50,23 @@ def _blattbasis(request: Request) -> str:
     Ohne Sitzung bleibt die Basis leer und das Blatt ohne Kennmuster: ein Zettel darf nicht
     ungedruckt bleiben, weil ein Link fehlt.
     """
+    try:
+        nur_lesen = sitzungsdienst.sitzungen.lesetoken(echt)
+    except SitzungFehler:
+        return ""
+    return str(request.base_url).rstrip("/") + f"/blatt/{nur_lesen}"
+
+
+def _blattbasis(request: Request) -> str:
+    """Dieselbe Basis für die laufende Sitzung, so wie der Browser sie im Cookie trägt."""
     token = request.cookies.get(COOKIE)
     if not token:
         return ""
     try:
         echt, _ = sitzungsdienst.sitzungen.aufloesen(token)
-        nur_lesen = sitzungsdienst.sitzungen.lesetoken(echt)
     except SitzungFehler:
         return ""
-    return str(request.base_url).rstrip("/") + f"/blatt/{nur_lesen}"
+    return _lesebasis(request, echt)
 
 
 def _punkt_zu(adresse) -> dict | None:
@@ -164,6 +173,35 @@ def render_ablaufplan_zip(request: Request) -> Response:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=puffer.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": 'attachment; filename="ablaufplan.zip"'})
+
+
+@router.get("/blatt/{token}/{art}/{kennung}")
+def render_blatt(token: str, art: str, kennung: str, request: Request) -> Response:
+    """
+    Das eine Blatt hinter seinem Lese-Link, als PDF zum Mitnehmen. Wer den Link hat, hat den
+    Zettel — auch ohne Sitzung im Browser und ohne den Stapel aller anderen.
+    """
+    if art not in ("person", "fahrzeug"):
+        raise HTTPException(status_code=404, detail="Diese Art von Blatt gibt es nicht.")
+    try:
+        echt, _ = sitzungsdienst.sitzungen.aufloesen(token)
+        inhalt, _ = sitzungsdienst.sitzungen.lesen(echt)
+    except SitzungFehler as fehler:
+        raise HTTPException(status_code=404, detail=str(fehler)) from fehler
+    mappe = Arbeitsmappe.model_validate(inhalt)
+    daten = plandaten(mappe, _ortspunkte(mappe), _lesebasis(request, echt))
+    gruppe = daten["personen" if art == "person" else "fahrzeuge"]
+    blatt = next((eintrag for eintrag in gruppe if eintrag["id"] == kennung), None)
+    if blatt is None:
+        raise HTTPException(status_code=404, detail="Zu diesem Blatt ist nichts geplant.")
+    name, teil = einzelnes_blatt(blatt, art)
+    try:
+        pdf = render_plan(teil)
+    except RenderError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition":
+                             "attachment; filename*=UTF-8''" + quote(name)})
 
 
 @router.get("/plan/alarm/{alarm_id}")

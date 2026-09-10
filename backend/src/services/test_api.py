@@ -160,3 +160,54 @@ class LesetokenTest(ApiTest):
         pdf = frisch.post("/api/render")
         self.assertEqual(200, pdf.status_code, pdf.text)
         self.assertTrue(pdf.content.startswith(b"%PDF"))
+
+
+PLANMAPPE = {
+    "version": 1,
+    "alarme": [],
+    "kataloge": {
+        "fahrzeuge": [{"id": "f1", "funkrufname": "LHF 6501.3"}],
+        "orte": [{"id": "o1", "name": "Wache Nord"}],
+        "personen": [{"id": "p1", "name": "Jörg", "anzahl": 1}],
+    },
+    "planung": {
+        "aktiv": True,
+        "laeufe": [{"id": "l1", "fahrzeugId": "f1", "schritte": [
+            {"id": "s1", "sortierung": 0.0, "art": "aufenthalt",
+             "von": "2026-09-19T08:00", "bis": "2026-09-19T08:30", "ortId": "o1",
+             "besatzung": [{"id": "b1", "personId": "p1", "faehrt": True}]}]}],
+    },
+}
+
+
+class BlattPdfTest(ApiTest):
+    """
+    Wer einen Lese-Link hat, kann seinen Zettel auch mitnehmen: dasselbe Blatt, das die Seite
+    zeigt, als PDF — ohne Sitzung im Browser und ohne den Stapel aller anderen.
+    """
+
+    def lesen(self) -> str:
+        token = self.sitzung_mit_plan()
+        return self.client.post(f"/api/sitzung/{token}/lesetoken").json()["token"]
+
+    def sitzung_mit_plan(self) -> str:
+        antwort = self.client.post("/api/sitzung", json=PLANMAPPE)
+        self.assertEqual(200, antwort.status_code, antwort.text)
+        return antwort.json()["token"]
+
+    @unittest.skipIf(shutil.which(settings.typst_binary) is None, "typst nicht installiert")
+    def test_person_und_fahrzeug_kommen_als_pdf(self):
+        lesen = self.lesen()
+        frisch = TestClient(app)
+        for art, kennung in (("person", "p1"), ("fahrzeug", "f1")):
+            with self.subTest(art=art):
+                antwort = frisch.get(f"/api/render/blatt/{lesen}/{art}/{kennung}")
+                self.assertEqual(200, antwort.status_code, antwort.text)
+                self.assertTrue(antwort.content.startswith(b"%PDF"))
+                self.assertIn("attachment", antwort.headers["content-disposition"])
+
+    def test_was_es_nicht_gibt_wird_nicht_gedruckt(self):
+        lesen = self.lesen()
+        self.assertEqual(404, self.client.get(f"/api/render/blatt/{lesen}/person/nope").status_code)
+        self.assertEqual(404, self.client.get(f"/api/render/blatt/{lesen}/tier/p1").status_code)
+        self.assertEqual(404, self.client.get("/api/render/blatt/kein-token/person/p1").status_code)

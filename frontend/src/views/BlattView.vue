@@ -3,7 +3,7 @@ import {computed, onBeforeUnmount, onMounted, ref} from 'vue'
 import {useRoute} from 'vue-router'
 import {t} from '../i18n'
 import {sitzungLesen} from '../api/sitzung'
-import {fehlertext} from '../api/render'
+import {fehlertext, renderBlatt} from '../api/render'
 import {plandatenVon} from '../store/planung'
 import {anfahrt, einsaetze, einsaetzeAmOrt, lagenName, personenplan} from '../scripts/ablauf'
 import type {Einsatz, Plandaten} from '../scripts/ablauf'
@@ -178,6 +178,22 @@ function adresstext(ort: Ort): string {
   return [strasse, ort.adresse.objekt, wo].filter(Boolean).join(', ')
 }
 
+/** Derselbe Zettel zum Mitnehmen: was hier steht, gedruckt, ohne den Stapel aller anderen. */
+async function pdf() {
+  fehler.value = null
+  try {
+    const url = URL.createObjectURL(
+        await renderBlatt(String(route.params.token), art.value, kennung.value))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${art.value}-${name.value || 'blatt'}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    fehler.value = await fehlertext(error)
+  }
+}
+
 async function laden() {
   try {
     mappe.value = (await sitzungLesen(String(route.params.token))).arbeitsmappe
@@ -207,12 +223,18 @@ onBeforeUnmount(() => {
     </template>
 
     <template v-else>
-      <div>
-        <div class="flex items-baseline gap-3 flex-wrap">
-          <h1 class="headline text-2xl">{{ name }}</h1>
-          <span v-if="nebentitel" class="text-muted text-sm">{{ nebentitel }}</span>
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div class="flex items-baseline gap-3 flex-wrap">
+            <h1 class="headline text-2xl">{{ name }}</h1>
+            <span v-if="nebentitel" class="text-muted text-sm">{{ nebentitel }}</span>
+          </div>
+          <p class="text-muted text-[13px] mt-1">{{ t('blatt.hinweis') }}</p>
         </div>
-        <p class="text-muted text-[13px] mt-1">{{ t('blatt.hinweis') }}</p>
+        <button v-if="zeilen.length" type="button" class="knopf knopf-klein" @click="pdf">
+          <font-awesome-icon icon="fa-solid fa-file-pdf"/>
+          {{ t('blatt.pdf') }}
+        </button>
       </div>
 
       <p v-if="!zeilen.length" class="abschnitt text-muted text-sm">{{ t('ablauf.ohnePlan') }}</p>

@@ -221,8 +221,8 @@ def _personenblatt(plan: Plan, person: Person) -> dict:
             gesehen.add(zeile.pop("_schluessel"))
             zeilen.append(zeile)
     zeilen.sort(key=lambda zeile: (zeile["datum"], zeile["von"]))
-    return {"name": person.name, "anzahl": person.anzahl, "rollen": person.rollen,
-            "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen),
+    return {"id": person.id, "name": person.name, "anzahl": person.anzahl,
+            "rollen": person.rollen, "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen),
             "link": plan.blattlink("person", person.id)}
 
 
@@ -249,7 +249,8 @@ def _fahrzeugblatt(plan: Plan, lauf: Lauf) -> dict:
         if weg:
             zeilen.append(weg)
         zeilen.append({**_zeile(plan, lauf, schritt), "besatzung": _besatzung(plan, schritt)})
-    return {"name": plan.name(lauf), "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen),
+    return {"id": lauf.fahrzeugId, "name": plan.name(lauf), "zeilen": zeilen,
+            "orte": _orte_des_blattes(plan, zeilen),
             "link": plan.blattlink("fahrzeug", lauf.fahrzeugId)}
 
 
