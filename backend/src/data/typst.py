@@ -57,14 +57,16 @@ def _compile(vorlage: str, eingaben: dict[str, str], name: str, beilagen=None) -
 
 def _kennmuster(daten: dict, scratch: Path) -> dict[str, str]:
     """
-    Zu jedem Kartenlink ein Kennmuster als Bild. Es liegt neben den Daten im Kritzelverzeichnis
-    und verschwindet mit ihm; das Template legt es aufs Blatt, damit ein Telefon den Weg kennt,
-    ohne dass jemand eine Adresse abtippt.
+    Zu jedem Kartenlink ein Kennmuster als Bild, dazu eines je Blatt auf dessen Lese-Ansicht. Es
+    liegt neben den Daten im Kritzelverzeichnis und verschwindet mit ihm; das Template legt es
+    aufs Blatt, damit ein Telefon den Weg kennt, ohne dass jemand eine Adresse abtippt, und den
+    Stand zeigt, ohne dass jemand neu druckt.
     """
-    verweise = sorted({verweis
-                       for blaetter in (daten["personen"], daten["fahrzeuge"])
-                       for blatt in blaetter for ort in blatt["orte"]
-                       for verweis in (ort.get("apple"), ort.get("google")) if verweis})
+    blaetter = [blatt for gruppe in (daten["personen"], daten["fahrzeuge"]) for blatt in gruppe]
+    verweise = sorted({verweis for blatt in blaetter
+                       for verweis in [blatt.get("link"),
+                                       *(ort.get(dienst) for ort in blatt["orte"]
+                                         for dienst in ("apple", "google"))] if verweis})
     muster = {}
     for nummer, verweis in enumerate(verweise):
         datei = scratch / f"qr-{nummer}.svg"

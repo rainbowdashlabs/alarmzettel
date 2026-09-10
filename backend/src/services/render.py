@@ -41,6 +41,25 @@ def _mappe(request: Request) -> Arbeitsmappe:
     return Arbeitsmappe.model_validate(inhalt)
 
 
+def _blattbasis(request: Request) -> str:
+    """
+    Der Anfang der Lese-Links, mit denen jedes Blatt sein Kennmuster bekommt. Das Lesetoken
+    entsteht dabei, falls es noch keines gibt — es ist dasselbe, das der Teilen-Knopf ausgibt.
+
+    Ohne Sitzung bleibt die Basis leer und das Blatt ohne Kennmuster: ein Zettel darf nicht
+    ungedruckt bleiben, weil ein Link fehlt.
+    """
+    token = request.cookies.get(COOKIE)
+    if not token:
+        return ""
+    try:
+        echt, _ = sitzungsdienst.sitzungen.aufloesen(token)
+        nur_lesen = sitzungsdienst.sitzungen.lesetoken(echt)
+    except SitzungFehler:
+        return ""
+    return str(request.base_url).rstrip("/") + f"/blatt/{nur_lesen}"
+
+
 def _punkt_zu(adresse) -> dict | None:
     """
     Der Punkt einer Adresse: der an ihr gesetzte, sonst der des Adressdienstes. Ein gesetzter gilt
@@ -121,7 +140,7 @@ def render_ablaufplan(request: Request) -> Response:
     """Der Ablaufplan: ein Blatt je Person, eines je Fahrzeug, und der Gesamtplan quer."""
     mappe = _mappe(request)
     try:
-        pdf = render_plan(plandaten(mappe, _ortspunkte(mappe)))
+        pdf = render_plan(plandaten(mappe, _ortspunkte(mappe), _blattbasis(request)))
     except RenderError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return Response(content=pdf, media_type="application/pdf",
@@ -135,7 +154,7 @@ def render_ablaufplan_zip(request: Request) -> Response:
     einen Zettel heraus, statt den ganzen Stapel zu blättern und zu trennen.
     """
     mappe = _mappe(request)
-    daten = plandaten(mappe, _ortspunkte(mappe))
+    daten = plandaten(mappe, _ortspunkte(mappe), _blattbasis(request))
     puffer = io.BytesIO()
     try:
         with zipfile.ZipFile(puffer, "w", zipfile.ZIP_DEFLATED) as archiv:

@@ -8,11 +8,34 @@
 #set text(font: SCHRIFT, size: 10pt, lang: "de")
 #set par(justify: false)
 
-/// Der Kopf eines Blattes: der Name groß, daneben, was ihn einordnet.
-#let kopf(name, neben) = {
+/// Das Kennmuster, das vom Papier auf den laufenden Stand führt: die Lese-Ansicht dieses Blattes.
+///
+/// Ein gedruckter Zettel altert, sobald jemand den Plan anfasst. Wer die Kamera davorhält, sieht
+/// denselben Tag, wie er gerade geplant ist.
+#let blattmuster(ziel) = {
+  if ziel == "" or ziel not in data.kennmuster { return [] }
+  link(ziel)[
+    #align(center)[
+      #image(data.kennmuster.at(ziel), width: 19mm)
+      #v(1pt)
+      #text(size: 7pt, fill: luma(90))[#underline[Aktueller Stand]]
+    ]
+  ]
+}
+
+/// Der Kopf eines Blattes: der Name groß, daneben, was ihn einordnet, rechts der Weg zurück.
+#let kopf(name, neben, ziel: "") = {
   block(below: 6pt)[
-    #text(size: 17pt, weight: "bold")[#name]
-    #if neben != "" [ #h(6pt) #text(size: 10pt, fill: luma(90))[#neben] ]
+    #grid(
+      columns: (1fr, auto),
+      column-gutter: 8pt,
+      align: (left + top, right + top),
+      [
+        #text(size: 17pt, weight: "bold")[#name]
+        #if neben != "" [ #h(6pt) #text(size: 10pt, fill: luma(90))[#neben] ]
+      ],
+      blattmuster(ziel),
+    )
   ]
   line(length: 100%, stroke: 1pt + black)
   v(4pt)
@@ -107,7 +130,8 @@
     if person.anzahl > 1 { str(person.anzahl) + " Köpfe" } else { "" },
     person.rollen.join(", "),
   ).filter(t => t != "").join(" · ")
-  kopf(if person.name != "" { person.name } else { "Ohne Namen" }, neben)
+  kopf(if person.name != "" { person.name } else { "Ohne Namen" }, neben,
+       ziel: person.at("link", default: ""))
   if person.zeilen.len() == 0 {
     leerer_hinweis("Noch nirgends eingeteilt.")
   } else {
@@ -131,7 +155,8 @@
 
 /// Ein Blatt je Fahrzeug — der Zettel fürs Armaturenbrett.
 #let fahrzeugblatt(fahrzeug) = {
-  kopf(if fahrzeug.name != "" { fahrzeug.name } else { "Ohne Namen" }, "")
+  kopf(if fahrzeug.name != "" { fahrzeug.name } else { "Ohne Namen" }, "",
+       ziel: fahrzeug.at("link", default: ""))
   if fahrzeug.zeilen.len() == 0 {
     leerer_hinweis("Nichts geplant.")
   } else {

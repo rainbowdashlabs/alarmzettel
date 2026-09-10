@@ -251,6 +251,22 @@ class ZettelTest(unittest.TestCase):
         self.assertEqual("", wache["adresse"])
         self.assertNotIn("apple", wache)
 
+    def test_jedes_blatt_zeigt_auf_seine_lese_ansicht(self):
+        """
+        Das Kennmuster im Kopf führt vom Papier auf den laufenden Stand — je Blatt auf seines,
+        nicht auf die ganze Sitzung.
+        """
+        plan = plandaten(Arbeitsmappe.model_validate(MAPPE),
+                         blattbasis="https://zettel.example/blatt/LESE")
+        self.assertEqual("https://zettel.example/blatt/LESE/person/p-alex",
+                         plan["personen"][0]["link"])
+        self.assertEqual("https://zettel.example/blatt/LESE/fahrzeug/f-lhf",
+                         plan["fahrzeuge"][0]["link"])
+
+    def test_ohne_basis_traegt_das_blatt_keinen_link(self):
+        """Wer ohne Sitzung druckt, bekommt einen Zettel ohne Kennmuster statt gar keinen."""
+        self.assertEqual("", daten()["personen"][0]["link"])
+
     def zeile_mit_material(self, posten: list[Materialposten]) -> dict:
         mappe = Arbeitsmappe.model_validate(MAPPE | {
             "kataloge": MAPPE["kataloge"] | {"material": [{"id": "m1", "name": "Übungspuppe"}]}})

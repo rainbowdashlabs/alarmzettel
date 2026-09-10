@@ -30,8 +30,10 @@ class Plan:
     hieße, es widersprüchlich pflegen zu können.
     """
 
-    def __init__(self, arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> None:
+    def __init__(self, arbeitsmappe: Arbeitsmappe, punkte: dict | None = None,
+                 blattbasis: str = "") -> None:
         self.planung: Planung = arbeitsmappe.planung
+        self._blattbasis = blattbasis.rstrip("/")
         self._orte = {ort.id: ort.name for ort in arbeitsmappe.kataloge.alle_orte()}
         self.personen = arbeitsmappe.kataloge.personen
         self._personen = {person.id: person for person in self.personen}
@@ -44,6 +46,15 @@ class Plan:
         self._adressen = {ort.id: ort for ort in arbeitsmappe.kataloge.alle_orte()}
         self._punkte = punkte or {}
         self.einsaetze = einsaetze(arbeitsmappe, self._punkte)
+
+    def blattlink(self, art: str, kennung: str) -> str:
+        """
+        Der Weg vom Papier zurück in den Plan: die Lese-Ansicht dieses Blattes. Ohne Basis — dann
+        weiß niemand, unter welchem Namen der Server erreichbar ist — bleibt sie leer.
+        """
+        if not self._blattbasis or not kennung:
+            return ""
+        return f"{self._blattbasis}/{art}/{kennung}"
 
     def ort(self, ort_id: str) -> str:
         return self._orte.get(ort_id, "")
@@ -211,7 +222,8 @@ def _personenblatt(plan: Plan, person: Person) -> dict:
             zeilen.append(zeile)
     zeilen.sort(key=lambda zeile: (zeile["datum"], zeile["von"]))
     return {"name": person.name, "anzahl": person.anzahl, "rollen": person.rollen,
-            "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
+            "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen),
+            "link": plan.blattlink("person", person.id)}
 
 
 def _besatzung(plan: Plan, schritt: Schritt, nur: set[str] | None = None) -> list[dict]:
@@ -237,7 +249,8 @@ def _fahrzeugblatt(plan: Plan, lauf: Lauf) -> dict:
         if weg:
             zeilen.append(weg)
         zeilen.append({**_zeile(plan, lauf, schritt), "besatzung": _besatzung(plan, schritt)})
-    return {"name": plan.name(lauf), "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen)}
+    return {"name": plan.name(lauf), "zeilen": zeilen, "orte": _orte_des_blattes(plan, zeilen),
+            "link": plan.blattlink("fahrzeug", lauf.fahrzeugId)}
 
 
 def _orte_des_blattes(plan: Plan, zeilen: list[dict]) -> list[dict]:
@@ -362,14 +375,18 @@ def _abschnitte(plan: Plan, lauf: Lauf, schritt: Schritt) -> list[tuple[int, int
     return [(von, da, anfahrt_zelle), (da, bis, _zelle(plan, lauf, schritt))]
 
 
-def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None) -> dict:
+def plandaten(arbeitsmappe: Arbeitsmappe, punkte: dict | None = None,
+              blattbasis: str = "") -> dict:
     """
     Personenblätter, Fahrzeugblätter und der Gesamtplan, fertig zum Auslegen.
 
     `punkte` sind die Koordinaten der Orte, soweit der Adressdienst sie kennt. Ohne sie fehlt auf
     den Blättern allein die geschätzte Fahrzeit.
+
+    `blattbasis` ist der Anfang der Lese-Links; jedes Blatt trägt dann den seinen und damit das
+    Kennmuster, das vom Papier auf den laufenden Stand führt.
     """
-    plan = Plan(arbeitsmappe, punkte)
+    plan = Plan(arbeitsmappe, punkte, blattbasis)
     return {
         "personen": [_personenblatt(plan, person) for person in plan.personen if person.blatt],
         "fahrzeuge": [_fahrzeugblatt(plan, lauf) for lauf in plan.planung.laeufe
