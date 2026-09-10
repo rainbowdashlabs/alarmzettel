@@ -52,7 +52,10 @@ function geordnet<T extends { id: string }>(quelle: () => T[], lesen: (eintrag: 
     return [...bekannt, ...quelle().filter(eintrag => !gesehen.has(eintrag.id))]
   })
 
-  watch(() => quelle().map(eintrag => eintrag.id).join(), ordnen, {immediate: true})
+  // Beobachtet wird, *welche* Einträge es gibt, nicht in welcher Reihenfolge sie stehen: der
+  // Abgleich baut die Arbeitsmappe neu auf und legt sie dabei anders herum hin. Hinge das
+  // Ordnen daran, spränge die Zeile unter dem Cursor mitten im Wort davon.
+  watch(() => [...quelle().map(eintrag => eintrag.id)].sort().join(), ordnen, {immediate: true})
   // Als `reactive`, damit die Vorlage `liste` ohne `.value` liest — in einem einfachen Objekt
   // packt Vue eine Referenz nicht aus.
   return reactive({liste, ordnen})
