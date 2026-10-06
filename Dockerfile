@@ -53,7 +53,8 @@ COPY --from=frontend-build /app/dist ./static/
 # /data is where shared working sets and the downloaded address list live, and is the only thing
 # that outlives the container. The address list is fetched on first start, not shipped.
 ENV SITZUNG_VERZEICHNIS=/data/freigaben \
-    ADRESSEN_DATEI=/data/adressen.sqlite
+    ADRESSEN_DATEI=/data/adressen.sqlite \
+    LOG_FORMAT=json
 RUN mkdir -p src/render/tmp /data/freigaben && chmod 1777 src/render/tmp \
  && useradd --system --uid 10001 alarmplaner \
  && chown -R alarmplaner:alarmplaner /app /data
