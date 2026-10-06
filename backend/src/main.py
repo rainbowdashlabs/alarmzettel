@@ -11,7 +11,10 @@ from starlette.responses import FileResponse
 from services.adressen import adressen
 from services.sitzung import sitzungen
 from web.app import router
+from web.logformat import configure_logging
 from web.settings import settings
+
+configure_logging()
 
 
 async def _aufraeumen():
