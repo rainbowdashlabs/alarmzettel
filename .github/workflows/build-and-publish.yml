@@ -75,10 +75,10 @@ jobs:
             curl -fs http://127.0.0.1:8000/api/health && break
           done
           curl -fs http://127.0.0.1:8000/api/health
-          sitzung=$(curl -fs -X POST http://127.0.0.1:8000/api/session | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')
-          curl -fs -X PUT http://127.0.0.1:8000/api/session/arbeitsmappe \
-            -H "X-Session-Id: $sitzung" -H 'Content-Type: application/json' \
+          curl -fs -c sitzung.txt -X POST http://127.0.0.1:8000/api/sitzung \
+            -H 'Content-Type: application/json' \
             --data-binary @backend/src/render/sample/sample.json > /dev/null
-          curl -fs -o zettel.pdf -X POST http://127.0.0.1:8000/api/render -H "X-Session-Id: $sitzung"
-          head -c 4 zettel.pdf | grep -q '%PDF' && echo "PDF gerendert"
+          curl -fs -b sitzung.txt -o zettel.pdf -X POST http://127.0.0.1:8000/api/render
+          head -c 4 zettel.pdf | grep -q '%PDF'
+          echo "PDF gerendert"
           docker rm -f pruefung
